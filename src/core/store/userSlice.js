@@ -1,0 +1,15 @@
+export const createUserSlice = (set) => ({
+  screen: "landing",
+  setScreen: (screen) => set({ screen }),
+  user: null,
+  setUser: (user) => set({ user }),
+  activeThemeId: "midnight",
+  streak: 0,
+  setST: (streak) => set({ streak }),
+  lastDate: null,
+  setLD: (lastDate) => set({ lastDate }),
+  badges: [],
+  setBD: (updater) => set((state) => ({ badges: typeof updater === 'function' ? updater(state.badges) : updater })),
+  bodyMeasurements: [],
+  addMeasurement: (measurement) => set((state) => ({ bodyMeasurements: [...(state.bodyMeasurements || []), measurement] })),
+});
