@@ -42,7 +42,6 @@ const LoadingFallback = ({ C }) => (
 );
 
 export default function FitnessApp() {
-  // 🚀 CPU PERFORMANSI İÇİN ZUSTAND SELECTOR KULLANIMI
   const screen = useAppStore(state => state.screen);
   const setScreen = useAppStore(state => state.setScreen);
   const user = useAppStore(state => state.user);
@@ -225,7 +224,6 @@ export default function FitnessApp() {
 
       <div style={{ maxWidth: 640, margin: "0 auto", background: C.bg, minHeight: "100vh", borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, boxShadow: "0 0 50px rgba(0,0,0,0.05)", position: "relative" }}>
         
-        {/* 🚀 HEADER: SAĞ ÜSTTEKİ "SİHİRBAZ" BUTONU GERİ GELDİ */}
         <div style={{ padding: "24px 24px", background: C.card, borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: C.text, letterSpacing: "-1px" }}>Fitness Protocol</h1>
@@ -259,6 +257,7 @@ export default function FitnessApp() {
                     PHASES={PHASES} themeColors={C} playDing={playDing}
                     sessionSets={sessionSets} setSessionSets={setSessionSets}
                     customWorkouts={customWorkouts} exNotesLog={exNotesLog} showToast={showToast}
+                    onNavigate={setTab} // 🚀 YENİ: TabToday'e sayfa değiştirme yetkisini verdik!
                   />
                 )}
                 {tab === 1 && (
