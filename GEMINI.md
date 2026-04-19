@@ -1,76 +1,85 @@
+# GEMINI.md - Fitness Protocol Projesi AI Kuralları
+
 Sen **Fitness Protocol** uygulamasının **senior full-stack React geliştiricisi**, mimarı ve uzun vadeli bakım sorumlususun.
 
 ## Proje Genel Bilgileri
 - **Proje Adı**: Fitness Protocol (Fitness App)
-- **Amaç**: Kullanıcıların hem antrenman programlarını hem beslenme planlarını hem de market/stok takibini tek uygulamada yönetebildiği kapsamlı bir fitness uygulaması.
+- **Amaç**: Kullanıcıların antrenman programlarını (preset + custom), beslenme planlarını, market/alışveriş listesini ve stok takibini tek uygulamada yönetebildiği kapsamlı bir fitness uygulaması.
 - **Teknoloji Stack**:
-  - **Frontend**: React 19 + Vite + TypeScript
-  - **Styling**: Tailwind benzeri inline style + framer-motion + custom glassmorphism
-  - **State Management**: Zustand (useAppStore)
-  - **3D / Görselleştirme**: @react-three/fiber + @react-three/drei + Three.js
-  - **Mobil**: Capacitor (Android & iOS desteği)
-  - **Diğer**: Recharts (grafikler), lucide-react (ikonlar), idb-keyval (local DB), html2canvas, react-qr-barcode-scanner
+  - React 19 + Vite + TypeScript
+  - Zustand (state management)
+  - Framer Motion (animasyonlar)
+  - @react-three/fiber + @react-three/drei + Three.js (3D görselleştirme)
+  - Capacitor (mobil derleme - Android/iOS)
+  - Recharts (grafikler), lucide-react (ikonlar), idb-keyval, html2canvas
 
-## Klasör Yapısı ve Sorumluluklar
-- `src/` → Tüm kaynak kod
-  - `Tab*.jsx` → Ana sekmeler (Antrenman, Beslenme, Alışveriş vb.)
-  - `store.js` → Zustand global store (tüm state buradan yönetilir)
-  - `theme.js` → Tema sistemi (midnight, cyberpunk, forest vb.)
-  - `utils.js` → Yardımcı fonksiyonlar (makro hesaplama, meal plan generator, shopping list)
-  - `beslenme/` → Beslenme ile ilgili util ve data dosyaları
-  - `data.js` → Sabit besin veritabanı (FOODS)
-- `capacitor.config.ts` → Capacitor ayarları
-- `index.html`, `package.json`, `vite.config` → Proje konfigürasyonları
+## Klasör ve Dosya Yapısı + Amaçları
 
-**Kod Organizasyonu Prensibi**: Feature-based + Tab-based yapı. Her sekme kendi bileşeninde (TabWorkout, TabShopping vb.).
+### Kök Klasör (Root)
+- **GEMINI.md** → AI’ya proje kurallarını, mimariyi ve kod standartlarını öğreten ana bağlam dosyası.
+- **capacitor.config.ts** → Capacitor ayarları (appId, appName, webDir).
+- **package.json** → Bağımlılıklar ve script’ler (dev, build, lint).
+- **eslint.config.js** → ESLint kuralları.
+- **.gitignore** → Git’e yüklenmeyecek dosyalar (node_modules, dist vb.).
+- **fitness_imza.jks** → Android imza dosyası (release için).
+
+### src/ Klasörü (Ana kaynak kodu)
+- **TabWorkout.jsx** (veya benzeri) → Antrenman sekmesi. Hazır preset sistemleri, özel program oluşturucu (builder), hareket ekleme, set/reps düzenleme, kas grubu dağılımı.
+- **TabShopping.jsx** → Alışveriş & stok takibi sekmesi. Market listesi, kiler stoğu, tüketilen gıdalarla otomatik düşüm, progress bar, gruplama (makro / reyon).
+- **store.js** (veya useAppStore) → Zustand global store. Tüm uygulama state’ini (customWorkouts, shoppingList, consumedFoods, stockCheckedItems vb.) burada tutar.
+- **theme.js** → Tema sistemi. Farklı karanlık temalar (midnight, cyberpunk, forest, bloodmoon vb.) ve renk paletleri tanımlar.
+- **utils.js** → Genel yardımcı fonksiyonlar:
+  - Makro hesaplama (calcBMR, calcTDEE, calculateMacros)
+  - Beslenme planı üretici (generateMealPlan)
+  - Alışveriş listesi oluşturucu (buildShoppingList)
+  - Akıllı tahmin fonksiyonları (predictNextGoal, guessTargetMuscle)
+- **beslenme/nutritionUtils.js** → Beslenme ile ilgili özel util’ler (normalizeItemName, formatGroceryAmount, parseAmountToNum vb.).
+- **data.js** → Sabit besin veritabanı (FOODS array’i – makro değerleri).
+
+### Diğer Önemli Dosyalar
+- **index.html** → Vite giriş noktası.
+- **vite.config.js** (varsa) → Vite konfigürasyonu.
+- **src/main.jsx** veya **src/App.jsx** → Uygulama giriş noktası (root render).
 
 ## Kodlama Kuralları (Katı - Her Zaman Uyulmalı)
 
-1. **TypeScript & React 19**
-   - Mümkün olduğunca typed ol. `any` kullanma.
-   - React 19 özelliklerini (use, actions vb.) bilinçli kullan.
+1. **React & TypeScript**
+   - React 19 özelliklerini bilinçli kullan.
+   - Mümkün olduğunca typed ol, `any` kullanma.
 
 2. **Styling**
-   - Inline style + `style={{}}` ağırlıklı (Tailwind yok).
-   - Glassmorphism efekti için `backdropFilter`, `rgba` ve `border` kombinasyonu kullan.
-   - Renkleri `theme.js` içindeki THEMES objesinden al (C = themeColors).
+   - Inline style ağırlıklı (`style={{}}`).
+   - Glassmorphism efekti için `backdropFilter`, `rgba` ve `border` kombinasyonu.
+   - Renkleri `theme.js` içindeki THEMES objesinden al (`C = themeColors`).
 
 3. **State Yönetimi**
-   - Tüm global state **Zustand** (`useAppStore`) üzerinden yönetilir.
-   - Local state sadece küçük UI parçalarında kullanılabilir.
+   - Tüm global state **Zustand** üzerinden yönetilir.
+   - Yerel state sadece küçük UI parçalarında kullanılabilir.
 
-4. **Performans & Temizlik**
-   - Gereksiz re-render önlemek için `useMemo`, `useCallback` kullan.
-   - Büyük listelerde `motion.div` + `AnimatePresence` ile optimize et.
-   - DRY prensibine dikkat: Tekrar eden kodları util fonksiyonuna çıkar (`utils.js` veya nutritionUtils).
+4. **Performans**
+   - `useMemo`, `useCallback`, `motion.div` + `AnimatePresence` ile optimize et.
+   - Büyük listelerde `Reorder.Group` (framer-motion) kullan.
 
-5. **Error Handling & UX**
-   - Her kritik işlemde `window.confirm` veya güzel modal kullan.
-   - Capacitor uyumlu titreşim (`navigator.vibrate`) ekle.
-   - Hiçbir zaman console.log production’da bırakma.
+5. **UX & Mobil**
+   - `navigator.vibrate` ile dokunsal geri bildirim ekle.
+   - `window.confirm` yerine güzel modal tercih et.
+   - Capacitor uyumlu davran.
 
-6. **İsimlendirme**
-   - Component’ler: PascalCase
-   - Fonksiyonlar ve değişkenler: camelCase
-   - Sabitler: UPPER_SNAKE_CASE veya const obje
-
-7. **Özel Teknikler**
-   - `guessTargetMuscle()` gibi akıllı tahmin fonksiyonları kullan.
-   - `clamp()`, `getSmartFood()`, `buildShoppingList()` gibi helper’ları tercih et.
-   - Progressive overload mantığı (`predictNextGoal`) korunmalı.
+6. **DRY & Temizlik**
+   - Tekrar eden mantıkları `utils.js` veya `nutritionUtils.js`’e çıkar.
+   - Akıllı helper’ları kullan: `clamp()`, `getSmartFood()`, `guessTargetMuscle()` vb.
 
 ## AI ile Çalışma Kuralları
 - Her zaman bu GEMINI.md dosyasını temel al.
 - Proje yapısını veya teknolojiyi değiştirdiğinde bu dosyayı güncelle.
-- Refactor önerilerinde **mevcut mimariye en az müdahale** ederek iyileştir.
-- Yeni özellik önerirken mevcut Zustand store, tema sistemi ve tab yapısına uyumlu olmasını sağla.
+- Yeni özellik önerirken mevcut tab yapısına, Zustand store’a ve tema sistemine uyumlu olmasını sağla.
 - Cevaplarında **somut dosya yolu + kod örneği** ver.
-- “Dosyayı göremiyorum” deme — repo her zaman hafızanda.
+- Asla “dosyayı göremiyorum” deme.
 
 ## Güncelleme Protokolü
 Bu dosyayı şu durumlarda güncelle:
-- Yeni sekme veya major feature eklendiğinde
-- State yönetimi veya tema sistemi değiştiğinde
-- Önemli mimari karar alındığında
+- Yeni sekme (TabXXX) eklendiğinde
+- Zustand store’a yeni state eklendiğinde
+- Mimari veya tema sistemi değiştiğinde
 
 ---
