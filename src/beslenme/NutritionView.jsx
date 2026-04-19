@@ -5,6 +5,7 @@ import { fonts, getMealCategories } from './nutritionUtils';
 import { generateMealPlan } from '../utils'; 
 import { SearchFoodModal, FoodDetailModal, BarcodeScannerModal, SamplePlanModal } from './NutritionModals'; 
 import useModalStore from '../store/useModalStore';
+import { getCommonStyles } from '../theme'; // 🚀 YENİ: Stil merkezimizi (Theme) import ettik!
 
 // 1. MAKRO BAR BİLEŞENİ
 function MacroBar({ label, plannedVal, eatenVal, target, color, C }) {
@@ -25,6 +26,9 @@ function MacroBar({ label, plannedVal, eatenVal, target, color, C }) {
 export default function NutritionView({ user, macros, regeneratePlan, dayPlan, nutDay, setNutDay, themeColors: C, shoppingList = [], onOpenStock }) {
   const { addConsumedFood, removeConsumedFood, consumedFoods = [], customTargetMacros, mealPlan, setMealPlan } = useAppStore(); 
   const { showConfirm, showAlert } = useModalStore(); 
+  
+  // 🚀 YENİ: Tekrarlayan kodlar silindi. Ortak cam efektlerini doğrudan temadan çekiyoruz!
+  const { glassCard, glassInner } = getCommonStyles(C);
 
   const currentMealPlan = Array.isArray(mealPlan) ? mealPlan[nutDay] : mealPlan;
   const activePlan = (dayPlan && dayPlan.meals) ? dayPlan : currentMealPlan;
@@ -152,23 +156,12 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
     }, { confirmText: "Öğünü Ekle", confirmColor: C.blue });
   };
 
-  const glassCardStyle = {
-    background: `linear-gradient(145deg, ${C.card}D9, ${C.bg}99)`, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
-    border: `1px solid ${C.border}60`, boxShadow: "0 10px 40px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.05)",
-    borderRadius: 24, padding: "20px 24px", marginBottom: 24, overflow: "hidden"
-  };
-
-  const glassInnerStyle = {
-    background: `linear-gradient(145deg, rgba(0,0,0,0.2), rgba(0,0,0,0.05))`, border: `1px solid ${C.border}40`,
-    borderRadius: 16, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
-  };
-
   const WATER_PER_BOTTLE = 250; const totalBottles = Math.ceil(targetWater / WATER_PER_BOTTLE); 
 
   return (
     <div style={{ paddingBottom: 100, fontFamily: fonts.body, color: C.text }}>
       
-      <motion.div onClick={onOpenStock} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={{ ...glassCardStyle, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", border: `1px solid ${stockSummary.outOfStock > 0 ? C.red : (stockSummary.lowStock > 0 ? C.yellow : `${C.border}60`)}` }}>
+      <motion.div onClick={onOpenStock} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={{ ...glassCard, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", border: `1px solid ${stockSummary.outOfStock > 0 ? C.red : (stockSummary.lowStock > 0 ? C.yellow : `${C.border}60`)}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}><div style={{ fontSize: 28 }}>📦</div><div><div style={{ fontSize: 16, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: C.text, marginBottom: 2 }}>Stoklarım (Kiler)</div><div style={{ fontSize: 11, color: stockSummary.outOfStock > 0 ? C.red : (stockSummary.lowStock > 0 ? C.yellow : C.sub), fontWeight: 700 }}>{stockSummary.outOfStock > 0 ? `🚨 ${stockSummary.outOfStock} Ürün Tükendi!` : (stockSummary.lowStock > 0 ? `⚠️ ${stockSummary.lowStock} Ürün Azalıyor` : "✅ Stoklar Yeterli")}</div></div></div>
         <div style={{ fontSize: 18, color: C.mute }}>➔</div>
       </motion.div>
@@ -180,7 +173,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
         <button onClick={() => setIsRestDay(!isRestDay)} style={{ flexShrink: 0, padding: "10px 16px", borderRadius: 20, background: isRestDay ? `${C.blue}20` : `rgba(0,0,0,0.2)`, border: `1px solid ${isRestDay ? C.blue : `${C.border}40`}`, color: isRestDay ? C.blue : C.text, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: fonts.header, backdropFilter: "blur(10px)" }}>{isRestDay ? "🛋️ DİNLENME" : "🏋️ İDMAN GÜNÜ"}</button>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={glassCardStyle}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={glassCard}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ flex: 1, paddingRight: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}><div style={{ fontSize: 12, color: C.sub, fontWeight: 800, letterSpacing: 1 }}>ALINAN KALORİ</div></div>
@@ -204,18 +197,18 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
         </div>
         
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, borderTop: `1px solid ${C.border}60`, paddingTop: 16 }}>
-           <div style={{ ...glassInnerStyle, padding: "10px 16px" }}>
+           <div style={{ ...glassInner, padding: "10px 16px" }}>
              <div style={{ fontSize: 10, color: C.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 4 }}>LİF (FİBER)</div>
              <div style={{ fontSize: 16, fontWeight: 900, fontFamily: fonts.mono, color: eatenTotals.fib >= targetFiber ? C.green : C.text }}>{eatenTotals.fib.toFixed(1)}g <span style={{ fontSize: 12, color: C.sub }}>/ {targetFiber}g</span></div>
            </div>
-           <div style={{ ...glassInnerStyle, padding: "10px 16px" }}>
+           <div style={{ ...glassInner, padding: "10px 16px" }}>
              <div style={{ fontSize: 10, color: C.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 4 }}>ŞEKER</div>
              <div style={{ fontSize: 16, fontWeight: 900, fontFamily: fonts.mono, color: eatenTotals.sug > targetSugar ? C.red : C.text }}>{eatenTotals.sug.toFixed(1)}g <span style={{ fontSize: 12, color: C.sub }}>/ {targetSugar}g Max</span></div>
            </div>
         </div>
       </motion.div>
 
-      <div style={{ ...glassCardStyle, border: `1px solid ${C.blue}40`, boxShadow: `0 8px 30px ${C.blue}15`, display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ ...glassCard, border: `1px solid ${C.blue}40`, boxShadow: `0 8px 30px ${C.blue}15`, display: "flex", flexDirection: "column", gap: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div><div style={{ fontSize: 12, color: C.blue, fontWeight: 900, fontFamily: fonts.header, letterSpacing: 1 }}>SU TÜKETİMİ 💧</div><div style={{ fontSize: 24, fontWeight: 900, fontFamily: fonts.mono, color: C.text, marginTop: 4 }}>{waterConsumed} <span style={{ fontSize: 12, color: C.mute }}>/ {targetWater} ml</span></div></div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -249,7 +242,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
           const currentTag = mealTags[`${mi}-${nutDay}`] || "none";
 
           return (
-            <motion.div layout key={mi} style={{ ...glassCardStyle, padding: 0, paddingBottom: isExpanded ? 24 : 0 }}>
+            <motion.div layout key={mi} style={{ ...glassCard, padding: 0, paddingBottom: isExpanded ? 24 : 0 }}>
               <div onClick={() => setExpandMeal(expandMeal === mi ? null : mi)} style={{ padding: "20px 24px", background: isEmpty ? 'transparent' : `linear-gradient(135deg, ${C.green}1A, transparent)`, borderBottom: isExpanded ? `1px solid ${C.border}60` : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer', WebkitTapHighlightColor: "transparent" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
@@ -277,7 +270,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
                         </div>
                       )}
                       {isEmpty ? (
-                        <div style={{ padding: 30, textAlign: 'center', ...glassInnerStyle }}>
+                        <div style={{ padding: 30, textAlign: 'center', ...glassInner }}>
                           <button onClick={() => setAddItem({ di: nutDay, mi })} style={{ background: "rgba(0,0,0,0.2)", border: `1px solid ${C.border}80`, color: C.text, padding: "10px 16px", borderRadius: 12, fontWeight: 800, cursor: 'pointer', fontFamily: fonts.header }}>Yiyecek Ekle +</button>
                         </div>
                       ) : (

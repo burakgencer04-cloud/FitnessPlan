@@ -2,8 +2,10 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
-import { useAppStore } from '../../store';
-import { MEASUREMENT_TYPES, CORE_LIFTS, guessTargetMuscle, fonts, getGlassCardStyle, getGlassInnerStyle, CustomTooltip } from './progressUtils';
+// 🚀 YENİ: usePhotoStore'u da import ediyoruz
+import { useAppStore, usePhotoStore } from '../../store'; 
+import { MEASUREMENT_TYPES, CORE_LIFTS, guessTargetMuscle, fonts, CustomTooltip } from './progressUtils';
+import { getCommonStyles } from '../../theme'; 
 
 import ProgressPhotos from './ProgressPhotos';
 import WorkoutConsistency from './WorkoutConsistency';
@@ -17,19 +19,18 @@ export default function ProgressMain({
   weightLog = {}, themeColors: C, selectedProgram, hasActiveProgram, onSelectProgram
 }) {
   const user = useAppStore(state => state.user);
-  
-  // 🚀 DÜZELTME BURADA: "|| []" kısmı parantezin dışına alındı. Sonsuz döngü engellendi!
   const bodyMeasurements = useAppStore(state => state.bodyMeasurements) || [];
-  
   const streak = useAppStore(state => state.streak);
   const addMeasurement = useAppStore(state => state.addMeasurement);
+
+  // 🚀 YENİ: Fotoğraflar artık yepyeni, asenkron ve limitsiz kasadan geliyor!
+  const { photos: progressPhotos, isLoaded: photosLoaded, loadPhotos, addPhoto, removePhoto } = usePhotoStore();
   
   const [showMeasureModal, setShowMeasureModal] = useState(false);
   const [measureForm, setMeasureForm] = useState({ date: new Date().toISOString().split('T')[0], type: "weight", value: "" });
   const [selectedChartType, setSelectedChartType] = useState("weight");
   const [volumeFilter, setVolumeFilter] = useState("Tümü");
   
-  const [progressPhotos, setProgressPhotos] = useState([]);
   const [photoModalIndex, setPhotoModalIndex] = useState(null);
   const [storyModal, setStoryModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -38,40 +39,47 @@ export default function ProgressMain({
   const isOlder = user?.age >= 50;
   const currentWeight = bodyMeasurements.filter(m => m.type === 'weight').sort((a,b) => new Date(b.date) - new Date(a.date))[0]?.value || user?.weight || 80;
 
-  const glassCardStyle = getGlassCardStyle(C);
-  const glassInnerStyle = getGlassInnerStyle(C);
+  const { glassCard, glassInner } = getCommonStyles(C);
 
+  // 🚀 YENİ: Bileşen yüklendiğinde fotoğrafları IndexedDB'den çek
   useEffect(() => {
-    const savedPhotos = JSON.parse(localStorage.getItem('progressPhotos') || '[]');
-    setProgressPhotos(savedPhotos);
-  }, []);
+    if (!photosLoaded) {
+      loadPhotos();
+    }
+  }, [photosLoaded, loadPhotos]);
 
   const triggerConfetti = () => {
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 4000);
   };
 
+  // 🚀 YENİ: Asenkron (async) fotoğraf kayıt işlemi
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
       const todayDate = new Date().toLocaleDateString('tr-TR');
       const todayLogVolumes = volumeTrendData.find(v => v.rawDate === todayDate)?.Hacim || 0;
-      const newPhoto = { id: Date.now(), date: todayDate, src: reader.result, volume: todayLogVolumes, note: "Güncel Form" };
-      const updatedPhotos = [newPhoto, ...progressPhotos].slice(0, 20); 
-      setProgressPhotos(updatedPhotos);
-      localStorage.setItem('progressPhotos', JSON.stringify(updatedPhotos));
+      
+      const newPhoto = { 
+        id: Date.now(), 
+        date: todayDate, 
+        src: reader.result, 
+        volume: todayLogVolumes, 
+        note: "Güncel Form" 
+      };
+      
+      await addPhoto(newPhoto); // Veritabanına kaydet
       triggerConfetti();
     };
     reader.readAsDataURL(file);
   };
 
-  const handleDeletePhoto = (id) => {
+  // 🚀 YENİ: Asenkron (async) fotoğraf silme işlemi
+  const handleDeletePhoto = async (id) => {
     if (window.confirm("Bu görseli silmek istediğine emin misin?")) {
-      const updated = progressPhotos.filter(p => p.id !== id);
-      setProgressPhotos(updated);
-      localStorage.setItem('progressPhotos', JSON.stringify(updated));
+      await removePhoto(id); // Veritabanından sil
       setPhotoModalIndex(null);
     }
   };
@@ -177,17 +185,16 @@ export default function ProgressMain({
     return Math.min(100, Math.max(0, Math.round(ratio - 20))) || 20;
   }, [volumeTrendData, isOlder]);
 
-  // 🚀 Yeni Dinamik Başarımlar Eklendi
   const extendedBadges = useMemo(() => {
     const dynamicBadges = [];
     if (globalTotalVolume >= 10000) dynamicBadges.push({ label: "10 Ton Kulübü", color: C.yellow, icon: "🐘" });
     if (globalTotalVolume >= 50000) dynamicBadges.push({ label: "50 Ton Canavarı", color: C.red, icon: "🦖" });
-    if (globalTotalVolume >= 100000) dynamicBadges.push({ label: "100 Ton Herkül", color: C.text, icon: "🏛️" }); // Yeni
+    if (globalTotalVolume >= 100000) dynamicBadges.push({ label: "100 Ton Herkül", color: C.text, icon: "🏛️" }); 
     if (streak >= 7) dynamicBadges.push({ label: "Haftalık Disiplin", color: C.green, icon: "🔥" });
-    if (streak >= 30) dynamicBadges.push({ label: "Aylık Çelik İrade", color: C.blue, icon: "🛡️" }); // Yeni
+    if (streak >= 30) dynamicBadges.push({ label: "Aylık Çelik İrade", color: C.blue, icon: "🛡️" }); 
     if (personalRecords.length >= 3) dynamicBadges.push({ label: "Kuvvet Ustası", color: C.blue, icon: "💎" });
-    if (totalDone >= 50) dynamicBadges.push({ label: "50. Antrenmanım", color: C.yellow, icon: "💯" }); // Yeni
-    if (progressPhotos.length >= 3) dynamicBadges.push({ label: "Değişim Mimarı", color: C.green, icon: "📸" }); // Yeni
+    if (totalDone >= 50) dynamicBadges.push({ label: "50. Antrenmanım", color: C.yellow, icon: "💯" }); 
+    if (progressPhotos.length >= 3) dynamicBadges.push({ label: "Değişim Mimarı", color: C.green, icon: "📸" }); 
     return dynamicBadges;
   }, [globalTotalVolume, streak, personalRecords, totalDone, progressPhotos, C]);
 
@@ -208,7 +215,7 @@ export default function ProgressMain({
   if (!hasActiveProgram || !selectedProgram) {
     return (
       <div style={{ paddingBottom: 40, fontFamily: fonts.body, color: C.text, position: "relative" }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ ...glassCardStyle, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: "80px 20px", textAlign: 'center', margin: "20px auto", maxWidth: 400 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ ...glassCard, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: "80px 20px", textAlign: 'center', margin: "20px auto", maxWidth: 400 }}>
           <div style={{ width: 64, height: 64, borderRadius: 16, background: `rgba(0,0,0,0.3)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, marginBottom: 24, border: `1px solid ${C.border}40` }}>📈</div>
           <h2 style={{ fontSize: 20, color: C.text, fontWeight: 900, fontFamily: fonts.header, marginBottom: 12 }}>Analiz Bekleniyor</h2>
           <p style={{ fontSize: 13, color: C.sub, lineHeight: 1.6, maxWidth: 280, marginBottom: 32 }}>İlerlemeni takip etmek için bir antrenman programı seçmelisin.</p>
@@ -236,7 +243,6 @@ export default function ProgressMain({
           </button>
         </div>
 
-        {/* 🚀 GÜN SERİSİ EN ÜSTE ALINDI */}
         <StatBoxes streak={streak} globalTotalVolume={globalTotalVolume} C={C} />
 
         <WorkoutConsistency recentWorkoutsGrid={recentWorkoutsGrid} totalDone={totalDone} progressPhotos={progressPhotos} setPhotoModalIndex={setPhotoModalIndex} C={C} />
@@ -245,9 +251,8 @@ export default function ProgressMain({
         
         <ProgressPhotos progressPhotos={progressPhotos} setPhotoModalIndex={setPhotoModalIndex} handlePhotoUpload={handlePhotoUpload} fileInputRef={fileInputRef} C={C} />
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={glassCardStyle}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={glassCard}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            {/* 🚀 VÜCUT ÖLÇÜLERİM */}
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, fontFamily: fonts.header, color: C.text }}>Vücut Ölçülerim</h2>
             <button onClick={() => { setMeasureForm(prev => ({...prev, type: selectedChartType})); setShowMeasureModal(true); }} style={{ background: C.text, color: C.bg, border: "none", padding: "8px 16px", borderRadius: 10, fontWeight: 800, cursor: "pointer", fontSize: 12 }}>Kayıt Gir</button>
           </div>
@@ -281,7 +286,7 @@ export default function ProgressMain({
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ ...glassInnerStyle, height: 140, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ ...glassInner, height: 140, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ color: C.sub, fontSize: 13, fontWeight: 600 }}>Ölçüm verisi yok.</span>
             </div>
           )}
@@ -291,7 +296,6 @@ export default function ProgressMain({
         <PRSection personalRecords={personalRecords} currentWeight={currentWeight} isOlder={isOlder} C={C} />
         <BadgesSection badges={badges} BADGES={BADGES} BADGE_ICONS={BADGE_ICONS} extendedBadges={extendedBadges} C={C} />
 
-        {/* 🚀 CSV İNDİRME EN ALTA GİZLENDİ */}
         <div style={{ textAlign: "center", marginTop: 32, marginBottom: 16 }}>
           <button onClick={handleDownloadCSV} style={{ background: "transparent", border: "none", color: C.mute, fontSize: 11, cursor: "pointer", opacity: 0.4, textDecoration: "underline", padding: 8 }}>
             Verilerimi İndir (CSV)

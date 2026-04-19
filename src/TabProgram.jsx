@@ -2,27 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { useAppStore } from './store'; 
 import { WORKOUT_PRESETS } from './data'; 
+import { getCommonStyles } from './theme'; // 🚀 YENİ: Stil merkezimizi import ettik!
 
 const fonts = {
   header: "'Comucan', system-ui, sans-serif", 
   body: "'Comucan', system-ui, sans-serif",   
   mono: "monospace"                           
 };
-
-const getGlassCardStyle = (C) => ({
-  background: `linear-gradient(145deg, ${C.card}D9, ${C.bg}99)`,
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
-  border: `1px solid ${C.border}40`,
-  boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-  borderRadius: 24,
-  padding: 24,
-  marginBottom: 20,
-  position: "relative",
-  overflow: "hidden",
-  transform: "translateZ(0)",
-  willChange: "transform, opacity"
-});
 
 // Egzersiz Ekleme Modalı
 const ExerciseModal = ({ show, onClose, onAdd, C, EXERCISE_DB, customExercises }) => {
@@ -98,10 +84,12 @@ const ExerciseModal = ({ show, onClose, onAdd, C, EXERCISE_DB, customExercises }
 export default function TabProgram({ 
   themeColors: C = {}, customWorkouts = [], setCustomWorkouts, EXERCISE_DB = [] 
 }) {
+  // 🚀 YENİ: Ortak stilleri temadan çektik. Dosyanın başındaki o devasa 'getGlassCardStyle' fonksiyonu çöpe gitti!
+  const { glassCard } = getCommonStyles(C);
+
   const user = useAppStore(state => state.user);
   const setUser = useAppStore(state => state.setUser);
   
-  // 🚀 DÜZELTME BURADA: "|| []" kısmı parantezin dışına alındı. Sonsuz döngü engellendi!
   const customExercises = useAppStore(state => state.customExercises) || [];
   
   const addCustomExercise = useAppStore(state => state.addCustomExercise);
@@ -274,7 +262,6 @@ export default function TabProgram({
     })).sort((a, b) => b.sets - a.sets);
   }, [editingWorkout?.exercises, combinedDB]);
 
-  const glassCardStyle = getGlassCardStyle(C);
 
   // DİNAMİK ARKA PLAN RENKLERİ
   const bgPrimary = selectedPreset ? selectedPreset.color : C.blue;
@@ -362,12 +349,12 @@ export default function TabProgram({
                       <motion.div 
                         whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                         key={preset.id} onClick={() => setSelectedPreset(preset)} 
+                        // 🚀 YENİ: Ortak kart stilini buradan çağırıyoruz ve üzerine preset rengini ekliyoruz.
                         style={{ 
-                          ...glassCardStyle, 
+                          ...glassCard, 
                           marginBottom: 0, 
                           cursor: "pointer", 
                           padding: 20,
-                          // 🚀 BURAYA DİNAMİK KUTUCUK GRADYANI EKLENDİ
                           background: `linear-gradient(145deg, ${C.card}E6, ${preset.color}15)`,
                           border: `1px solid ${preset.color}40`
                         }}

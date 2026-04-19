@@ -1,6 +1,11 @@
+// ============================================================================
+// 🎨 FİTNESS PLAN - GLOBAL TEMA VE STİL MERKEZİ
+// ============================================================================
+
 export const THEMES = {
   // 1. SAF SİYAH (AMOLED Ekranlar için kusursuz, pilden tasarruf sağlar)
   midnight: {
+    id: 'midnight',
     bg: "#000000",
     card: "#09090b", 
     text: "#ffffff",
@@ -15,6 +20,7 @@ export const THEMES = {
 
   // 2. DEMİR GRİSİ (Göz yormayan, endüstriyel ve mat tasarım)
   iron: {
+    id: 'iron',
     bg: "#181a1f",
     card: "#21252b",
     text: "#f8f8f2",
@@ -29,57 +35,87 @@ export const THEMES = {
 
   // 3. SİBERPUNK (Zifiri karanlık mor/siyah, neon camgöbeği ve fosforlu pembe)
   cyberpunk: {
-    bg: "#05000a",      // Neredeyse tam siyah, çok hafif mor alt tonlu
-    card: "#0d0216",    // Çok loş siyah/mor
-    text: "#ffffff",    // Net beyaz
-    sub: "#c084fc",     // Açık neon mor
-    mute: "#4c1d95",    // Koyu mor
-    border: "#2e1065",  // Karanlık mor kenarlıklar
-    green: "#06b6d4",   // Siberpunk Camgöbeği (Cyan)
-    blue: "#d946ef",    // Fosforlu Pembe/Mor
-    red: "#f43f5e",     // Neon Kırmızı
-    yellow: "#fef08a"   // Siberpunk Sarı
+    id: 'cyberpunk',
+    bg: "#090514",
+    card: "#120a28",
+    text: "#e2d5f8",
+    sub: "#a38ce3",
+    mute: "#4a3576",
+    border: "#2a1b4e",
+    green: "#06b6d4", // Neon Camgöbeği (Cyan)
+    blue: "#8b5cf6",  // Derin Mavi
+    red: "#f43f5e",   // Canlı Kırmızı
+    yellow: "#d946ef" // Neon Pembe/Macenta
   },
 
-  // 4. NEON GECE (Koyu lacivert arkaplan, elektrik mavisi)
-  neon: {
-    bg: "#020617",      
-    card: "#0f172a",    
-    text: "#f8fafc",    
-    sub: "#94a3b8",     
-    mute: "#334155",    
-    border: "#1e293b",  
-    green: "#10b981",   
-    blue: "#0ea5e9",    
-    red: "#ef4444",     
-    yellow: "#f59e0b"   
+  // 4. KAHVE RENGİ (Sıcak, organik ve doğal bir his)
+  mocha: {
+    id: 'mocha',
+    bg: "#1c1917",
+    card: "#292524",
+    text: "#fafaf9",
+    sub: "#a8a29e",
+    mute: "#57534e",
+    border: "#44403c",
+    green: "#84cc16",
+    blue: "#0ea5e9",
+    red: "#ef4444",
+    yellow: "#f59e0b"
   },
 
-  // 5. KARANLIK ORMAN (Zifiri çam yeşili ve neon nane yeşili vurgular)
+  // 5. ORMAN YEŞİLİ (Doğa odaklı, ferah ve huzur verici)
   forest: {
-    bg: "#040b06",      // Siyah/Koyu yeşil
-    card: "#081a0f",    // Loş orman yeşili
-    text: "#ecfdf5",    // Kırık beyaz/mint
-    sub: "#6ee7b7",     // Açık nane yeşili
-    mute: "#064e3b",    // Koyu zümrüt
-    border: "#022c22",  // Derin orman kenarlığı
-    green: "#10b981",   // Parlak zümrüt
-    blue: "#3b82f6",    
-    red: "#ef4444",     
-    yellow: "#fbbf24"   
-  },
-
-  // 6. KANLI AY (Zifiri siyah/bordo, agresif kırmızı vurgular)
-  bloodmoon: {
-    bg: "#0a0202",      // Siyah/Bordo
-    card: "#140404",    // Loş bordo
-    text: "#fef2f2",    // Kırık beyaz/pembe
-    sub: "#fca5a5",     // Uçuk kırmızı
-    mute: "#7f1d1d",    // Koyu kan kırmızısı
-    border: "#450a0a",  // Derin bordo kenarlık
-    green: "#22c55e",   
-    blue: "#60a5fa",    
-    red: "#ef4444",     // Yakut kırmızısı (Ana renk)
-    yellow: "#f59e0b"   
+    id: 'forest',
+    bg: "#064e3b",
+    card: "#065f46",
+    text: "#f0fdf4",
+    sub: "#a7f3d0",
+    mute: "#047857",
+    border: "#059669",
+    green: "#34d399",
+    blue: "#38bdf8",
+    red: "#f87171",
+    yellow: "#fbbf24"
   }
+};
+
+// ============================================================================
+// 💎 ORTAK UI STİLLERİ (GLASSMORPHISM)
+// Bu fonksiyon, aktif tema renklerini (C) alıp tüm uygulamada kullanılacak 
+// standart, yüksek kaliteli cam efekti objelerini döndürür.
+// ============================================================================
+export const getCommonStyles = (C) => {
+  // Renk objesi gelmezse hata vermemesi için güvenlik önlemi (Fallback)
+  const safeC = C || THEMES.midnight; 
+
+  return {
+    // Ana büyük kartlar için (Örn: Beslenme özet kartı, Antrenman gün kartı)
+    glassCard: {
+      background: `linear-gradient(145deg, ${safeC.card}D9, ${safeC.bg}99)`,
+      backdropFilter: "blur(24px)", 
+      WebkitBackdropFilter: "blur(24px)",
+      border: `1px solid ${safeC.border}60`,
+      boxShadow: "0 10px 40px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.05)",
+      borderRadius: 24, 
+      padding: "20px 24px", 
+      marginBottom: 24, 
+      overflow: "hidden",
+      position: "relative",
+      transform: "translateZ(0)", // Mobil cihazlarda GPU hızlandırması için
+      willChange: "transform, opacity"
+    },
+
+    // Kart içindeki küçük bölümler için (Örn: Makro detayları, set kutucukları)
+    glassInner: {
+      background: `linear-gradient(145deg, rgba(0,0,0,0.2), rgba(0,0,0,0.05))`,
+      border: `1px solid ${safeC.border}40`,
+      borderRadius: 16, 
+      backdropFilter: "blur(10px)", 
+      WebkitBackdropFilter: "blur(10px)",
+      padding: "16px"
+    },
+    
+    // Uygulama geneli buton parlamaları vb. için standart gölge
+    glowShadow: (color) => `0 4px 15px ${color}40`
+  };
 };
