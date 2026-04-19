@@ -83,3 +83,4 @@ Bu dosyayı şu durumlarda güncelle:
 - Mimari veya tema sistemi değiştiğinde
 
 ---
+---
