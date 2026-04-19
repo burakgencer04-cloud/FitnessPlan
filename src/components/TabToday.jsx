@@ -3,7 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { useAppStore } from '../store';
 import { EXERCISE_DB } from '../data'; 
-import { fonts, getGlassCardStyle, getGlassInnerStyle, WORKOUT_TIPS, guessTargetMuscle } from './tabTodayUtils';
+// 🚀 DÜZELTME: Eski stiller silindi
+import { fonts, WORKOUT_TIPS, guessTargetMuscle } from './tabTodayUtils';
+import { getCommonStyles } from '../theme'; // 🚀 YENİ: Stil merkezimizi import ettik
+import AICoach from './AICoach'; // 🚀 YENİ: Yapay Zeka Koçumuzu import ettik!
+
 import InteractiveMuscleMap from './InteractiveMuscleMap';
 import SetRow from './SetRow';
 import HistoryBottomSheet from './HistoryBottomSheet';
@@ -30,481 +34,339 @@ const WorkoutTimer = React.memo(({ sessActive }) => {
 
   const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
   const s = (elapsed % 60).toString().padStart(2, '0');
-  return <>{m}:{s}</>;
+  return <div style={{ fontSize: 24, fontWeight: 900, fontFamily: fonts.mono, color: "#fff", textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}>{m}:{s}</div>;
 });
 
-export default function TabToday({
-  sessActive, setSessActive, sessPhase, setSessPhase, sessDay, setSessDay, timer, restT, weightLog, setWL,
-  finishSession, PHASES, themeColors: C, playDing, sessionSets = {}, setSessionSets,
-  activePhase, activeDay, setActiveDay, completedW, customWorkouts 
-}) {
+const Confetti = ({ C }) => {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'none', display: 'flex', justifyContent: 'center' }}>
+      {[...Array(50)].map((_, i) => (
+        <motion.div 
+          key={i} initial={{ y: -50, x: 0, scale: Math.random() * 1.5 }} 
+          animate={{ y: window.innerHeight + 50, x: (Math.random() - 0.5) * window.innerWidth, rotate: Math.random() * 360 }} 
+          transition={{ duration: 2 + Math.random() * 2, ease: "easeOut" }} 
+          style={{ position: 'absolute', width: 10, height: 10, background: [C.green, C.blue, C.yellow, C.red][Math.floor(Math.random() * 4)], borderRadius: Math.random() > 0.5 ? '50%' : '2px', boxShadow: "0 0 10px rgba(255,255,255,0.5)" }} 
+        />
+      ))}
+    </div>
+  );
+};
+
+export default function TabToday({ themeColors: C, onNavigate }) {
   const user = useAppStore(state => state.user);
-  
+  const customWorkouts = useAppStore(state => state.customWorkouts) || [];
+  const completedW = useAppStore(state => state.completedW) || {};
+  const setCW = useAppStore(state => state.setCW);
+  const weightLog = useAppStore(state => state.weightLog) || {};
+  const setWL = useAppStore(state => state.setWL);
+  const sessionSets = useAppStore(state => state.sessionSets) || {};
+  const setSessionSets = useAppStore(state => state.setSessionSets);
+  const streak = useAppStore(state => state.streak);
+  const setST = useAppStore(state => state.setST);
+  const setLD = useAppStore(state => state.setLD);
+
+  const customExercises = useAppStore(state => state.customExercises) || [];
+  const combinedDB = useMemo(() => [...(Array.isArray(EXERCISE_DB) ? EXERCISE_DB : []), ...customExercises], [customExercises]);
+
+  // 🚀 YENİ: Ortak stilleri temadan çektik
+  const { glassCard, glassInner } = getCommonStyles(C);
+
   const [activeExIndex, setActiveExIndex] = useState(0);
-  const [modalState, setModalState] = useState({ video: false, summary: false, historyEx: null, swapOpen: false, platesOpen: false });
-  const [dynamicSetCounts, setDynamicSetCounts] = useState({});
-  const [swappedExercises, setSwappedExercises] = useState({});
-  const [visibleRestLeft, setVisibleRestLeft] = useState(0);
-  const [dailyTip, setDailyTip] = useState(WORKOUT_TIPS[0]);
+  const [sessActive, setSessActive] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  
+  const [modalState, setModalState] = useState({
+    historyEx: null, platesOpen: false, swapOpen: false, video: false, summary: false
+  });
+
+  const dailyTip = useMemo(() => WORKOUT_TIPS[Math.floor(Math.random() * WORKOUT_TIPS.length)], []);
+
+  const safeWorkouts = Array.isArray(customWorkouts) ? customWorkouts : [];
+  const todayW = safeWorkouts.length > 0 ? safeWorkouts[0] : null; 
+  const exercises = todayW ? (todayW.exercises || []) : [];
+  const hasWorkout = exercises.length > 0;
+  
+  const isCompleted = completedW[todayW?.id];
 
   useEffect(() => {
-    const savedSessionStr = localStorage.getItem('activeWorkoutSession');
-    if (savedSessionStr) {
-      try {
-        const saved = JSON.parse(savedSessionStr);
-        if (saved.isActive) {
-          setSessActive(true);
-          setSessPhase(saved.phase);
-          setSessDay(saved.day);
-          setActiveExIndex(saved.exIndex || 0);
-          setDynamicSetCounts(saved.setCounts || {});
-          setSwappedExercises(saved.swaps || {});
-          if (saved.sessionSets && setSessionSets) {
-            setSessionSets(saved.sessionSets);
-          }
-        }
-      } catch (e) {
-        console.error("Session restore error", e);
-      }
+    const saved = localStorage.getItem('activeWorkoutSession');
+    if (saved) {
+      const p = JSON.parse(saved);
+      if (p.wid === todayW?.id) setSessActive(true);
+      else localStorage.removeItem('activeWorkoutSession');
     }
-  }, []); 
+  }, [todayW]);
 
-  useEffect(() => {
-    if (sessActive) {
-      const prevSavedStr = localStorage.getItem('activeWorkoutSession');
-      const prevSaved = prevSavedStr ? JSON.parse(prevSavedStr) : {};
-      localStorage.setItem('activeWorkoutSession', JSON.stringify({
-        isActive: true,
-        phase: sessPhase,
-        day: sessDay,
-        exIndex: activeExIndex,
-        setCounts: dynamicSetCounts,
-        swaps: swappedExercises,
-        sessionSets: sessionSets, 
-        startTime: prevSaved.startTime || Date.now() 
-      }));
-    }
-  }, [sessActive, sessPhase, sessDay, activeExIndex, dynamicSetCounts, swappedExercises, sessionSets]);
-
-  const activePlanWorkouts = customWorkouts && customWorkouts.length > 0 ? customWorkouts : PHASES[activePhase]?.workouts;
-  const currentWorkout = activePlanWorkouts?.[activeDay];
-  const sessionExercises = currentWorkout?.exercises || [];
-  
-  const baseExercise = sessionExercises[activeExIndex];
-  const activeExercise = swappedExercises[activeExIndex] || baseExercise;
-  
   const activeExerciseDetails = useMemo(() => {
-    if (!activeExercise) return null;
-    const found = EXERCISE_DB.find(e => e.name === activeExercise.name);
-    return found || { name: activeExercise.name, target: guessTargetMuscle(activeExercise.name), video: "" };
-  }, [activeExercise]);
+    if (!hasWorkout || !exercises[activeExIndex]) return null;
+    const name = exercises[activeExIndex].name;
+    const dbMatch = combinedDB.find(e => e.name.toLowerCase() === name.toLowerCase());
+    return dbMatch || { name, target: guessTargetMuscle(name) };
+  }, [hasWorkout, exercises, activeExIndex, combinedDB]);
 
-  const currentSetCount = dynamicSetCounts[activeExIndex] || parseInt(activeExercise?.sets) || 3;
-  const isLastExercise = activeExIndex === sessionExercises.length - 1;
-
-  useEffect(() => {
-    setDailyTip(WORKOUT_TIPS[Math.floor(Math.random() * WORKOUT_TIPS.length)]);
-  }, [sessActive]);
-
-  useEffect(() => {
-    let interval;
-    if (visibleRestLeft > 0) {
-      interval = setInterval(() => setVisibleRestLeft(prev => prev - 1), 1000);
-    }
-    if (visibleRestLeft > 0 && visibleRestLeft <= 3 && sessActive) {
-      if (playDing) playDing(880, 0.1); 
-      if (navigator.vibrate) navigator.vibrate(50);
-    }
-    if (visibleRestLeft === 0 && sessActive && interval) {
-      if (playDing) playDing(1200, 0.3);
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-    }
-    return () => clearInterval(interval);
-  }, [visibleRestLeft, sessActive, playDing]);
-
-  const muscleVolumes = useMemo(() => {
-    const volumes = {};
-    let maxVol = 0;
-    const userWeight = Number(user?.weight) || 80;
-
-    Object.entries(sessionSets).forEach(([key, set]) => {
-      if (set?.done && set?.t !== 'W') { 
-        const [exIdx] = key.split('-');
-        const exName = sessionExercises[exIdx]?.name;
-        if (exName) {
-          const realTarget = sessionExercises[exIdx]?.target || guessTargetMuscle(exName);
-          const enteredWeight = parseFloat(set.w) || 0;
-          const vol = enteredWeight * (parseInt(set.r) || 0);
-          volumes[realTarget] = (volumes[realTarget] || 0) + vol;
-          if (volumes[realTarget] > maxVol) maxVol = volumes[realTarget];
-        }
-      }
-    });
-
-    return Object.keys(volumes).map(muscle => ({
-      name: muscle, volume: volumes[muscle], intensity: maxVol > 0 ? volumes[muscle] / maxVol : 0 
-    }));
-  }, [sessionSets, sessionExercises, user?.weight]);
-
-  const totalVolume = useMemo(() => muscleVolumes.reduce((acc, m) => acc + m.volume, 0), [muscleVolumes]);
-
-  const currentMaxWeight = useMemo(() => {
-    let max = 0;
-    for (let i = 0; i < currentSetCount; i++) {
-       const w = parseFloat(sessionSets[`${activeExIndex}-${i}`]?.w) || 0;
-       if (w > max) max = w;
-    }
-    return max;
-  }, [sessionSets, activeExIndex, currentSetCount]);
-
-  const handleWorkoutStart = useCallback(() => {
-    if (!sessionExercises.length) return;
-    setSessPhase(activePhase);
-    setSessDay(activeDay);
-    if (navigator.vibrate) navigator.vibrate(200);
+  const handleStart = () => {
     setSessActive(true);
-    timer.toggle();
-  }, [activePhase, activeDay, sessionExercises.length, setSessPhase, setSessDay, setSessActive, timer]);
+    localStorage.setItem('activeWorkoutSession', JSON.stringify({ wid: todayW.id, startTime: Date.now() }));
+    if (navigator.vibrate) navigator.vibrate(50);
+  };
 
-  const handleWorkoutFinish = useCallback(() => {
-    setModalState(prev => ({ ...prev, summary: true })); 
-  }, []);
-
-  const completeAndCloseSession = useCallback(() => {
-    setModalState(p => ({ ...p, summary: false }));
+  const handleFinish = () => {
     setSessActive(false);
-    setVisibleRestLeft(0);
-    localStorage.removeItem('activeWorkoutSession'); 
+    localStorage.removeItem('activeWorkoutSession');
     
-    const savedStr = localStorage.getItem('activeWorkoutSession');
-    const saved = savedStr ? JSON.parse(savedStr) : {};
-    const finalSecs = saved.startTime ? Math.floor((Date.now() - saved.startTime) / 1000) : 0;
-    const finalTimeFormatted = `${Math.floor(finalSecs / 60).toString().padStart(2, '0')}:${(finalSecs % 60).toString().padStart(2, '0')}`;
+    setCW(p => ({ ...p, [todayW.id]: true }));
+    setST(streak + 1);
+    setLD(new Date().toDateString());
     
-    finishSession({ duration: finalTimeFormatted });
-    setSessionSets({}); 
-  }, [finishSession, setSessionSets]);
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    setShowConfetti(true);
+    setModalState(p => ({ ...p, summary: true }));
+    setTimeout(() => setShowConfetti(false), 4000);
+  };
 
-  const handleSetUpdate = useCallback((exIdx, setIdx, field, value) => {
-    setSessionSets(prev => ({ ...prev, [`${exIdx}-${setIdx}`]: { ...(prev[`${exIdx}-${setIdx}`] || { w: "", r: "", rpe: "", t: "N", done: false }), [field]: value } }));
+  const handleSetUpdate = useCallback((exName, setIndex, field, val) => {
+    setSessionSets(prev => {
+      const exSets = [...(prev[exName] || [])];
+      if (!exSets[setIndex]) exSets[setIndex] = { kg: "", reps: "", rpe: "", isDone: false };
+      exSets[setIndex] = { ...exSets[setIndex], [field]: val };
+      return { ...prev, [exName]: exSets };
+    });
   }, [setSessionSets]);
 
-  const handleSetToggle = useCallback((exIdx, setIdx, restTime, exName) => {
-    const key = `${exIdx}-${setIdx}`;
-    const currentSet = sessionSets[key] || { w: "", r: "", rpe: "", t: "N", done: false };
-    const isNowDone = !currentSet.done;
-    
-    handleSetUpdate(exIdx, setIdx, 'done', isNowDone);
-    
-    if (isNowDone) {
-      if (playDing) playDing(880, 0.1);
-      if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-      const isWarmup = currentSet.t === 'W';
-      const rTime = isWarmup ? 45 : (parseInt(restTime) || 90);
+  const toggleSetDone = useCallback((exName, setIndex) => {
+    setSessionSets(prev => {
+      const exSets = [...(prev[exName] || [])];
+      if (!exSets[setIndex]) return prev;
       
-      restT.start(rTime, exName);
-      setVisibleRestLeft(rTime);
+      const isNowDone = !exSets[setIndex].isDone;
+      exSets[setIndex] = { ...exSets[setIndex], isDone: isNowDone };
       
-      const wNum = parseFloat(currentSet.w) || 0;
-      const rNum = parseInt(currentSet.r) || 0;
-      
-      if (wNum > 0 && rNum > 0 && !isWarmup) {
-        setWL(prev => {
-          const history = Array.isArray(prev[exName]) ? prev[exName] : (prev[exName] ? [prev[exName]] : []);
-          const todayStr = new Date().toLocaleDateString();
-          const otherDays = history.filter(h => h.date !== todayStr);
-          const todayLog = history.find(h => h.date === todayStr);
-          
-          const bestWeight = Math.max(wNum, todayLog ? parseFloat(todayLog.weight) : 0);
-          const bestReps = bestWeight === wNum ? rNum : (todayLog ? todayLog.reps : 0); 
-          
-          return { ...prev, [exName]: [...otherDays, { weight: bestWeight, reps: bestReps, date: todayStr }] };
-        });
+      if (isNowDone) {
+        if (navigator.vibrate) navigator.vibrate(20);
+        const { kg, reps, rpe } = exSets[setIndex];
+        if (kg && reps) {
+          const dateStr = new Date().toLocaleDateString('tr-TR');
+          setWL(old => {
+            const exHistory = old[exName] || [];
+            return { ...old, [exName]: [...exHistory, { date: dateStr, weight: kg, reps, rpe: rpe || "8" }] };
+          });
+        }
       }
-    } else {
-      setVisibleRestLeft(0);
-    }
-  }, [sessionSets, handleSetUpdate, playDing, restT, setWL]);
+      return { ...prev, [exName]: exSets };
+    });
+  }, [setSessionSets, setWL]);
 
-  const addSet = () => { setDynamicSetCounts(prev => ({ ...prev, [activeExIndex]: currentSetCount + 1 })); if (navigator.vibrate) navigator.vibrate(20); };
-  const removeSet = () => { if (currentSetCount > 1) { setDynamicSetCounts(prev => ({ ...prev, [activeExIndex]: currentSetCount - 1 })); if (navigator.vibrate) navigator.vibrate(20); } };
-  
-  const handleSwap = (newExName) => { 
-    setSwappedExercises(prev => ({ ...prev, [activeExIndex]: { ...activeExercise, name: newExName } })); 
-    setModalState(p => ({ ...p, swapOpen: false })); 
-    if (navigator.vibrate) navigator.vibrate(50); 
+  const handleSwap = (newEx) => {
+    const originalEx = exercises[activeExIndex];
+    alert(`${originalEx.name} yerine ${newEx.name} seçildi! (Demoda görsel olarak kalır, DB'ye işlenmesi Builder'dan yapılır)`);
+    setModalState(p => ({ ...p, swapOpen: false }));
   };
 
   const swapAlternatives = useMemo(() => {
-    const targetGroup = activeExerciseDetails?.target || guessTargetMuscle(activeExercise?.name);
-    return EXERCISE_DB.filter(e => e.target === targetGroup && e.name !== activeExercise?.name);
-  }, [activeExerciseDetails, activeExercise]);
+    if (!activeExerciseDetails) return [];
+    return combinedDB.filter(e => e.target === activeExerciseDetails.target && e.name !== activeExerciseDetails.name).slice(0, 5);
+  }, [activeExerciseDetails, combinedDB]);
 
-  const workoutSummaryData = useMemo(() => {
-    if (!sessionExercises) return [];
-    return sessionExercises.map((ex, exIdx) => {
-      let maxW = 0; let setsDone = 0;
-      Object.keys(sessionSets).forEach(key => {
-        if (key.startsWith(`${exIdx}-`) && sessionSets[key]?.done) {
-          const w = parseFloat(sessionSets[key].w) || 0;
-          if (w > maxW) maxW = w;
-          setsDone++;
-        }
+  const currentMaxWeight = useMemo(() => {
+    if (!activeExerciseDetails) return 0;
+    const history = weightLog[activeExerciseDetails.name] || [];
+    let max = 0;
+    history.forEach(log => { const w = parseFloat(log.weight); if (w > max) max = w; });
+    return max;
+  }, [activeExerciseDetails, weightLog]);
+
+  const totalVolume = useMemo(() => {
+    let vol = 0;
+    Object.values(sessionSets).forEach(sets => {
+      sets.forEach(s => {
+        if (s.isDone && s.kg && s.reps) vol += parseFloat(s.kg) * parseInt(s.reps);
       });
-      return { name: ex.name, maxWeight: maxW, sets: setsDone };
-    }).filter(s => s.sets > 0); 
-  }, [sessionSets, sessionExercises]);
+    });
+    return vol;
+  }, [sessionSets]);
 
-  const glassCardStyle = getGlassCardStyle(C);
+  const progressPct = useMemo(() => {
+    if (!hasWorkout || exercises.length === 0) return 0;
+    let totalSets = 0; let doneSets = 0;
+    exercises.forEach(ex => {
+      const req = parseInt(ex.sets) || 0;
+      totalSets += req;
+      const doneForEx = (sessionSets[ex.name] || []).filter(s => s.isDone).length;
+      doneSets += Math.min(req, doneForEx);
+    });
+    return totalSets === 0 ? 0 : Math.round((doneSets / totalSets) * 100);
+  }, [exercises, sessionSets, hasWorkout]);
 
-  const RenderExerciseList = useMemo(() => {
-    if (sessionExercises.length === 0) {
-      return (
-        <div style={{ ...getGlassInnerStyle(C), padding: 40, textAlign: "center" }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>🛋️</div>
-          <div style={{ fontSize: 16, color: C.text, fontWeight: 800, fontFamily: fonts.header }}>Bugün Dinlenme Günü</div>
-          <div style={{ fontSize: 13, color: C.sub, marginTop: 8 }}>Kasların toparlanması için dinlenmek, antrenman yapmak kadar önemlidir.</div>
-        </div>
-      );
-    }
+  if (!user) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {sessionExercises.map((ex, idx) => {
-          const targetMuscle = ex.target || guessTargetMuscle(ex.name);
-          return (
-            <motion.div 
-              key={idx} initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.10, type: "spring", stiffness: 100, damping: 15 }} whileHover={{ scale: 1.02 }}
-              style={{ 
-                position: "relative", overflow: "hidden", padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: `linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0.2) 100%)`, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-                borderRadius: 20, border: `1px solid rgba(255,255,255,0.05)`, boxShadow: `0 4px 15px rgba(0,0,0,0.1)`,
-                transform: "translateZ(0)", willChange: "transform"
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, position: "relative", zIndex: 1 }}>
-                 <div style={{ width: 44, height: 44, borderRadius: '14px', background: `rgba(255,255,255,0.05)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: C.text, border: `1px solid rgba(255,255,255,0.08)` }}>
-                   {idx + 1}
-                 </div>
-                 <div>
-                    <div style={{ fontWeight: 800, fontSize: 15, color: C.text, fontFamily: fonts.header, letterSpacing: 0.5 }}>{ex.name}</div>
-                    <div style={{ fontSize: 12, color: C.mute, marginTop: 4, fontFamily: fonts.mono, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span>{ex.sets} Set</span><span>×</span><span>{ex.reps}</span>
-                    </div>
-                 </div>
-              </div>
-              <div style={{ position: "relative", zIndex: 1, fontSize: 10, color: C.mute, fontWeight: 800, background: 'rgba(0,0,0,0.4)', padding: '6px 12px', borderRadius: 10, letterSpacing: 1, border: `1px solid rgba(255,255,255,0.05)` }}>
-                {targetMuscle.toUpperCase()}
-              </div>
-            </motion.div>
-          );
-        })}
+      <div style={{ padding: 40, textAlign: 'center', color: C.text, fontFamily: fonts.body }}>
+        <h2 style={{ fontFamily: fonts.header, fontSize: 24 }}>Hoş Geldin!</h2>
+        <p style={{ color: C.sub }}>Devam etmek için profilini oluşturmalısın.</p>
       </div>
     );
-  }, [sessionExercises, C]);
+  }
 
   return (
-    <div style={{ minHeight: '100vh', paddingBottom: 100, color: C.text, position: "relative" }}>
-      
-      <style>
-        {`
-          .hide-arrows::-webkit-outer-spin-button, .hide-arrows::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-          .hide-arrows { -moz-appearance: textfield; }
-          .workout-scroll::-webkit-scrollbar { display: none; }
-        `}
-      </style>
+    <div style={{ paddingBottom: 100, fontFamily: fonts.body, color: C.text }}>
+      {showConfetti && <Confetti C={C} />}
 
-      {/* 🔥 GPU DOSTU ARKA PLAN: Sadece CSS radial-gradient, filter: blur tamamen kaldırıldı! */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-        <motion.div 
-          animate={{ opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} 
-          style={{ position: 'absolute', top: '-20%', left: '-20%', width: '80vw', height: '80vw', background: `radial-gradient(circle, ${C.blue}30 0%, transparent 60%)`, transform: "translateZ(0)" }} 
-        />
-        <motion.div 
-          animate={{ opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }} 
-          style={{ position: 'absolute', bottom: '-10%', right: '-20%', width: '70vw', height: '70vw', background: `radial-gradient(circle, ${C.green}20 0%, transparent 60%)`, transform: "translateZ(0)" }} 
-        />
+      {/* HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", letterSpacing: "-0.5px", color: C.text }}>
+            Hoş geldin, <span style={{ color: C.green }}>{user?.name || "Şampiyon"}</span>
+          </h1>
+          <div style={{ fontSize: 13, color: C.sub, fontWeight: 600, marginTop: 4 }}>
+            {new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
+        </div>
+        <div style={{ width: 56, height: 56, borderRadius: '50%', background: `linear-gradient(135deg, ${C.card}, ${C.bg})`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', border: `1px solid ${C.border}60`, boxShadow: `0 4px 15px rgba(0,0,0,0.1)` }}>
+          <svg width="48" height="48" viewBox="0 0 36 36" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
+            <circle cx="18" cy="18" r="16" fill="none" stroke={`${C.green}20`} strokeWidth="4" />
+            <motion.circle cx="18" cy="18" r="16" fill="none" stroke={C.green} strokeWidth="4" strokeDasharray="100.53" initial={{ strokeDashoffset: 100.53 }} animate={{ strokeDashoffset: 100.53 - (100.53 * progressPct) / 100 }} transition={{ duration: 1 }} strokeLinecap="round" />
+          </svg>
+          <div style={{ fontSize: 14, fontWeight: 900, fontFamily: fonts.mono, color: C.text }}>%{progressPct}</div>
+        </div>
       </div>
 
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <AnimatePresence>
-          {visibleRestLeft > 0 && sessActive && (
-            <motion.div 
-              initial={{ opacity: 0, backdropFilter: "blur(0px)" }} animate={{ opacity: 1, backdropFilter: "blur(12px)" }} exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
-              style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(5, 8, 12, 0.8)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", WebkitBackdropFilter: "blur(12px)", transform: "translateZ(0)" }}
-            >
-              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", position: "relative", zIndex: 1, transform: "translateZ(0)" }}>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 32 }}>
-                  <div style={{ width: 24, height: 2, background: visibleRestLeft <= 10 ? C.red : C.mute, marginBottom: 16, borderRadius: 2 }} />
-                  <span style={{ fontSize: 11, color: visibleRestLeft <= 10 ? C.red : C.sub, fontWeight: 700, letterSpacing: 4, textTransform: "uppercase" }}>
-                    {visibleRestLeft <= 10 ? "Sete Hazırlan" : "Toparlanma"}
-                  </span>
-                </div>
-                <div style={{ fontSize: 120, fontWeight: 200, fontFamily: fonts.mono, color: visibleRestLeft <= 10 ? C.red : C.text, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: -6 }}>
-                  {Math.floor(visibleRestLeft / 60).toString().padStart(2, '0')}:{(visibleRestLeft % 60).toString().padStart(2, '0')}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 40, marginTop: 48 }}>
-                  <button onClick={() => setVisibleRestLeft(v => Math.max(0, v - 10))} style={{ background: "transparent", border: "none", color: C.mute, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 10 }}>
-                    <span style={{ fontSize: 20 }}>⏪</span><span style={{ fontSize: 11, fontWeight: 600 }}>-10sn</span>
-                  </button>
-                  <button onClick={() => setVisibleRestLeft(0)} style={{ background: C.text, color: C.bg, border: "none", width: 72, height: 72, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                    <span style={{ fontSize: 22, transform: "translateX(2px)" }}>▶</span>
-                  </button>
-                  <button onClick={() => setVisibleRestLeft(v => v + 30)} style={{ background: "transparent", border: "none", color: C.mute, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 10 }}>
-                    <span style={{ fontSize: 20 }}>⏩</span><span style={{ fontSize: 11, fontWeight: 600 }}>+30sn</span>
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* 🤖 YAPAY ZEKA KOÇU BURAYA EKLENDİ */}
+      <AICoach C={C} nutDay={new Date().getDay() === 0 ? 6 : new Date().getDay() - 1} />
 
-        {!sessActive ? (
-          <div style={{ maxWidth: 600, margin: '0 auto' }}>
-            {activePlanWorkouts && activePlanWorkouts.length > 0 && (
-              <div style={{ marginBottom: 24, position: "relative" }}>
-                <div className="workout-scroll" style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 16, alignItems: "stretch", WebkitOverflowScrolling: "touch" }}>
-                  {activePlanWorkouts.map((w, i) => {
-                    const isActive = activeDay === i;
-                    const shortName = w.label ? w.label.split(' - ').pop() : `Program ${i + 1}`;
-                    const exerciseCount = w.exercises ? w.exercises.length : 0;
-                    const isRestDay = exerciseCount === 0;
-
-                    return (
-                      <motion.button 
-                        key={i} onClick={() => setActiveDay && setActiveDay(i)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
-                        style={{ 
-                          flexShrink: 0, width: 130, padding: "16px", borderRadius: 24, border: `1px solid ${isActive ? C.green : `rgba(255,255,255,0.05)`}`, 
-                          background: isActive ? `linear-gradient(145deg, ${C.green}20, transparent)` : "rgba(0,0,0,0.2)", 
-                          backdropFilter: "blur(12px)", color: C.text, cursor: "pointer", display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12, position: "relative", overflow: "hidden",
-                          transform: "translateZ(0)"
-                        }}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center", position: "relative", zIndex: 1 }}>
-                          <div style={{ width: 32, height: 32, borderRadius: 10, background: isActive ? C.green : "rgba(255,255,255,0.05)", color: isActive ? C.bg : C.text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, fontFamily: fonts.mono }}>{i + 1}</div>
-                          {isActive && <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.green, boxShadow: `0 0 10px ${C.green}` }} />}
-                        </div>
-                        <div style={{ textAlign: "left", width: "100%", position: "relative", zIndex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: isActive ? C.text : C.sub, fontFamily: fonts.header, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{shortName}</div>
-                          <div style={{ fontSize: 10, color: isActive ? C.green : C.mute, fontWeight: 700, marginTop: 4 }}>{isRestDay ? "DİNLENME" : `${exerciseCount} HAREKET`}</div>
-                        </div>
-                      </motion.button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <div style={{ ...glassCardStyle, padding: "24px", background: `linear-gradient(135deg, ${C.card}E6 0%, rgba(0,0,0,0.4) 100%)`, border: `1px solid ${C.border}50`, display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 0 }}>
-                <div>
-                  <div style={{ fontSize: 11, color: C.sub, fontWeight: 800, letterSpacing: 2, marginBottom: 6, fontFamily: fonts.header }}>SIRADAKİ HEDEF</div>
-                  <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: C.text, fontFamily: fonts.header, fontStyle: "italic", letterSpacing: "-0.5px" }}>{currentWorkout?.label || "Dinlenme Günü"}</h2>
-                </div>
-                <div style={{ textAlign: "right", background: "rgba(0,0,0,0.3)", padding: "10px 16px", borderRadius: 16, border: `1px solid ${C.border}40` }}>
-                  <div style={{ fontSize: 28, fontWeight: 900, color: C.text, fontFamily: fonts.mono, lineHeight: 1 }}>{sessionExercises.length}</div>
-                  <div style={{ fontSize: 9, color: C.mute, fontWeight: 800, letterSpacing: 1, marginTop: 2 }}>HAREKET</div>
-                </div>
-              </div>
-              {RenderExerciseList}
-            </div>
-
-            {sessionExercises.length > 0 && (
-              <div style={{ position: "fixed", bottom: 100, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 100, padding: "0 20px", transform: "translateZ(0)" }}>
-                <motion.button 
-                  onClick={handleWorkoutStart} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                  style={{ width: "100%", maxWidth: 400, background: `linear-gradient(135deg, ${C.green}, #22c55e)`, border: "none", borderRadius: 100, color: "#000", fontWeight: 900, padding: "20px", cursor: "pointer", fontSize: 16, letterSpacing: 1, fontFamily: fonts.header, boxShadow: `0 8px 20px rgba(0,0,0,0.2)`, display: "flex", justifyContent: "center", alignItems: "center", gap: 10 }}
-                >
-                  <span>ANTRENMANA BAŞLA</span> <span style={{ fontSize: 20 }}>⚡</span>
-                </motion.button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div style={{ maxWidth: 600, margin: '0 auto', transition: "padding 0.3s" }}>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, padding: "0 8px" }}>
-               <div>
-                 <div style={{ fontSize: 40, fontWeight: 300, letterSpacing: -2, fontFamily: fonts.mono }}>
-                   <WorkoutTimer sessActive={sessActive} />
-                 </div>
-                 <span style={{ fontSize: 10, color: C.sub, fontWeight: 800, fontFamily: fonts.header, letterSpacing: 1 }}>GEÇEN SÜRE</span>
-               </div>
-               
-               <motion.button 
-                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleWorkoutFinish}
-                 style={{ background: `linear-gradient(145deg, ${C.red}20, transparent)`, border: `1px solid ${C.red}60`, color: C.red, width: 44, height: 44, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transform: "translateZ(0)" }}
-               >
-                 <div style={{ width: 14, height: 14, background: C.red, borderRadius: 3 }} />
-               </motion.button>
-               
-               <div style={{ textAlign: 'right' }}>
-                 <div style={{ fontSize: 24, fontWeight: 900, color: C.yellow, fontFamily: fonts.mono }}>{totalVolume.toLocaleString()} <span style={{fontSize: 14, color: C.text}}>kg</span></div>
-                 <span style={{ fontSize: 10, color: C.sub, fontWeight: 800, fontFamily: fonts.header, letterSpacing: 1 }}>HACİM (TONAJ)</span>
-               </div>
-            </div>
-
-            <AnimatePresence mode="wait">
-              <motion.div key={activeExIndex} initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} transition={{ duration: 0.2 }} style={glassCardStyle}>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div>
-                      <h2 style={{ fontSize: 20, fontWeight: 900, margin: "0 0 4px 0", fontStyle: "italic", lineHeight: 1.2, fontFamily: fonts.header }}>{activeExercise.name}</h2>
-                      <span style={{ fontSize: 11, color: C.sub, fontWeight: 600 }}>Hedef: {activeExerciseDetails?.target || "Egzersiz"}</span>
-                    </div>
-                    <button onClick={() => setModalState(p => ({ ...p, swapOpen: true }))} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}60`, color: C.text, width: 36, height: 36, borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>🔄</button>
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: 6, flexWrap: "wrap" }}>
-                    <button onClick={() => setModalState(p => ({ ...p, platesOpen: true }))} style={{ background: `linear-gradient(145deg, rgba(255,255,255,0.05), rgba(0,0,0,0.2))`, border: `1px solid ${C.border}60`, color: C.yellow, padding: "8px 12px", borderRadius: 12, fontWeight: 800, cursor: "pointer", fontSize: 11, fontFamily: fonts.header }}>🏋️ Plaka</button>
-                    <button onClick={() => setModalState(p => ({ ...p, historyEx: activeExercise.name }))} style={{ background: `linear-gradient(145deg, rgba(255,255,255,0.05), rgba(0,0,0,0.2))`, border: `1px solid ${C.border}60`, color: C.green, padding: "8px 12px", borderRadius: 12, fontWeight: 800, cursor: "pointer", fontSize: 11, fontFamily: fonts.header }}>📊 Geçmiş</button>
-                    <button onClick={() => setModalState(p => ({ ...p, video: true }))} style={{ background: `linear-gradient(145deg, rgba(255,255,255,0.05), rgba(0,0,0,0.2))`, border: `1px solid ${C.border}60`, color: C.blue, padding: "8px 12px", borderRadius: 12, fontWeight: 800, cursor: "pointer", fontSize: 11, fontFamily: fonts.header }}>🎥 Rehber</button>
-                  </div>
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {[...Array(currentSetCount)].map((_, si) => {
-                    const exName = activeExercise.name;
-                    const exHistory = weightLog[exName];
-                    const lastLog = Array.isArray(exHistory) ? exHistory[exHistory.length - 1] : exHistory;
-                    return (
-                      <SetRow 
-                        key={si} setIndex={si} setData={sessionSets[`${activeExIndex}-${si}`]} lastLog={lastLog} 
-                        themeColors={C} targetRepsStr={activeExercise.reps}
-                        onToggle={() => handleSetToggle(activeExIndex, si, activeExercise.rest, exName)}
-                        onUpdate={(field, value) => handleSetUpdate(activeExIndex, si, field, value)}
-                      />
-                    )
-                  })}
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 16 }}>
-                   <button onClick={removeSet} disabled={currentSetCount <= 1} style={{ background: "transparent", border: "none", color: C.mute, fontSize: 12, fontWeight: 800, cursor: currentSetCount <= 1 ? "default" : "pointer", opacity: currentSetCount <= 1 ? 0.5 : 1 }}>- Set Sil</button>
-                   <button onClick={addSet} style={{ background: "transparent", border: `1px dashed ${C.border}60`, color: C.text, padding: "8px 16px", borderRadius: 12, fontWeight: 800, fontSize: 12, cursor: "pointer" }}>+ Yeni Set Ekle</button>
-                </div>
-
-              </motion.div>
-            </AnimatePresence>
-
-            <div style={{ display: "flex", gap: 12, marginTop: 24, transform: "translateZ(0)" }}>
-              {activeExIndex > 0 && (
-                <button onClick={() => setActiveExIndex(i => i - 1)} style={{ flex: 1, background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}60`, padding: 20, borderRadius: 20, fontWeight: 900, color: C.text, cursor: "pointer", fontSize: 14, fontFamily: fonts.header }}>← ÖNCEKİ</button>
-              )}
-              <button onClick={() => isLastExercise ? handleWorkoutFinish() : setActiveExIndex(i => i + 1)} style={{ flex: activeExIndex > 0 ? 2 : 1, background: isLastExercise ? `linear-gradient(135deg, ${C.green}, #22c55e)` : C.text, border: 'none', padding: 20, borderRadius: 20, fontWeight: 900, color: isLastExercise ? '#000' : C.bg, cursor: "pointer", fontSize: 15, fontFamily: fonts.header }}>
-                {isLastExercise ? "ANTRENMANI BİTİR 🏆" : "SONRAKİ ➔"}
-              </button>
-            </div>
-          </div>
+      {/* BUGÜNKÜ ANTRENMAN */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, fontFamily: fonts.header, color: C.text, letterSpacing: 0.5 }}>BUGÜNKÜ ANTRENMAN</h2>
+        {hasWorkout && (
+          <button onClick={() => onNavigate(1)} style={{ background: "transparent", border: "none", color: C.blue, fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: fonts.body }}>
+            Düzenle ➔
+          </button>
         )}
+      </div>
 
-        <AnimatePresence>
-          {modalState.historyEx && <HistoryBottomSheet exName={modalState.historyEx} history={weightLog[modalState.historyEx]} onClose={() => setModalState(p => ({ ...p, historyEx: null }))} C={C} />}
-          {modalState.platesOpen && <PlatesModal C={C} currentMaxWeight={currentMaxWeight} onClose={() => setModalState(p => ({ ...p, platesOpen: false }))} />}
-          {modalState.swapOpen && activeExerciseDetails && <SwapModal C={C} activeExerciseDetails={activeExerciseDetails} swapAlternatives={swapAlternatives} handleSwap={handleSwap} onClose={() => setModalState(p => ({ ...p, swapOpen: false }))} />}
-          {modalState.video && activeExerciseDetails && <VideoModal C={C} activeExerciseDetails={activeExerciseDetails} onClose={() => setModalState(p => ({ ...p, video: false }))} />}
-          {modalState.summary && <SummaryModal C={C} stats={{ volume: totalVolume }} summaryData={workoutSummaryData} onClose={() => setModalState(p => ({ ...p, summary: false }))} onComplete={completeAndCloseSession} />}
-        </AnimatePresence>
+      {!hasWorkout ? (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ ...glassCard, textAlign: 'center', padding: "40px 20px" }}>
+          <div style={{ fontSize: 40, marginBottom: 16, opacity: 0.8 }}>🛋️</div>
+          <h3 style={{ margin: "0 0 8px 0", fontFamily: fonts.header, fontSize: 18, color: C.text }}>Dinlenme Günü</h3>
+          <p style={{ color: C.sub, fontSize: 13, lineHeight: 1.5, margin: "0 0 24px 0" }}>Bugün için planlanmış bir antrenmanın yok. Kaslarının toparlanmasına izin ver veya yeni bir program çiz.</p>
+          <button onClick={() => onNavigate(1)} style={{ background: C.text, color: C.bg, border: "none", padding: "14px 24px", borderRadius: 14, fontWeight: 900, cursor: "pointer", fontFamily: fonts.header, fontSize: 14 }}>Program Çiz</button>
+        </motion.div>
+      ) : isCompleted ? (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ ...glassCard, textAlign: 'center', padding: "40px 20px", border: `1px solid ${C.green}40`, background: `linear-gradient(145deg, ${C.card}, ${C.green}10)` }}>
+           <div style={{ fontSize: 48, marginBottom: 16, filter: `drop-shadow(0 0 20px ${C.green})` }}>🏆</div>
+           <h3 style={{ margin: "0 0 8px 0", fontFamily: fonts.header, fontSize: 24, fontWeight: 900, fontStyle: "italic", color: C.green }}>GÖREV TAMAMLANDI</h3>
+           <p style={{ color: C.text, fontSize: 14, fontWeight: 600 }}>Bugünkü antrenmanını başarıyla bitirdin. Yarın görüşmek üzere!</p>
+           <button onClick={() => setCW(p => ({ ...p, [todayW.id]: false }))} style={{ marginTop: 24, background: "transparent", border: `1px solid ${C.border}`, color: C.sub, padding: "10px 20px", borderRadius: 12, fontWeight: 800, cursor: "pointer" }}>Geri Al</button>
+        </motion.div>
+      ) : !sessActive ? (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ ...glassCard, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: -50, right: -50, width: 150, height: 150, background: `radial-gradient(circle, ${C.green}30 0%, transparent 70%)` }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
+            <div>
+              <div style={{ fontSize: 11, color: C.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 4 }}>SISTEM: {todayW.day}</div>
+              <div style={{ fontSize: 22, fontWeight: 900, fontFamily: fonts.header, color: C.text }}>{todayW.label}</div>
+            </div>
+            <div style={{ fontSize: 12, color: C.sub, fontWeight: 800 }}>{exercises.length} Hareket</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 16, scrollbarWidth: "none" }}>
+            {exercises.map((ex, i) => (
+              <div key={i} style={{ flexShrink: 0, background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}60`, padding: "12px 16px", borderRadius: 16, width: 140 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: C.text, marginBottom: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ex.name}</div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.sub, fontWeight: 700, fontFamily: fonts.mono }}>
+                  <span>{ex.sets}x{ex.reps}</span><span>{guessTargetMuscle(ex.name)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleStart} style={{ width: '100%', padding: "18px", borderRadius: 16, background: `linear-gradient(135deg, ${C.green}, #22c55e)`, color: "#000", border: "none", fontWeight: 900, fontSize: 16, cursor: "pointer", fontFamily: fonts.header, boxShadow: `0 10px 25px ${C.green}40`, display: "flex", justifyContent: "center", alignItems: "center", gap: 10 }}>
+            🚀 ANTRENMANA BAŞLA
+          </motion.button>
+        </motion.div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          
+          <div style={{ position: "sticky", top: 10, zIndex: 100, background: `linear-gradient(145deg, ${C.card}E6, ${C.bg}E6)`, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", padding: "16px 20px", borderRadius: 24, border: `1px solid ${C.blue}40`, boxShadow: `0 10px 30px rgba(0,0,0,0.5)`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+               <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 2 }} style={{ width: 12, height: 12, borderRadius: "50%", background: C.red, boxShadow: `0 0 10px ${C.red}` }} />
+               <div>
+                 <div style={{ fontSize: 10, color: C.sub, fontWeight: 800, letterSpacing: 1 }}>GEÇEN SÜRE</div>
+                 <WorkoutTimer sessActive={sessActive} />
+               </div>
+             </div>
+             <button onClick={() => { if(window.confirm("Antrenmanı iptal etmek istediğine emin misin?")) { setSessActive(false); localStorage.removeItem('activeWorkoutSession'); } }} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.text, padding: "10px 16px", borderRadius: 12, fontWeight: 800, cursor: "pointer", fontSize: 12 }}>İptal Et</button>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 10 }}>
+            {exercises.map((ex, idx) => {
+               const isActive = activeExIndex === idx;
+               const req = parseInt(ex.sets) || 0;
+               const done = (sessionSets[ex.name] || []).filter(s => s.isDone).length;
+               const isExCompleted = done >= req;
+               return (
+                 <button key={idx} onClick={() => setActiveExIndex(idx)} style={{ flexShrink: 0, padding: "12px 20px", borderRadius: 16, border: `1px solid ${isActive ? C.blue : (isExCompleted ? C.green : `${C.border}40`)}`, background: isActive ? `${C.blue}20` : (isExCompleted ? `${C.green}10` : "rgba(0,0,0,0.3)"), color: isActive ? C.text : C.mute, fontWeight: 800, cursor: "pointer", display: "flex", flexDirection: "column", gap: 4, transition: "0.2s" }}>
+                    <span style={{ fontSize: 13 }}>{idx+1}. {ex.name.split(" ")[0]}</span>
+                    <span style={{ fontSize: 10, fontFamily: fonts.mono, color: isExCompleted ? C.green : C.sub }}>{done}/{req} SET</span>
+                 </button>
+               );
+            })}
+          </div>
+
+          <div style={{ ...glassCard, padding: 0 }}>
+            <div style={{ padding: "20px 24px", borderBottom: `1px solid ${C.border}60`, background: `linear-gradient(135deg, ${C.card}, rgba(0,0,0,0.2))` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                 <div>
+                   <h3 style={{ margin: "0 0 4px 0", fontSize: 24, fontWeight: 900, fontFamily: fonts.header, color: C.text }}>{activeExerciseDetails.name}</h3>
+                   <div style={{ fontSize: 12, color: C.sub, fontWeight: 800, letterSpacing: 1 }}>{activeExerciseDetails.target}</div>
+                 </div>
+                 <button onClick={() => setModalState(p => ({ ...p, swapOpen: true }))} style={{ background: "rgba(255,255,255,0.1)", border: `1px solid ${C.border}`, color: C.text, padding: "8px 12px", borderRadius: 10, fontSize: 11, fontWeight: 800, cursor: "pointer" }}>🔄 Değiştir</button>
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <button onClick={() => setModalState(p => ({ ...p, video: true }))} style={{ flex: 1, background: `${C.blue}15`, color: C.blue, border: "none", padding: "12px", borderRadius: 12, fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><span>📺</span> Nasıl Yapılır</button>
+                <button onClick={() => setModalState(p => ({ ...p, historyEx: activeExerciseDetails.name }))} style={{ flex: 1, background: "rgba(255,255,255,0.05)", color: C.text, border: `1px solid ${C.border}`, padding: "12px", borderRadius: 12, fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><span>📊</span> Geçmiş Verim</button>
+              </div>
+            </div>
+
+            <div style={{ padding: "20px 24px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "30px 1fr 1fr 1fr 40px", gap: 8, marginBottom: 12, padding: "0 10px" }}>
+                <div style={{ fontSize: 10, color: C.mute, fontWeight: 800, textAlign: "center" }}>SET</div>
+                <div style={{ fontSize: 10, color: C.mute, fontWeight: 800, textAlign: "center" }}>KG</div>
+                <div style={{ fontSize: 10, color: C.mute, fontWeight: 800, textAlign: "center" }}>TEKRAR</div>
+                <div style={{ fontSize: 10, color: C.mute, fontWeight: 800, textAlign: "center" }}>RPE</div>
+                <div style={{ fontSize: 10, color: C.mute, fontWeight: 800, textAlign: "center" }}>ONAY</div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {Array.from({ length: parseInt(exercises[activeExIndex]?.sets) || 0 }).map((_, i) => {
+                  const stateSets = sessionSets[activeExerciseDetails.name] || [];
+                  const currentSet = stateSets[i] || { kg: "", reps: "", rpe: "", isDone: false };
+                  return <SetRow key={`${activeExerciseDetails.name}-${i}`} index={i} data={currentSet} onUpdate={(field, val) => handleSetUpdate(activeExerciseDetails.name, i, field, val)} onToggleDone={() => toggleSetDone(activeExerciseDetails.name, i)} C={C} />;
+                })}
+              </div>
+            </div>
+
+            <div style={{ padding: 24, borderTop: `1px solid ${C.border}60`, background: "rgba(0,0,0,0.2)", display: "flex", gap: 12 }}>
+              <button onClick={() => setModalState(p => ({ ...p, platesOpen: true }))} style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, padding: 20, borderRadius: 20, fontWeight: 900, color: C.text, cursor: "pointer", fontSize: 15, fontFamily: fonts.header, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><span>🧮</span> PLAKA</button>
+              
+              {activeExIndex < exercises.length - 1 ? (
+                <button onClick={() => setActiveExIndex(i => i+1)} style={{ flex: 2, background: C.text, border: 'none', padding: 20, borderRadius: 20, fontWeight: 900, color: C.bg, cursor: "pointer", fontSize: 15, fontFamily: fonts.header }}>SONRAKİ ➔</button>
+              ) : (
+                <button onClick={handleFinish} style={{ flex: 2, background: `linear-gradient(135deg, ${C.green}, #22c55e)`, border: 'none', padding: 20, borderRadius: 20, fontWeight: 900, color: '#000', cursor: "pointer", fontSize: 15, fontFamily: fonts.header, boxShadow: `0 10px 25px ${C.green}40` }}>ANTRENMANI BİTİR 🏆</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {modalState.historyEx && <HistoryBottomSheet exName={modalState.historyEx} history={weightLog[modalState.historyEx]} onClose={() => setModalState(p => ({ ...p, historyEx: null }))} C={C} />}
+        {modalState.platesOpen && <PlatesModal C={C} currentMaxWeight={currentMaxWeight} onClose={() => setModalState(p => ({ ...p, platesOpen: false }))} />}
+        {modalState.swapOpen && activeExerciseDetails && <SwapModal C={C} activeExerciseDetails={activeExerciseDetails} swapAlternatives={swapAlternatives} handleSwap={handleSwap} onClose={() => setModalState(p => ({ ...p, swapOpen: false }))} />}
+        {modalState.video && activeExerciseDetails && <VideoModal C={C} activeExerciseDetails={activeExerciseDetails} onClose={() => setModalState(p => ({ ...p, video: false }))} />}
+        {modalState.summary && <SummaryModal C={C} stats={{ volume: totalVolume }} summary={{ title: "Tebrikler!", desc: "Harika bir iş çıkardın." }} onClose={() => setModalState(p => ({ ...p, summary: false }))} />}
+      </AnimatePresence>
+
+      <div style={{ marginTop: 32 }}>
+        <h3 style={{ fontSize: 14, color: C.sub, fontWeight: 800, marginBottom: 16, fontFamily: fonts.header }}>GÜNÜN İPUCU</h3>
+        <div style={{ ...glassInner, background: "rgba(0,0,0,0.2)", padding: 20, borderLeft: `4px solid ${C.blue}` }}>
+          <div style={{ fontSize: 13, color: C.text, lineHeight: 1.6, fontStyle: "italic", fontWeight: 600 }}>"{dailyTip}"</div>
+        </div>
       </div>
     </div>
   );
