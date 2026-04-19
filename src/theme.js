@@ -1,176 +1,85 @@
-// ============================================================================
-// 🎨 FITNESS PROTOCOL — DESIGN SYSTEM v3.0 (Premium)
-// Apple Fitness / Nike Training Club tier
-// ============================================================================
-
 export const THEMES = {
+  // 1. SAF SİYAH (AMOLED Ekranlar için kusursuz, pilden tasarruf sağlar)
   midnight: {
-    id: 'midnight',
     bg: "#000000",
-    card: "#0d0d0f",
+    card: "#09090b", 
     text: "#ffffff",
-    sub: "#8e8ea0",
-    mute: "#3d3d4a",
-    border: "#1e1e26",
+    sub: "#a1a1aa", 
+    mute: "#3f3f46", 
+    border: "#27272a",
     green: "#22c55e",
     blue: "#3b82f6",
     red: "#ef4444",
-    yellow: "#f59e0b"
+    yellow: "#eab308"
   },
+
+  // 2. DEMİR GRİSİ (Göz yormayan, endüstriyel ve mat tasarım)
   iron: {
-    id: 'iron',
-    bg: "#141618",
-    card: "#1e2127",
-    text: "#f0f0f2",
-    sub: "#9ba3af",
-    mute: "#4a5160",
-    border: "#252b34",
-    green: "#86efac",
-    blue: "#60a5fa",
-    red: "#f87171",
-    yellow: "#fcd34d"
+    bg: "#181a1f",
+    card: "#21252b",
+    text: "#f8f8f2",
+    sub: "#abb2bf",
+    mute: "#5c6370",
+    border: "#2b323b",
+    green: "#98c379",
+    blue: "#61afef",
+    red: "#e06c75",
+    yellow: "#e5c07b"
   },
+
+  // 3. SİBERPUNK (Zifiri karanlık mor/siyah, neon camgöbeği ve fosforlu pembe)
   cyberpunk: {
-    id: 'cyberpunk',
-    bg: "#06030f",
-    card: "#0e0820",
-    text: "#ede4ff",
-    sub: "#9b7ed4",
-    mute: "#3d2a6e",
-    border: "#1e1040",
-    green: "#22d3ee",
-    blue: "#7c3aed",
-    red: "#f43f5e",
-    yellow: "#c026d3"
+    bg: "#05000a",      // Neredeyse tam siyah, çok hafif mor alt tonlu
+    card: "#0d0216",    // Çok loş siyah/mor
+    text: "#ffffff",    // Net beyaz
+    sub: "#c084fc",     // Açık neon mor
+    mute: "#4c1d95",    // Koyu mor
+    border: "#2e1065",  // Karanlık mor kenarlıklar
+    green: "#06b6d4",   // Siberpunk Camgöbeği (Cyan)
+    blue: "#d946ef",    // Fosforlu Pembe/Mor
+    red: "#f43f5e",     // Neon Kırmızı
+    yellow: "#fef08a"   // Siberpunk Sarı
   },
-  mocha: {
-    id: 'mocha',
-    bg: "#16130f",
-    card: "#211d18",
-    text: "#f5f0ec",
-    sub: "#9e958c",
-    mute: "#4e4840",
-    border: "#352e28",
-    green: "#84cc16",
-    blue: "#0ea5e9",
-    red: "#f87171",
-    yellow: "#f59e0b"
+
+  // 4. NEON GECE (Koyu lacivert arkaplan, elektrik mavisi)
+  neon: {
+    bg: "#020617",      
+    card: "#0f172a",    
+    text: "#f8fafc",    
+    sub: "#94a3b8",     
+    mute: "#334155",    
+    border: "#1e293b",  
+    green: "#10b981",   
+    blue: "#0ea5e9",    
+    red: "#ef4444",     
+    yellow: "#f59e0b"   
   },
+
+  // 5. KARANLIK ORMAN (Zifiri çam yeşili ve neon nane yeşili vurgular)
   forest: {
-    id: 'forest',
-    bg: "#03160e",
-    card: "#051e12",
-    text: "#ecfdf5",
-    sub: "#6ee7b7",
-    mute: "#065f46",
-    border: "#064e3b",
-    green: "#34d399",
-    blue: "#38bdf8",
-    red: "#f87171",
-    yellow: "#fbbf24"
+    bg: "#040b06",      // Siyah/Koyu yeşil
+    card: "#081a0f",    // Loş orman yeşili
+    text: "#ecfdf5",    // Kırık beyaz/mint
+    sub: "#6ee7b7",     // Açık nane yeşili
+    mute: "#064e3b",    // Koyu zümrüt
+    border: "#022c22",  // Derin orman kenarlığı
+    green: "#10b981",   // Parlak zümrüt
+    blue: "#3b82f6",    
+    red: "#ef4444",     
+    yellow: "#fbbf24"   
+  },
+
+  // 6. KANLI AY (Zifiri siyah/bordo, agresif kırmızı vurgular)
+  bloodmoon: {
+    bg: "#0a0202",      // Siyah/Bordo
+    card: "#140404",    // Loş bordo
+    text: "#fef2f2",    // Kırık beyaz/pembe
+    sub: "#fca5a5",     // Uçuk kırmızı
+    mute: "#7f1d1d",    // Koyu kan kırmızısı
+    border: "#450a0a",  // Derin bordo kenarlık
+    green: "#22c55e",   
+    blue: "#60a5fa",    
+    red: "#ef4444",     // Yakut kırmızısı (Ana renk)
+    yellow: "#f59e0b"   
   }
-};
-
-// ============================================================================
-// 💎 DESIGN TOKENS — Shared Style Primitives
-// ============================================================================
-
-/** Premium glassmorphism card */
-export const getCommonStyles = (C) => {
-  const safeC = C || THEMES.midnight;
-
-  return {
-    glassCard: {
-      background: `linear-gradient(145deg, ${safeC.card}F2 0%, ${safeC.bg}E0 100%)`,
-      backdropFilter: "blur(20px)",
-      WebkitBackdropFilter: "blur(20px)",
-      border: `1px solid ${safeC.border}80`,
-      borderTop: `1px solid rgba(255,255,255,0.06)`,
-      boxShadow: [
-        "0 12px 40px rgba(0,0,0,0.25)",
-        "inset 0 1px 0 rgba(255,255,255,0.05)",
-        "inset 0 -1px 0 rgba(0,0,0,0.15)"
-      ].join(", "),
-      borderRadius: 24,
-      padding: "20px 22px",
-      marginBottom: 16,
-      overflow: "hidden",
-      position: "relative",
-      transform: "translateZ(0)",
-      willChange: "transform",
-    },
-
-    glassInner: {
-      background: "linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0.12) 100%)",
-      border: `1px solid ${safeC.border}50`,
-      borderRadius: 16,
-      backdropFilter: "blur(10px)",
-      WebkitBackdropFilter: "blur(10px)",
-      padding: "14px 16px",
-    },
-
-    // Floating action button style
-    fabStyle: (color) => ({
-      background: `linear-gradient(135deg, ${color}, ${color}CC)`,
-      border: "none",
-      borderRadius: 16,
-      cursor: "pointer",
-      boxShadow: `0 8px 24px ${color}40, inset 0 1px 0 rgba(255,255,255,0.15)`,
-      transition: "transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease",
-      fontFamily: "'Comucan', system-ui, sans-serif",
-      fontWeight: 900,
-    }),
-
-    // Subtle glow shadow
-    glow: (color, opacity = 0.35) =>
-      `0 0 24px ${color}${Math.round(opacity * 255).toString(16).padStart(2,'0')}`,
-
-    // Section header label
-    sectionLabel: {
-      fontSize: 11,
-      color: safeC.mute,
-      fontWeight: 800,
-      letterSpacing: 2,
-      textTransform: "uppercase",
-      fontFamily: "'Comucan', system-ui, sans-serif",
-      marginBottom: 12,
-    },
-
-    // Row divider
-    divider: {
-      height: 1,
-      background: `linear-gradient(90deg, transparent, ${safeC.border}80, transparent)`,
-      margin: "14px 0",
-      border: "none",
-    },
-
-    // Pill badge
-    badge: (color) => ({
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 5,
-      background: `${color}18`,
-      border: `1px solid ${color}35`,
-      borderRadius: 9999,
-      padding: "3px 10px",
-      fontSize: 11,
-      fontWeight: 800,
-      color: color,
-      letterSpacing: 0.5,
-    }),
-
-    // Premium input field
-    input: {
-      background: "rgba(255,255,255,0.04)",
-      border: `1px solid ${safeC.border}80`,
-      borderRadius: 12,
-      color: safeC.text,
-      padding: "12px 14px",
-      fontSize: 15,
-      fontWeight: 600,
-      fontFamily: "'Comucan', system-ui, sans-serif",
-      width: "100%",
-      transition: "border-color 0.2s, box-shadow 0.2s",
-    },
-  };
 };

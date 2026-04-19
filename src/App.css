@@ -1,387 +1,67 @@
-/* ═══════════════════════════════════════════════════════════
-   APP.CSS — FITNESS PROTOCOL · Premium Dark UI System
-   Apple Fitness / Nike Training Club seviyesi
-   ═══════════════════════════════════════════════════════════ */
+/* App.css - Kaydırma Düzeltmesi & Native App Reset */
 
 @font-face {
   font-family: 'Comucan';
-  src: url('/comucan.otf') format('opentype'),
-       url('/comucan.ttf') format('truetype');
+  src: url('/comucan.ttf') format('truetype'); 
   font-weight: normal;
   font-style: normal;
-  font-display: swap;
 }
 
-/* ──────────────────────────────────────────────────────────
-   1. CSS Custom Properties (Design Tokens)
-   ────────────────────────────────────────────────────────── */
-:root {
-  --radius-xs: 8px;
-  --radius-sm: 12px;
-  --radius-md: 16px;
-  --radius-lg: 20px;
-  --radius-xl: 24px;
-  --radius-2xl: 32px;
-  --radius-full: 9999px;
-
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.25);
-  --shadow-lg: 0 16px 48px rgba(0,0,0,0.35);
-  --shadow-xl: 0 24px 72px rgba(0,0,0,0.45);
-
-  --blur-sm: blur(8px);
-  --blur-md: blur(16px);
-  --blur-lg: blur(24px);
-  --blur-xl: blur(40px);
-
-  --transition-fast: 0.15s cubic-bezier(0.4,0,0.2,1);
-  --transition-base: 0.25s cubic-bezier(0.4,0,0.2,1);
-  --transition-slow: 0.4s cubic-bezier(0.16,1,0.3,1);
-  --transition-spring: 0.5s cubic-bezier(0.34,1.56,0.64,1);
-}
-
-/* ──────────────────────────────────────────────────────────
-   2. Base Reset
-   ────────────────────────────────────────────────────────── */
+/* 1. Tarayıcı Zeminini Siyah Yap (Beyaz şerit engelleme) */
 html {
-  background-color: #000;
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
+  background-color: #050810;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #000;
-  color-scheme: dark;
+  background-color: #050810;
+  color-scheme: dark; /* Tarayıcıya karanlık modda olduğunu söyler */
   -webkit-tap-highlight-color: transparent;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  /* Kaydırmayı bozan kilitler (overflow ve overscroll) kaldırıldı! */
 }
 
 * {
   box-sizing: border-box;
 }
 
-/* ──────────────────────────────────────────────────────────
-   3. iOS Safe Area & Root
-   ────────────────────────────────────────────────────────── */
+/* 2. iOS Çentik ve Güvenli Alan Desteği */
 #root {
   min-height: 100vh;
-  min-height: 100dvh;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
+  padding-left: env(safe-area-inset-right);
+  padding-right: env(safe-area-inset-left);
 }
 
-/* ──────────────────────────────────────────────────────────
-   4. Input & Form Resets
-   ────────────────────────────────────────────────────────── */
+/* 3. İstenmeyen Metin Seçimlerini Engelleme */
 button, select, input[type="button"], .no-select {
   user-select: none;
   -webkit-user-select: none;
 }
 
+/* 4. Global Input Temizliği (iOS Safari için) */
 input, select, textarea {
   appearance: none;
   -webkit-appearance: none;
 }
 
-input:focus, textarea:focus, select:focus {
-  outline: none;
+/* 5. Premium İnce Scrollbar Tasarımı */
+::-webkit-scrollbar {
+  width: 4px;
 }
-
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
-input[type=number] { -moz-appearance: textfield; }
-
-.hide-arrows::-webkit-outer-spin-button,
-.hide-arrows::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.hide-arrows { -moz-appearance: textfield; }
-
-/* ──────────────────────────────────────────────────────────
-   5. Premium Scrollbars
-   ────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 3px; height: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.1);
-  border-radius: var(--radius-full);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(148, 163, 184, 0.2); 
+  border-radius: 10px;
 }
 
 .hide-scroll {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.hide-scroll::-webkit-scrollbar { display: none; }
-
-/* ──────────────────────────────────────────────────────────
-   6. Core Keyframe Animations
-   ────────────────────────────────────────────────────────── */
-
-/* Background orb floats */
-@keyframes orbFloat {
-  0%   { transform: translate(0,0) scale(1); }
-  33%  { transform: translate(45px,-35px) scale(1.07); }
-  66%  { transform: translate(-28px,22px) scale(0.95); }
-  100% { transform: translate(0,0) scale(1); }
-}
-@keyframes orbFloat2 {
-  0%   { transform: translate(0,0) scale(1); }
-  40%  { transform: translate(-40px,45px) scale(1.1); }
-  70%  { transform: translate(22px,-18px) scale(0.93); }
-  100% { transform: translate(0,0) scale(1); }
-}
-@keyframes orbFloat3 {
-  0%   { transform: translate(0,0) scale(1) rotate(0deg); }
-  50%  { transform: translate(18px,-28px) scale(1.06) rotate(8deg); }
-  100% { transform: translate(0,0) scale(1) rotate(0deg); }
-}
-
-/* Spinner */
-@keyframes spinCW {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-/* Slide ups */
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeScale {
-  from { opacity: 0; transform: scale(0.95); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-/* Pulse glow */
-@keyframes pulseGlow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.65; transform: scale(0.92); }
-}
-
-/* Shimmer sweep */
-@keyframes shimmerSweep {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-
-/* Button shine */
-@keyframes btnShine {
-  0%   { left: -100%; }
-  55%  { left: 130%; }
-  100% { left: 130%; }
-}
-
-/* Progress bar fill */
-@keyframes fillBar {
-  from { width: 0%; }
-}
-
-/* Heartbeat for active indicator */
-@keyframes heartbeat {
-  0%, 100% { transform: scale(1); }
-  14%       { transform: scale(1.3); }
-  28%       { transform: scale(1); }
-  42%       { transform: scale(1.3); }
-  56%       { transform: scale(1); }
-}
-
-/* Tick stamp */
-@keyframes tickIn {
-  from { transform: scale(0) rotate(-20deg); opacity: 0; }
-  to   { transform: scale(1) rotate(0deg); opacity: 1; }
-}
-
-/* ──────────────────────────────────────────────────────────
-   7. Utility / Helper Classes
-   ────────────────────────────────────────────────────────── */
-
-/* Staggered entry animations */
-.animate-in {
-  animation: slideUp var(--transition-slow) both;
-}
-.delay-1 { animation-delay: 0.05s; }
-.delay-2 { animation-delay: 0.10s; }
-.delay-3 { animation-delay: 0.15s; }
-.delay-4 { animation-delay: 0.20s; }
-.delay-5 { animation-delay: 0.25s; }
-.delay-6 { animation-delay: 0.30s; }
-
-/* Gradient text */
-.gradient-text {
-  background: linear-gradient(135deg, #22c55e 0%, #3b82f6 50%, #8b5cf6 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmerSweep 5s linear infinite;
-}
-
-/* Button shine effect */
-.btn-shine {
-  position: relative;
-  overflow: hidden;
-}
-.btn-shine::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 55%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255,255,255,0.12) 50%,
-    transparent 100%
-  );
-  animation: btnShine 4s ease-in-out infinite;
-  pointer-events: none;
-}
-
-/* Spinner */
-.spin {
-  animation: spinCW 0.85s linear infinite;
-}
-
-/* Card lift on hover */
-.card-lift {
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
-  cursor: pointer;
-}
-.card-lift:hover {
-  transform: translateY(-2px) scale(1.005);
-  box-shadow: 0 20px 64px rgba(0,0,0,0.3) !important;
-}
-.card-lift:active {
-  transform: translateY(0) scale(0.99);
-}
-
-/* Pulse dot (live indicator) */
-.pulse-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  animation: pulseGlow 2s ease-in-out infinite;
-}
-
-/* Glass surface */
-.glass {
-  backdrop-filter: var(--blur-lg);
-  -webkit-backdrop-filter: var(--blur-lg);
-  background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(0,0,0,0.1));
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-/* Noise grain overlay */
-.noise-overlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 160px 160px;
-}
-
-/* ──────────────────────────────────────────────────────────
-   8. Premium Component Styles
-   ────────────────────────────────────────────────────────── */
-
-/* Segmented control tabs */
-.seg-tab {
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-/* Stat number — large bold display figures */
-.stat-number {
-  font-family: 'Comucan', system-ui, sans-serif;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -2px;
-  line-height: 1;
-}
-
-/* Section divider */
-.section-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
-  margin: 20px 0;
-}
-
-/* Badge pill */
-.badge-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border-radius: var(--radius-full);
-  padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-}
-
-/* ──────────────────────────────────────────────────────────
-   9. Bottom Sheet drag handle
-   ────────────────────────────────────────────────────────── */
-.drag-handle {
-  width: 36px;
-  height: 4px;
-  border-radius: var(--radius-full);
-  background: rgba(255,255,255,0.15);
-  margin: 0 auto 20px;
-}
-
-/* ──────────────────────────────────────────────────────────
-   10. Active Session indicator scan line
-   ────────────────────────────────────────────────────────── */
-@keyframes scanLine {
-  0%   { top: -2px; opacity: 0.8; }
-  100% { top: 100%; opacity: 0; }
-}
-.scan-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, currentColor 40%, currentColor 60%, transparent 100%);
-  animation: scanLine 2.5s linear infinite;
-  pointer-events: none;
-}
-
-/* ──────────────────────────────────────────────────────────
-   11. Progress ring animation
-   ────────────────────────────────────────────────────────── */
-.progress-ring {
-  transform: rotate(-90deg);
-  transform-origin: center;
-}
-.progress-ring circle {
-  transition: stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1);
+.hide-scroll::-webkit-scrollbar {
+  display: none;
 }

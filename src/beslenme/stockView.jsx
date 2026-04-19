@@ -2,12 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../store';
 import { fonts, THEMES, guessAisle, formatGroceryAmount, parseAmountToNum, formatRemaining, normalizeItemName } from './nutritionUtils';
-import { getCommonStyles } from '../theme'; // 🚀 YENİ: Stil merkezimizi import ettik!
 
 export default function StockView({ shoppingList = [], themeColors: C = {}, onCloseStock }) {
-  // 🚀 YENİ: Ortak cam efektlerini doğrudan temadan çekiyoruz!
-  const { glassCard, glassInner } = getCommonStyles(C);
-
+  // 🎯 YENİ: Veriler doğrudan motordan geliyor
   const { 
     consumedFoods = [],
     stockCheckedItems, 
@@ -26,6 +23,21 @@ export default function StockView({ shoppingList = [], themeColors: C = {}, onCl
   const [newItemName, setNewItemName] = useState("");
   const [newItemAmount, setNewItemAmount] = useState("");
   const [hasCelebrated, setHasCelebrated] = useState(false);
+
+  // 💎 PREMIUM GLASSMORPHISM STYLES
+  const glassCardStyle = {
+    background: `linear-gradient(145deg, ${C.card}D9, ${C.bg}99)`,
+    backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+    border: `1px solid ${C.border}60`,
+    boxShadow: "0 10px 40px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.05)",
+    borderRadius: 24, padding: "20px 24px", marginBottom: 24, overflow: "hidden"
+  };
+
+  const glassInnerStyle = {
+    background: `linear-gradient(145deg, rgba(0,0,0,0.2), rgba(0,0,0,0.05))`,
+    border: `1px solid ${C.border}40`,
+    borderRadius: 16, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
+  };
   
   // 🎯 Rezerve Mantığı
   const consumedTotals = useMemo(() => {
@@ -161,7 +173,7 @@ export default function StockView({ shoppingList = [], themeColors: C = {}, onCl
   };
 
   const renderDetailItem = (item, color) => (
-    <div key={item.id} style={{ ...glassInner, padding: "12px 16px", marginBottom: 8 }}>
+    <div key={item.id} style={{ ...glassInnerStyle, padding: "12px 16px", marginBottom: 8 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
         <span style={{ fontSize: 14, fontWeight: 800, color: C.text, fontFamily: fonts.header }}>{item.name}</span>
         <span style={{ fontSize: 12, fontWeight: 900, fontFamily: fonts.mono, color: color }}>Kalan: {item.remainingStr} / {item.initialStr}</span>
@@ -183,7 +195,7 @@ export default function StockView({ shoppingList = [], themeColors: C = {}, onCl
       </AnimatePresence>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-        <button onClick={onCloseStock} style={{ ...glassInner, color: C.text, width: 44, height: 44, borderRadius: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+        <button onClick={onCloseStock} style={{ ...glassInnerStyle, color: C.text, width: 44, height: 44, borderRadius: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
           ←
         </button>
         <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: C.text }}>
@@ -217,7 +229,7 @@ export default function StockView({ shoppingList = [], themeColors: C = {}, onCl
         )}
       </AnimatePresence>
 
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} style={glassCard}>
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} style={glassCardStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div><div style={{ fontSize: 12, color: C.sub, fontWeight: 800, marginBottom: 4, letterSpacing: 1 }}>DOLULUK ORANI</div><div style={{ fontSize: 32, fontWeight: 900, fontFamily: fonts.mono, color: C.text, lineHeight: 1, textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}>{progressPct}%</div></div>
           <div style={{ textAlign: 'right' }}><div style={{ fontSize: 16, fontWeight: 900, fontFamily: fonts.mono, color: C.text }}>{boughtItems} / {totalItems}</div><div style={{ fontSize: 10, color: C.sub, fontWeight: 800 }}>ÜRÜN</div></div>
@@ -228,19 +240,19 @@ export default function StockView({ shoppingList = [], themeColors: C = {}, onCl
       </motion.div>
 
       {stockAnalysis && (
-        <motion.div onClick={() => setShowStockModal(true)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={{ ...glassInner, cursor: "pointer", background: `${stockAnalysis.color}15`, padding: 20, marginBottom: 24, border: `1px solid ${stockAnalysis.color}50`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <motion.div onClick={() => setShowStockModal(true)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={{ ...glassInnerStyle, cursor: "pointer", background: `${stockAnalysis.color}15`, padding: 20, marginBottom: 24, border: `1px solid ${stockAnalysis.color}50`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}><div style={{ fontSize: 32 }}>{stockAnalysis.icon}</div><div><div style={{ fontSize: 11, fontWeight: 900, color: stockAnalysis.color, letterSpacing: 1, marginBottom: 4 }}>KİLER DURUMU</div><div style={{ fontSize: 13, color: C.text, fontWeight: 600, lineHeight: 1.4, paddingRight: 10 }}>{stockAnalysis.msg}</div></div></div>
           <div style={{ fontSize: 24, color: stockAnalysis.color, opacity: 0.5 }}>➔</div>
         </motion.div>
       )}
 
-      <div style={{ ...glassCard, padding: "16px 20px", display: "flex", gap: 8, alignItems: "center" }}>
+      <div style={{ ...glassCardStyle, padding: "16px 20px", display: "flex", gap: 8, alignItems: "center" }}>
         <input type="text" placeholder="İhtiyaç Ekle (Örn: Su...)" value={newItemName} onChange={e => setNewItemName(e.target.value)} style={{ flex: 2, background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}60`, color: C.text, padding: "14px", borderRadius: 14, outline: "none", fontFamily: fonts.body, fontSize: 14 }} />
         <input type="text" placeholder="Miktar" value={newItemAmount} onChange={e => setNewItemAmount(e.target.value)} style={{ flex: 1, background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}60`, color: C.text, padding: "14px", borderRadius: 14, outline: "none", fontFamily: fonts.body, fontSize: 14 }} />
         <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleAddCustomItem} style={{ background: `linear-gradient(135deg, ${C.green}, #22c55e)`, color: "#000", border: "none", padding: "0 20px", height: 46, borderRadius: 14, fontWeight: 900, fontSize: 20, cursor: "pointer", boxShadow: `0 4px 15px ${C.green}40` }}>+</motion.button>
       </div>
 
-      <div style={{ display: "flex", ...glassInner, padding: 6, marginBottom: 24 }}>
+      <div style={{ display: "flex", ...glassInnerStyle, padding: 6, marginBottom: 24 }}>
         <button onClick={() => setGroupingMode("macro")} style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", background: groupingMode === "macro" ? "rgba(255,255,255,0.1)" : "transparent", color: groupingMode === "macro" ? C.text : C.mute, fontWeight: 800, fontSize: 12, cursor: "pointer", transition: "0.2s" }}>📊 Makroya Göre</button>
         <button onClick={() => setGroupingMode("aisle")} style={{ flex: 1, padding: "10px", borderRadius: 12, border: "none", background: groupingMode === "aisle" ? "rgba(255,255,255,0.1)" : "transparent", color: groupingMode === "aisle" ? C.text : C.mute, fontWeight: 800, fontSize: 12, cursor: "pointer", transition: "0.2s" }}>🛒 Reyona Göre</button>
       </div>
@@ -254,7 +266,7 @@ export default function StockView({ shoppingList = [], themeColors: C = {}, onCl
           const isAllBought = catBought === category.items.length;
 
           return (
-            <motion.div layout key={category.cat} style={{ ...glassCard, padding: 0, paddingBottom: isExpanded ? 24 : 0, border: `1px solid ${isAllBought ? C.green : `${C.border}60`}` }}>
+            <motion.div layout key={category.cat} style={{ ...glassCardStyle, padding: 0, paddingBottom: isExpanded ? 24 : 0, border: `1px solid ${isAllBought ? C.green : `${C.border}60`}` }}>
               <div onClick={() => { setExpandedCats(prev => ({ ...prev, [category.cat]: !prev[category.cat] })); if (navigator.vibrate) navigator.vibrate(15); }} style={{ padding: "18px 24px", background: `linear-gradient(135deg, ${theme.color}1A, transparent)`, borderBottom: isExpanded ? `1px solid ${C.border}60` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 40, height: 40, borderRadius: 14, background: "rgba(0,0,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, border: `1px solid ${theme.color}40` }}>{theme.icon}</div>

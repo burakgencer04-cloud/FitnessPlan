@@ -3,6 +3,8 @@ import { useAppStore } from '../store';
 import useModalStore from '../store/useModalStore';
 import { EXERCISE_DB } from '../data'; 
 import { guessTargetMuscle } from '../components/tabTodayUtils';
+import { useHaptics } from './useHaptics'; 
+import { useRestTimer } from './useWorkoutTimer'; // 🚀 YENİ: Kronometreyi içe aktarıyoruz
 
 export function useWorkoutLogic(todayW, C) {
   const user = useAppStore(state => state.user);
@@ -16,10 +18,13 @@ export function useWorkoutLogic(todayW, C) {
   const streak = useAppStore(state => state.streak);
   const setST = useAppStore(state => state.setST);
   const setLD = useAppStore(state => state.setLD);
-  
-  // 🚀 YENİ: addXp fonksiyonunu Store'dan çekiyoruz
   const addXp = useAppStore(state => state.addXp);
+  
   const { showConfirm } = useModalStore();
+  const { lightTap, heavyImpact, successPulse, warningPulse } = useHaptics();
+  
+  // 🚀 YENİ: Kronometreyi Başlatıyoruz
+  const restTimer = useRestTimer();
 
   const combinedDB = useMemo(() => [...(Array.isArray(EXERCISE_DB) ? EXERCISE_DB : []), ...customExercises], [customExercises]);
   const exercises = todayW ? (todayW.exercises || []) : [];
@@ -48,10 +53,10 @@ export function useWorkoutLogic(todayW, C) {
   }, [hasWorkout, exercises, activeExIndex, combinedDB]);
 
   const handleStart = useCallback(() => {
-    if (navigator.vibrate) navigator.vibrate(50);
+    heavyImpact(); 
     setSessActive(true);
     localStorage.setItem('activeWorkoutSession', JSON.stringify({ wid: todayW?.id, startTime: Date.now() }));
-  }, [todayW]);
+  }, [todayW, heavyImpact]);
 
   const handleFinish = useCallback(() => {
     setSessActive(false);
@@ -59,24 +64,29 @@ export function useWorkoutLogic(todayW, C) {
     setCW(p => ({ ...p, [todayW?.id]: true }));
     setST(streak + 1);
     setLD(new Date().toDateString());
-    
-    // 🚀 YENİ: Antrenman bittiğinde kullanıcı 300 XP kazanır!
     addXp(300);
     
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    successPulse(); 
+    restTimer.stop(); // Antrenman biterse sayacı durdur
+    
     setShowConfetti(true);
     setModalState(p => ({ ...p, summary: true }));
     setTimeout(() => setShowConfetti(false), 4000);
-  }, [todayW, streak, setCW, setST, setLD, addXp]);
+  }, [todayW, streak, setCW, setST, setLD, addXp, successPulse, restTimer]);
 
   const handleCancel = useCallback(() => {
+    warningPulse(); 
     showConfirm(
       "Antrenmanı Bitir", 
       "Antrenmanı bitirmek istediğine emin misin? Kaydedilmemiş setlerin silinebilir.", 
-      () => { setSessActive(false); localStorage.removeItem('activeWorkoutSession'); },
+      () => { 
+        setSessActive(false); 
+        localStorage.removeItem('activeWorkoutSession'); 
+        restTimer.stop(); // İptal edilirse sayacı durdur
+      },
       { confirmText: "Evet, Bitir", confirmColor: C.red }
     );
-  }, [C, showConfirm]);
+  }, [C, showConfirm, warningPulse, restTimer]);
 
   const undoCompletion = useCallback(() => {
     setCW(p => ({ ...p, [todayW?.id]: false }));
@@ -100,7 +110,11 @@ export function useWorkoutLogic(todayW, C) {
       exSets[setIndex] = { ...exSets[setIndex], done: isNowDone };
       
       if (isNowDone) {
-        if (navigator.vibrate) navigator.vibrate(20);
+        lightTap(); 
+        
+        // 🚀 YENİ: Set onaylandığında dinlenme sayacını otomatik başlat (Örn: 90 saniye)
+        restTimer.start(90, "DİNLENME");
+
         const { w, r, rpe } = exSets[setIndex]; 
         if (w && r) {
           const dateStr = new Date().toLocaleDateString('tr-TR');
@@ -112,7 +126,7 @@ export function useWorkoutLogic(todayW, C) {
       }
       return { ...prev, [exName]: exSets };
     });
-  }, [setSessionSets, setWL]);
+  }, [setSessionSets, setWL, lightTap, restTimer.start]);
 
   const handleSwap = useCallback((newEx) => {
     const originalEx = exercises[activeExIndex];
@@ -162,6 +176,7 @@ export function useWorkoutLogic(todayW, C) {
     activeExerciseDetails, swapAlternatives, currentMaxWeight, totalVolume, progressPct,
     weightLog, sessionSets,
     handleStart, handleFinish, handleCancel, undoCompletion,
-    handleSetUpdate, toggleSetDone, handleSwap
+    handleSetUpdate, toggleSetDone, handleSwap,
+    restTimer // 🚀 UI için kronometreyi dışarı aktardık
   };
 }
