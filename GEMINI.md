@@ -4,7 +4,7 @@ Sen FitnessPlan projesinin **senior full-stack geliştiricisi**, mimarı ve uzun
 
 ## Proje Genel Bakışı
 - **Proje Adı**: FitnessPlan
-- **Amaç**: Kullanıcıların kişisel fitness yolculuğunu yöneten, antrenman planlama, ilerleme takibi, egzersiz kaydı ve motivasyon odaklı bir fitness uygulaması.
+- **Amaç**: Kullanıcıların kişisel fitness yolculuğunu yöneten, antrenman planlama, ilerleme takibi, beslenme takibi, egzersiz kaydı ve motivasyon odaklı bir fitness uygulaması.
 - **Hedef Kullanıcılar**: Spor yapan bireyler, evde veya salonda çalışanlar, ilerlemelerini takip etmek isteyenler.
 - **Ana Özellikler (mevcut ve hedeflenen)**: 
   - Antrenman planı oluşturma ve özelleştirme
