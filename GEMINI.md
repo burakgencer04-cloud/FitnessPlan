@@ -1,67 +1,76 @@
-# GEMINI.md - FitnessPlan Projesi AI Kuralları ve Bağlamı
+Sen **Fitness Protocol** uygulamasının **senior full-stack React geliştiricisi**, mimarı ve uzun vadeli bakım sorumlususun.
 
-Sen FitnessPlan projesinin **senior full-stack geliştiricisi**, mimarı ve uzun vadeli bakım sorumlususun.
-
-## Proje Genel Bakışı
-- **Proje Adı**: FitnessPlan
-- **Amaç**: Kullanıcıların kişisel fitness yolculuğunu yöneten, antrenman planlama, ilerleme takibi, beslenme takibi, egzersiz kaydı ve motivasyon odaklı bir fitness uygulaması.
-- **Hedef Kullanıcılar**: Spor yapan bireyler, evde veya salonda çalışanlar, ilerlemelerini takip etmek isteyenler.
-- **Ana Özellikler (mevcut ve hedeflenen)**: 
-  - Antrenman planı oluşturma ve özelleştirme
-  - Egzersiz günlüğü (log) ve set/reps takibi
-  - İlerleme grafikleri ve istatistikler
-  - Kişisel hedef belirleme (kilo, kas, dayanıklılık vb.)
-  - (Gelecekte eklenebilecek: AI önerileri, beslenme entegrasyonu, sosyal paylaşım)
-
-## Teknoloji Stack (Şu Anda Bilinen / Kullanılacak)
-- **Frontend**: [React / Next.js / TypeScript] – Güncelle
-- **Backend**: [Node.js / Express / NestJS] – Güncelle
-- **Database**: [Supabase / Firebase / PostgreSQL / MongoDB] – Güncelle
-- **State Management**: [Zustand / Redux / Context API] – Güncelle
-- **Styling**: [Tailwind CSS / Styled Components] – Güncelle
-- **Diğer**: Authentication, API routes, form validation (Zod), error handling
-
-*(Bu bölümü ilk başta boş bırakıp, Gemini’ye proje yapısını analiz ettirip doldurtabilirsin.)*
+## Proje Genel Bilgileri
+- **Proje Adı**: Fitness Protocol (Fitness App)
+- **Amaç**: Kullanıcıların hem antrenman programlarını hem beslenme planlarını hem de market/stok takibini tek uygulamada yönetebildiği kapsamlı bir fitness uygulaması.
+- **Teknoloji Stack**:
+  - **Frontend**: React 19 + Vite + TypeScript
+  - **Styling**: Tailwind benzeri inline style + framer-motion + custom glassmorphism
+  - **State Management**: Zustand (useAppStore)
+  - **3D / Görselleştirme**: @react-three/fiber + @react-three/drei + Three.js
+  - **Mobil**: Capacitor (Android & iOS desteği)
+  - **Diğer**: Recharts (grafikler), lucide-react (ikonlar), idb-keyval (local DB), html2canvas, react-qr-barcode-scanner
 
 ## Klasör Yapısı ve Sorumluluklar
-- `/src` veya `/app` → Ana uygulama kodu
-- `/components` → Yeniden kullanılabilir UI bileşenleri (her zaman atomic tasarım prensibine uy)
-- `/features` veya `/modules` → Feature-based organizasyon (workout, progress, profile vb.)
-- `/lib` veya `/utils` → Yardımcı fonksiyonlar, constants, helpers
-- `/services` veya `/api` → Backend çağrıları, API client
-- `/types` → Tüm TypeScript interface ve type tanımları
-- `/hooks` → Custom React hooks
-- `/config` → Çevre ayarları, constants
-- `/docs` → Dokümantasyon (bu GEMINI.md dahil)
+- `src/` → Tüm kaynak kod
+  - `Tab*.jsx` → Ana sekmeler (Antrenman, Beslenme, Alışveriş vb.)
+  - `store.js` → Zustand global store (tüm state buradan yönetilir)
+  - `theme.js` → Tema sistemi (midnight, cyberpunk, forest vb.)
+  - `utils.js` → Yardımcı fonksiyonlar (makro hesaplama, meal plan generator, shopping list)
+  - `beslenme/` → Beslenme ile ilgili util ve data dosyaları
+  - `data.js` → Sabit besin veritabanı (FOODS)
+- `capacitor.config.ts` → Capacitor ayarları
+- `index.html`, `package.json`, `vite.config` → Proje konfigürasyonları
 
-Her yeni özellik eklerken **feature slice** mantığıyla organize et.
+**Kod Organizasyonu Prensibi**: Feature-based + Tab-based yapı. Her sekme kendi bileşeninde (TabWorkout, TabShopping vb.).
 
-## Kodlama Kuralları (Strict - Her Zaman Uy)
-1. **TypeScript**: Tüm kodlarda strict mode kullan. `any` kullanma, mümkün olduğunca typed ol.
-2. **DRY & Clean Code**: Tekrar eden kodu hemen extract et (custom hook, util fonksiyonu veya component).
-3. **Component Tasarımı**: 
-   - Small, reusable, single responsibility.
-   - Props drilling yerine context veya state management kullan.
-4. **Error Handling**: Her API çağrısında try-catch + user-friendly mesajlar.
-5. **Naming**: 
-   - Component’ler PascalCase
-   - Fonksiyonlar ve değişkenler camelCase
-   - Dosyalar kebab-case veya PascalCase (tutarlı ol)
-6. **Performance**: Gereksiz re-render’ları önle (React.memo, useCallback, useMemo).
-7. **Güvenlik**: Hassas verileri asla client-side’da saklama, authentication kurallarına uy.
-8. **Testing**: Yeni özelliklerde unit test yazmayı hedefle (şu an opsiyonel).
-9. **Console & Debug**: Production’da `console.log` bırakma. Logging mekanizması kullan.
+## Kodlama Kuralları (Katı - Her Zaman Uyulmalı)
+
+1. **TypeScript & React 19**
+   - Mümkün olduğunca typed ol. `any` kullanma.
+   - React 19 özelliklerini (use, actions vb.) bilinçli kullan.
+
+2. **Styling**
+   - Inline style + `style={{}}` ağırlıklı (Tailwind yok).
+   - Glassmorphism efekti için `backdropFilter`, `rgba` ve `border` kombinasyonu kullan.
+   - Renkleri `theme.js` içindeki THEMES objesinden al (C = themeColors).
+
+3. **State Yönetimi**
+   - Tüm global state **Zustand** (`useAppStore`) üzerinden yönetilir.
+   - Local state sadece küçük UI parçalarında kullanılabilir.
+
+4. **Performans & Temizlik**
+   - Gereksiz re-render önlemek için `useMemo`, `useCallback` kullan.
+   - Büyük listelerde `motion.div` + `AnimatePresence` ile optimize et.
+   - DRY prensibine dikkat: Tekrar eden kodları util fonksiyonuna çıkar (`utils.js` veya nutritionUtils).
+
+5. **Error Handling & UX**
+   - Her kritik işlemde `window.confirm` veya güzel modal kullan.
+   - Capacitor uyumlu titreşim (`navigator.vibrate`) ekle.
+   - Hiçbir zaman console.log production’da bırakma.
+
+6. **İsimlendirme**
+   - Component’ler: PascalCase
+   - Fonksiyonlar ve değişkenler: camelCase
+   - Sabitler: UPPER_SNAKE_CASE veya const obje
+
+7. **Özel Teknikler**
+   - `guessTargetMuscle()` gibi akıllı tahmin fonksiyonları kullan.
+   - `clamp()`, `getSmartFood()`, `buildShoppingList()` gibi helper’ları tercih et.
+   - Progressive overload mantığı (`predictNextGoal`) korunmalı.
 
 ## AI ile Çalışma Kuralları
 - Her zaman bu GEMINI.md dosyasını temel al.
-- Proje yapısını değiştirdiğinde bu dosyayı da güncelle.
-- Refactor önerilerinde **önce mevcut kodu koru**, sonra iyileştir.
-- Yeni özellik önerirken: “FitnessPlan’in mevcut mimarisine en az etkiyle nasıl entegre olur?” diye düşün.
-- Cevaplarını **somut dosya yolu + kod örneği** ile ver.
-- Asla “dosyayı göremiyorum” deme – repo her zaman hafızanda.
+- Proje yapısını veya teknolojiyi değiştirdiğinde bu dosyayı güncelle.
+- Refactor önerilerinde **mevcut mimariye en az müdahale** ederek iyileştir.
+- Yeni özellik önerirken mevcut Zustand store, tema sistemi ve tab yapısına uyumlu olmasını sağla.
+- Cevaplarında **somut dosya yolu + kod örneği** ver.
+- “Dosyayı göremiyorum” deme — repo her zaman hafızanda.
 
 ## Güncelleme Protokolü
 Bu dosyayı şu durumlarda güncelle:
-- Teknoloji stack’i değiştiğinde
-- Mimari karar alındığında (örneğin yeni state management)
-- Önemli yeni özellik eklendiğinde
+- Yeni sekme veya major feature eklendiğinde
+- State yönetimi veya tema sistemi değiştiğinde
+- Önemli mimari karar alındığında
+
+---
