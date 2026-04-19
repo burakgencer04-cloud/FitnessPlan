@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MacroPulse</string>
+    <string name="title_activity_main">MacroPulse</string>
+    <string name="package_name">com.macropulse.app</string>
+    <string name="custom_url_scheme">com.macropulse.app</string>
+</resources>

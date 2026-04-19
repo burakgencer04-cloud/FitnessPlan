@@ -1,0 +1,67 @@
+/* App.css - Kaydırma Düzeltmesi & Native App Reset */
+
+@font-face {
+  font-family: 'Comucan';
+  src: url('/comucan.ttf') format('truetype'); 
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* 1. Tarayıcı Zeminini Siyah Yap (Beyaz şerit engelleme) */
+html {
+  background-color: #050810;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #050810;
+  color-scheme: dark; /* Tarayıcıya karanlık modda olduğunu söyler */
+  -webkit-tap-highlight-color: transparent;
+  /* Kaydırmayı bozan kilitler (overflow ve overscroll) kaldırıldı! */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 2. iOS Çentik ve Güvenli Alan Desteği */
+#root {
+  min-height: 100vh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-right);
+  padding-right: env(safe-area-inset-left);
+}
+
+/* 3. İstenmeyen Metin Seçimlerini Engelleme */
+button, select, input[type="button"], .no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 4. Global Input Temizliği (iOS Safari için) */
+input, select, textarea {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* 5. Premium İnce Scrollbar Tasarımı */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2); 
+  border-radius: 10px;
+}
+
+.hide-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
