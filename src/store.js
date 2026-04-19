@@ -7,7 +7,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 export const useAppStore = create(
   persist(
     (set, get) => ({
-      // --- 0. SİSTEM & KULLANICI VERİLERİ ---
       screen: "landing",
       setScreen: (screen) => set({ screen }),
       user: null,
@@ -17,7 +16,6 @@ export const useAppStore = create(
       activeThemeId: "dark", 
       setActiveThemeId: (id) => set({ activeThemeId: id }),
 
-      // --- 1. ANTRENMAN, İLERLEME VE ÖLÇÜM VERİLERİ ---
       completedW: {},
       setCW: (updater) => set((state) => ({ completedW: typeof updater === 'function' ? updater(state.completedW) : updater })),
       weightLog: [],
@@ -40,7 +38,10 @@ export const useAppStore = create(
       addCustomExercise: (ex) => set((state) => ({ customExercises: [...(state.customExercises || []), ex] })),
       removeCustomExercise: (id) => set((state) => ({ customExercises: (state.customExercises || []).filter(e => e.id !== id) })),
 
-      // --- 2. BESLENME VE PLANLAMA VERİLERİ ---
+      // 🚀 YENİ: OYUNLAŞTIRMA (XP) VERİLERİ
+      xp: 0,
+      addXp: (amount) => set((state) => ({ xp: (state.xp || 0) + amount })),
+
       consumedFoods: [],
       customTargetMacros: null,
       mealPlan: null,
@@ -55,7 +56,6 @@ export const useAppStore = create(
       setQuickAddHistory: (history) => set({ quickAddHistory: history }),
       setMealTags: (tags) => set({ mealTags: tags }),
 
-      // --- 3. KİLER VE ALIŞVERİŞ VERİLERİ ---
       stockCheckedItems: {},
       stockCustomItems: [],
       stockEditedAmounts: {},
@@ -63,10 +63,9 @@ export const useAppStore = create(
       setStockCustomItems: (updater) => set((state) => ({ stockCustomItems: typeof updater === 'function' ? updater(state.stockCustomItems) : updater })),
       setStockEditedAmounts: (updater) => set((state) => ({ stockEditedAmounts: typeof updater === 'function' ? updater(state.stockEditedAmounts) : updater })),
 
-      // --- 4. SİSTEM AKSİYONLARI ---
       clearAllData: () => set({ 
         consumedFoods: [], mealPlan: null, stockCheckedItems: {}, stockCustomItems: [], stockEditedAmounts: {},
-        completedW: {}, weightLog: [], streak: 0, badges: [], sessionSets: {}, bodyMeasurements: [], customExercises: []
+        completedW: {}, weightLog: [], streak: 0, badges: [], sessionSets: {}, bodyMeasurements: [], customExercises: [], xp: 0
       })
     }),
     { name: 'fitness-app-vault' }
@@ -74,18 +73,14 @@ export const useAppStore = create(
 );
 
 // ============================================================================
-// 📸 2. MEDYA KASASI (IndexedDB - Fotoğraf ve Büyük Dosyalar İçin Limitsiz ve Asenkron)
+// 📸 2. MEDYA KASASI (IndexedDB)
 // ============================================================================
-
-// Native IndexedDB Motoru (Hiçbir harici kütüphane gerektirmez)
 const DB_NAME = 'FitnessApp_Media';
 const STORE_NAME = 'progress_photos';
 
 const getDB = () => new Promise((resolve, reject) => {
   const request = indexedDB.open(DB_NAME, 1);
-  request.onupgradeneeded = (e) => {
-    e.target.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
-  };
+  request.onupgradeneeded = (e) => { e.target.result.createObjectStore(STORE_NAME, { keyPath: 'id' }); };
   request.onsuccess = () => resolve(request.result);
   request.onerror = () => reject(request.error);
 });
@@ -120,31 +115,22 @@ const idb = {
   }
 };
 
-// Fotoğraf verilerini yönetecek YENİ Zustand Kasası
 export const usePhotoStore = create((set) => ({
   photos: [],
   isLoaded: false,
-  
   loadPhotos: async () => {
     try {
       const data = await idb.getPhotos();
-      // Tarihe göre yeniden eskiye doğru sırala
       const sorted = data.sort((a, b) => b.id - a.id);
       set({ photos: sorted, isLoaded: true });
-    } catch (e) {
-      console.error("Fotoğraflar yüklenirken hata oluştu:", e);
-    }
+    } catch (e) { console.error(e); }
   },
-  
   addPhoto: async (photo) => {
     try {
       await idb.addPhoto(photo);
       set((state) => ({ photos: [photo, ...state.photos] }));
-    } catch (e) {
-      alert("Depolama alanı dolu veya hata oluştu.");
-    }
+    } catch (e) { alert("Depolama alanı dolu veya hata."); }
   },
-  
   removePhoto: async (id) => {
     await idb.deletePhoto(id);
     set((state) => ({ photos: state.photos.filter(p => p.id !== id) }));

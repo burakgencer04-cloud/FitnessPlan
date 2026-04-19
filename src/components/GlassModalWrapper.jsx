@@ -2,47 +2,76 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function GlassModalWrapper({ isOpen, onClose, maxWidth = 480, children, C }) {
-  // Tema rengi gelmezse çökmemesi için güvenlik (Fallback)
-  const safeC = C || { card: '#1e293b', bg: '#0f172a', border: '#334155', text: '#f8fafc' };
+  const safeC = C || { card: '#0d0d0f', bg: '#000', border: '#1e1e26', text: '#fff' };
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }} 
-          exit={{ opacity: 0 }} 
-          style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} 
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 10000,
+            display: 'flex', alignItems: 'flex-end',
+            padding: '0',
+          }}
           onClick={onClose}
         >
-          {/* Derin Arka Plan Bulanıklığı */}
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }} />
-          
-          {/* Ana Modal Container (Glassmorphism) */}
-          <motion.div 
-            initial={{ scale: 0.95, y: 30 }} 
-            animate={{ scale: 1, y: 0 }} 
-            exit={{ scale: 0.95, y: 30 }} 
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            onClick={e => e.stopPropagation()} // Arka plana tıklamayı engeller
-            style={{ 
-              background: `linear-gradient(145deg, ${safeC.card}E6, ${safeC.bg}CC)`, 
-              borderRadius: 32, 
-              width: '100%', 
-              maxWidth: maxWidth, 
-              border: `1px solid rgba(255,255,255,0.1)`, 
-              boxShadow: "0 30px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1)", 
-              maxHeight: '85vh', 
-              display: "flex", 
-              flexDirection: "column", 
-              position: "relative", 
-              zIndex: 1, 
-              backdropFilter: "blur(32px)", 
-              WebkitBackdropFilter: "blur(32px)",
-              overflow: "hidden"
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: "absolute", inset: 0,
+              background: "rgba(0,0,0,0.75)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)"
+            }}
+          />
+
+          {/* Modal sheet — slides up from bottom */}
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", stiffness: 340, damping: 32 }}
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: "relative", zIndex: 1,
+              width: "100%",
+              maxWidth: maxWidth,
+              margin: "0 auto",
+              background: `linear-gradient(170deg, ${safeC.card}F8 0%, ${safeC.bg}F0 100%)`,
+              borderTopLeftRadius: 32,
+              borderTopRightRadius: 32,
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+              borderLeft: "1px solid rgba(255,255,255,0.04)",
+              borderRight: "1px solid rgba(255,255,255,0.04)",
+              boxShadow: "0 -24px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08)",
+              backdropFilter: "blur(40px)",
+              WebkitBackdropFilter: "blur(40px)",
+              maxHeight: "88vh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
             }}
           >
-            {children}
+            {/* Drag handle */}
+            <div style={{
+              width: 40, height: 4,
+              borderRadius: 9999,
+              background: "rgba(255,255,255,0.12)",
+              margin: "14px auto -4px",
+              flexShrink: 0,
+            }} />
+
+            {/* Scrollable content */}
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {children}
+            </div>
           </motion.div>
         </motion.div>
       )}

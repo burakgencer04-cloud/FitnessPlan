@@ -1,77 +1,69 @@
 // ============================================================================
-// 🎨 FİTNESS PLAN - GLOBAL TEMA VE STİL MERKEZİ
+// 🎨 FITNESS PROTOCOL — DESIGN SYSTEM v3.0 (Premium)
+// Apple Fitness / Nike Training Club tier
 // ============================================================================
 
 export const THEMES = {
-  // 1. SAF SİYAH (AMOLED Ekranlar için kusursuz, pilden tasarruf sağlar)
   midnight: {
     id: 'midnight',
     bg: "#000000",
-    card: "#09090b", 
+    card: "#0d0d0f",
     text: "#ffffff",
-    sub: "#a1a1aa", 
-    mute: "#3f3f46", 
-    border: "#27272a",
+    sub: "#8e8ea0",
+    mute: "#3d3d4a",
+    border: "#1e1e26",
     green: "#22c55e",
     blue: "#3b82f6",
     red: "#ef4444",
-    yellow: "#eab308"
-  },
-
-  // 2. DEMİR GRİSİ (Göz yormayan, endüstriyel ve mat tasarım)
-  iron: {
-    id: 'iron',
-    bg: "#181a1f",
-    card: "#21252b",
-    text: "#f8f8f2",
-    sub: "#abb2bf",
-    mute: "#5c6370",
-    border: "#2b323b",
-    green: "#98c379",
-    blue: "#61afef",
-    red: "#e06c75",
-    yellow: "#e5c07b"
-  },
-
-  // 3. SİBERPUNK (Zifiri karanlık mor/siyah, neon camgöbeği ve fosforlu pembe)
-  cyberpunk: {
-    id: 'cyberpunk',
-    bg: "#090514",
-    card: "#120a28",
-    text: "#e2d5f8",
-    sub: "#a38ce3",
-    mute: "#4a3576",
-    border: "#2a1b4e",
-    green: "#06b6d4", // Neon Camgöbeği (Cyan)
-    blue: "#8b5cf6",  // Derin Mavi
-    red: "#f43f5e",   // Canlı Kırmızı
-    yellow: "#d946ef" // Neon Pembe/Macenta
-  },
-
-  // 4. KAHVE RENGİ (Sıcak, organik ve doğal bir his)
-  mocha: {
-    id: 'mocha',
-    bg: "#1c1917",
-    card: "#292524",
-    text: "#fafaf9",
-    sub: "#a8a29e",
-    mute: "#57534e",
-    border: "#44403c",
-    green: "#84cc16",
-    blue: "#0ea5e9",
-    red: "#ef4444",
     yellow: "#f59e0b"
   },
-
-  // 5. ORMAN YEŞİLİ (Doğa odaklı, ferah ve huzur verici)
+  iron: {
+    id: 'iron',
+    bg: "#141618",
+    card: "#1e2127",
+    text: "#f0f0f2",
+    sub: "#9ba3af",
+    mute: "#4a5160",
+    border: "#252b34",
+    green: "#86efac",
+    blue: "#60a5fa",
+    red: "#f87171",
+    yellow: "#fcd34d"
+  },
+  cyberpunk: {
+    id: 'cyberpunk',
+    bg: "#06030f",
+    card: "#0e0820",
+    text: "#ede4ff",
+    sub: "#9b7ed4",
+    mute: "#3d2a6e",
+    border: "#1e1040",
+    green: "#22d3ee",
+    blue: "#7c3aed",
+    red: "#f43f5e",
+    yellow: "#c026d3"
+  },
+  mocha: {
+    id: 'mocha',
+    bg: "#16130f",
+    card: "#211d18",
+    text: "#f5f0ec",
+    sub: "#9e958c",
+    mute: "#4e4840",
+    border: "#352e28",
+    green: "#84cc16",
+    blue: "#0ea5e9",
+    red: "#f87171",
+    yellow: "#f59e0b"
+  },
   forest: {
     id: 'forest',
-    bg: "#064e3b",
-    card: "#065f46",
-    text: "#f0fdf4",
-    sub: "#a7f3d0",
-    mute: "#047857",
-    border: "#059669",
+    bg: "#03160e",
+    card: "#051e12",
+    text: "#ecfdf5",
+    sub: "#6ee7b7",
+    mute: "#065f46",
+    border: "#064e3b",
     green: "#34d399",
     blue: "#38bdf8",
     red: "#f87171",
@@ -80,42 +72,105 @@ export const THEMES = {
 };
 
 // ============================================================================
-// 💎 ORTAK UI STİLLERİ (GLASSMORPHISM)
-// Bu fonksiyon, aktif tema renklerini (C) alıp tüm uygulamada kullanılacak 
-// standart, yüksek kaliteli cam efekti objelerini döndürür.
+// 💎 DESIGN TOKENS — Shared Style Primitives
 // ============================================================================
+
+/** Premium glassmorphism card */
 export const getCommonStyles = (C) => {
-  // Renk objesi gelmezse hata vermemesi için güvenlik önlemi (Fallback)
-  const safeC = C || THEMES.midnight; 
+  const safeC = C || THEMES.midnight;
 
   return {
-    // Ana büyük kartlar için (Örn: Beslenme özet kartı, Antrenman gün kartı)
     glassCard: {
-      background: `linear-gradient(145deg, ${safeC.card}D9, ${safeC.bg}99)`,
-      backdropFilter: "blur(24px)", 
-      WebkitBackdropFilter: "blur(24px)",
-      border: `1px solid ${safeC.border}60`,
-      boxShadow: "0 10px 40px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255,255,255,0.05)",
-      borderRadius: 24, 
-      padding: "20px 24px", 
-      marginBottom: 24, 
+      background: `linear-gradient(145deg, ${safeC.card}F2 0%, ${safeC.bg}E0 100%)`,
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      border: `1px solid ${safeC.border}80`,
+      borderTop: `1px solid rgba(255,255,255,0.06)`,
+      boxShadow: [
+        "0 12px 40px rgba(0,0,0,0.25)",
+        "inset 0 1px 0 rgba(255,255,255,0.05)",
+        "inset 0 -1px 0 rgba(0,0,0,0.15)"
+      ].join(", "),
+      borderRadius: 24,
+      padding: "20px 22px",
+      marginBottom: 16,
       overflow: "hidden",
       position: "relative",
-      transform: "translateZ(0)", // Mobil cihazlarda GPU hızlandırması için
-      willChange: "transform, opacity"
+      transform: "translateZ(0)",
+      willChange: "transform",
     },
 
-    // Kart içindeki küçük bölümler için (Örn: Makro detayları, set kutucukları)
     glassInner: {
-      background: `linear-gradient(145deg, rgba(0,0,0,0.2), rgba(0,0,0,0.05))`,
-      border: `1px solid ${safeC.border}40`,
-      borderRadius: 16, 
-      backdropFilter: "blur(10px)", 
+      background: "linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0.12) 100%)",
+      border: `1px solid ${safeC.border}50`,
+      borderRadius: 16,
+      backdropFilter: "blur(10px)",
       WebkitBackdropFilter: "blur(10px)",
-      padding: "16px"
+      padding: "14px 16px",
     },
-    
-    // Uygulama geneli buton parlamaları vb. için standart gölge
-    glowShadow: (color) => `0 4px 15px ${color}40`
+
+    // Floating action button style
+    fabStyle: (color) => ({
+      background: `linear-gradient(135deg, ${color}, ${color}CC)`,
+      border: "none",
+      borderRadius: 16,
+      cursor: "pointer",
+      boxShadow: `0 8px 24px ${color}40, inset 0 1px 0 rgba(255,255,255,0.15)`,
+      transition: "transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease",
+      fontFamily: "'Comucan', system-ui, sans-serif",
+      fontWeight: 900,
+    }),
+
+    // Subtle glow shadow
+    glow: (color, opacity = 0.35) =>
+      `0 0 24px ${color}${Math.round(opacity * 255).toString(16).padStart(2,'0')}`,
+
+    // Section header label
+    sectionLabel: {
+      fontSize: 11,
+      color: safeC.mute,
+      fontWeight: 800,
+      letterSpacing: 2,
+      textTransform: "uppercase",
+      fontFamily: "'Comucan', system-ui, sans-serif",
+      marginBottom: 12,
+    },
+
+    // Row divider
+    divider: {
+      height: 1,
+      background: `linear-gradient(90deg, transparent, ${safeC.border}80, transparent)`,
+      margin: "14px 0",
+      border: "none",
+    },
+
+    // Pill badge
+    badge: (color) => ({
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 5,
+      background: `${color}18`,
+      border: `1px solid ${color}35`,
+      borderRadius: 9999,
+      padding: "3px 10px",
+      fontSize: 11,
+      fontWeight: 800,
+      color: color,
+      letterSpacing: 0.5,
+    }),
+
+    // Premium input field
+    input: {
+      background: "rgba(255,255,255,0.04)",
+      border: `1px solid ${safeC.border}80`,
+      borderRadius: 12,
+      color: safeC.text,
+      padding: "12px 14px",
+      fontSize: 15,
+      fontWeight: 600,
+      fontFamily: "'Comucan', system-ui, sans-serif",
+      width: "100%",
+      transition: "border-color 0.2s, box-shadow 0.2s",
+    },
   };
 };

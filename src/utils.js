@@ -315,3 +315,24 @@ export const generateMealPlan = (targetMacros, user) => {
 
   return weeklyPlan;
 };
+
+// ============================================================================
+// 🎮 OYUNLAŞTIRMA (GAMIFICATION) V2 - XP VE SEVİYE SİSTEMİ
+// ============================================================================
+export const getLevelInfo = (xp = 0) => {
+  // Her seviye 500 XP ister
+  const XP_PER_LEVEL = 500;
+  const level = Math.floor(xp / XP_PER_LEVEL) + 1;
+  const currentXpInLevel = xp % XP_PER_LEVEL;
+  const progressPct = Math.min(100, Math.round((currentXpInLevel / XP_PER_LEVEL) * 100));
+
+  let title = "Acemi";
+  if (level >= 3) title = "Çaylak Sporcu";
+  if (level >= 5) title = "Gelişen Atlet";
+  if (level >= 10) title = "Demir Bükücü";
+  if (level >= 20) title = "Salonun Hakimi";
+  if (level >= 50) title = "Olimpiyat Sporcusu";
+  if (level >= 100) title = "Efsanevi Titan";
+
+  return { level, currentXpInLevel, nextLevelXp: XP_PER_LEVEL, progressPct, title };
+};

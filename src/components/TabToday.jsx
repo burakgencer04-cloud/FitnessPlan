@@ -1,18 +1,17 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 
 import { useAppStore } from '../store';
-import useModalStore from '../store/useModalStore';
-import { EXERCISE_DB } from '../data'; 
 import { fonts, WORKOUT_TIPS, guessTargetMuscle } from './tabTodayUtils';
 import { getCommonStyles } from '../theme'; 
 import AICoach from './AICoach'; 
 
-import InteractiveMuscleMap from './InteractiveMuscleMap';
 import SetRow from './SetRow';
 import HistoryBottomSheet from './HistoryBottomSheet';
 import { PlatesModal, SwapModal, VideoModal, SummaryModal } from './WorkoutModals';
+import { useWorkoutLogic } from '../hooks/useWorkoutLogic'; // 🚀 YENİ: BÜTÜN MANTIK BURADAN GELİYOR!
 
+// Zamanlayıcı Bileşeni
 const WorkoutTimer = React.memo(({ sessActive }) => {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -37,166 +36,37 @@ const WorkoutTimer = React.memo(({ sessActive }) => {
   return <div style={{ fontSize: 24, fontWeight: 900, fontFamily: fonts.mono, color: "#fff", textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}>{m}:{s}</div>;
 });
 
-const Confetti = ({ C }) => {
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'none', display: 'flex', justifyContent: 'center' }}>
-      {[...Array(50)].map((_, i) => (
-        <motion.div 
-          key={i} initial={{ y: -50, x: 0, scale: Math.random() * 1.5 }} 
-          animate={{ y: window.innerHeight + 50, x: (Math.random() - 0.5) * window.innerWidth, rotate: Math.random() * 360 }} 
-          transition={{ duration: 2 + Math.random() * 2, ease: "easeOut" }} 
-          style={{ position: 'absolute', width: 10, height: 10, background: [C.green, C.blue, C.yellow, C.red][Math.floor(Math.random() * 4)], borderRadius: Math.random() > 0.5 ? '50%' : '2px', boxShadow: "0 0 10px rgba(255,255,255,0.5)" }} 
-        />
-      ))}
-    </div>
-  );
-};
+// Konfeti Bileşeni
+const Confetti = ({ C }) => (
+  <div style={{ position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'none', display: 'flex', justifyContent: 'center' }}>
+    {[...Array(50)].map((_, i) => (
+      <motion.div 
+        key={i} initial={{ y: -50, x: 0, scale: Math.random() * 1.5 }} 
+        animate={{ y: window.innerHeight + 50, x: (Math.random() - 0.5) * window.innerWidth, rotate: Math.random() * 360 }} 
+        transition={{ duration: 2 + Math.random() * 2, ease: "easeOut" }} 
+        style={{ position: 'absolute', width: 10, height: 10, background: [C.green, C.blue, C.yellow, C.red][Math.floor(Math.random() * 4)], borderRadius: Math.random() > 0.5 ? '50%' : '2px', boxShadow: "0 0 10px rgba(255,255,255,0.5)" }} 
+      />
+    ))}
+  </div>
+);
 
 export default function TabToday({ themeColors: C, onNavigate }) {
-  const user = useAppStore(state => state.user);
   const customWorkouts = useAppStore(state => state.customWorkouts) || [];
-  const completedW = useAppStore(state => state.completedW) || {};
-  const setCW = useAppStore(state => state.setCW);
-  const weightLog = useAppStore(state => state.weightLog) || {};
-  const setWL = useAppStore(state => state.setWL);
-  const sessionSets = useAppStore(state => state.sessionSets) || {};
-  const setSessionSets = useAppStore(state => state.setSessionSets);
-  const streak = useAppStore(state => state.streak);
-  const setST = useAppStore(state => state.setST);
-  const setLD = useAppStore(state => state.setLD);
-  
-  const { showConfirm } = useModalStore();
+  const todayW = customWorkouts.length > 0 ? customWorkouts[0] : null; 
 
-  const customExercises = useAppStore(state => state.customExercises) || [];
-  const combinedDB = useMemo(() => [...(Array.isArray(EXERCISE_DB) ? EXERCISE_DB : []), ...customExercises], [customExercises]);
+  // 🧠 İŞTE MİMARİ MÜKEMMELLİK: Yüzlerce satırlık mantığı tek satırda çekiyoruz!
+  const {
+    user, exercises, hasWorkout, isCompleted,
+    activeExIndex, setActiveExIndex,
+    sessActive, showConfetti, modalState, setModalState,
+    activeExerciseDetails, swapAlternatives, currentMaxWeight, totalVolume, progressPct,
+    weightLog, sessionSets,
+    handleStart, handleFinish, handleCancel, undoCompletion,
+    handleSetUpdate, toggleSetDone, handleSwap
+  } = useWorkoutLogic(todayW, C);
 
   const { glassCard, glassInner } = getCommonStyles(C);
-
-  const [activeExIndex, setActiveExIndex] = useState(0);
-  const [sessActive, setSessActive] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  
-  const [modalState, setModalState] = useState({
-    historyEx: null, platesOpen: false, swapOpen: false, video: false, summary: false
-  });
-
   const dailyTip = useMemo(() => WORKOUT_TIPS[Math.floor(Math.random() * WORKOUT_TIPS.length)], []);
-
-  const safeWorkouts = Array.isArray(customWorkouts) ? customWorkouts : [];
-  const todayW = safeWorkouts.length > 0 ? safeWorkouts[0] : null; 
-  const exercises = todayW ? (todayW.exercises || []) : [];
-  const hasWorkout = exercises.length > 0;
-  
-  const isCompleted = completedW[todayW?.id];
-
-  useEffect(() => {
-    const saved = localStorage.getItem('activeWorkoutSession');
-    if (saved) {
-      const p = JSON.parse(saved);
-      if (p.wid === todayW?.id) setSessActive(true);
-      else localStorage.removeItem('activeWorkoutSession');
-    }
-  }, [todayW]);
-
-  const activeExerciseDetails = useMemo(() => {
-    if (!hasWorkout || !exercises[activeExIndex]) return null;
-    const name = exercises[activeExIndex].name;
-    const dbMatch = combinedDB.find(e => e.name.toLowerCase() === name.toLowerCase());
-    return dbMatch || { name, target: guessTargetMuscle(name) };
-  }, [hasWorkout, exercises, activeExIndex, combinedDB]);
-
-  const handleStart = () => {
-    if (navigator.vibrate) navigator.vibrate(50);
-    setSessActive(true);
-    localStorage.setItem('activeWorkoutSession', JSON.stringify({ wid: todayW.id, startTime: Date.now() }));
-  };
-
-  const handleFinish = () => {
-    setSessActive(false);
-    localStorage.removeItem('activeWorkoutSession');
-    
-    setCW(p => ({ ...p, [todayW.id]: true }));
-    setST(streak + 1);
-    setLD(new Date().toDateString());
-    
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-    setShowConfetti(true);
-    setModalState(p => ({ ...p, summary: true }));
-    setTimeout(() => setShowConfetti(false), 4000);
-  };
-
-  const handleSetUpdate = useCallback((exName, setIndex, field, val) => {
-    setSessionSets(prev => {
-      const exSets = [...(prev[exName] || [])];
-      if (!exSets[setIndex]) exSets[setIndex] = { w: "", r: "", rpe: "", t: "N", done: false };
-      exSets[setIndex] = { ...exSets[setIndex], [field]: val };
-      return { ...prev, [exName]: exSets };
-    });
-  }, [setSessionSets]);
-
-  const toggleSetDone = useCallback((exName, setIndex) => {
-    setSessionSets(prev => {
-      const exSets = [...(prev[exName] || [])];
-      if (!exSets[setIndex]) return prev;
-      
-      const isNowDone = !exSets[setIndex].done; 
-      exSets[setIndex] = { ...exSets[setIndex], done: isNowDone };
-      
-      if (isNowDone) {
-        if (navigator.vibrate) navigator.vibrate(20);
-        const { w, r, rpe } = exSets[setIndex]; 
-        if (w && r) {
-          const dateStr = new Date().toLocaleDateString('tr-TR');
-          setWL(old => {
-            const exHistory = old[exName] || [];
-            return { ...old, [exName]: [...exHistory, { date: dateStr, weight: w, reps: r, rpe: rpe || "8" }] };
-          });
-        }
-      }
-      return { ...prev, [exName]: exSets };
-    });
-  }, [setSessionSets, setWL]);
-
-  const handleSwap = (newEx) => {
-    const originalEx = exercises[activeExIndex];
-    alert(`${originalEx.name} yerine ${newEx.name} seçildi!`);
-    setModalState(p => ({ ...p, swapOpen: false }));
-  };
-
-  const swapAlternatives = useMemo(() => {
-    if (!activeExerciseDetails) return [];
-    return combinedDB.filter(e => e.target === activeExerciseDetails.target && e.name !== activeExerciseDetails.name).slice(0, 5);
-  }, [activeExerciseDetails, combinedDB]);
-
-  const currentMaxWeight = useMemo(() => {
-    if (!activeExerciseDetails) return 0;
-    const history = weightLog[activeExerciseDetails.name] || [];
-    let max = 0;
-    history.forEach(log => { const w = parseFloat(log.weight); if (w > max) max = w; });
-    return max;
-  }, [activeExerciseDetails, weightLog]);
-
-  const totalVolume = useMemo(() => {
-    let vol = 0;
-    Object.values(sessionSets).forEach(sets => {
-      sets.forEach(s => {
-        if (s.done && s.w && s.r) vol += parseFloat(s.w) * parseInt(s.r);
-      });
-    });
-    return vol;
-  }, [sessionSets]);
-
-  const progressPct = useMemo(() => {
-    if (!hasWorkout || exercises.length === 0) return 0;
-    let totalSets = 0; let doneSets = 0;
-    exercises.forEach(ex => {
-      const req = parseInt(ex.sets) || 0;
-      totalSets += req;
-      const doneForEx = (sessionSets[ex.name] || []).filter(s => s.done).length; 
-      doneSets += Math.min(req, doneForEx);
-    });
-    return totalSets === 0 ? 0 : Math.round((doneSets / totalSets) * 100);
-  }, [exercises, sessionSets, hasWorkout]);
 
   if (!user) {
     return (
@@ -254,7 +124,7 @@ export default function TabToday({ themeColors: C, onNavigate }) {
              <div style={{ fontSize: 48, marginBottom: 16, filter: `drop-shadow(0 0 20px ${C.green})` }}>🏆</div>
              <h3 style={{ margin: "0 0 8px 0", fontFamily: fonts.header, fontSize: 24, fontWeight: 900, fontStyle: "italic", color: C.green }}>GÖREV TAMAMLANDI</h3>
              <p style={{ color: C.text, fontSize: 14, fontWeight: 600 }}>Bugünkü antrenmanını başarıyla bitirdin. Yarın görüşmek üzere!</p>
-             <button onClick={() => setCW(p => ({ ...p, [todayW.id]: false }))} style={{ marginTop: 24, background: "transparent", border: `1px solid ${C.border}`, color: C.sub, padding: "10px 20px", borderRadius: 12, fontWeight: 800, cursor: "pointer" }}>Geri Al</button>
+             <button onClick={undoCompletion} style={{ marginTop: 24, background: "transparent", border: `1px solid ${C.border}`, color: C.sub, padding: "10px 20px", borderRadius: 12, fontWeight: 800, cursor: "pointer" }}>Geri Al</button>
           </motion.div>
         ) : !sessActive ? (
           <motion.div key="start" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} transition={{ duration: 0.3 }} style={{ ...glassCard, position: "relative", overflow: "hidden" }}>
@@ -305,14 +175,7 @@ export default function TabToday({ themeColors: C, onNavigate }) {
                    <WorkoutTimer sessActive={sessActive} />
                  </div>
                </div>
-               <button onClick={() => { 
-                 showConfirm(
-                   "Antrenmanı Bitir", 
-                   "Antrenmanı bitirmek istediğine emin misin? Kaydedilmemiş setlerin silinebilir.", 
-                   () => { setSessActive(false); localStorage.removeItem('activeWorkoutSession'); },
-                   { confirmText: "Evet, Bitir", confirmColor: C.red }
-                 );
-               }} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.text, padding: "10px 16px", borderRadius: 12, fontWeight: 800, cursor: "pointer", fontSize: 12 }}>Bitir</button>
+               <button onClick={handleCancel} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.text, padding: "10px 16px", borderRadius: 12, fontWeight: 800, cursor: "pointer", fontSize: 12 }}>Bitir</button>
             </div>
 
             <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 10 }}>
