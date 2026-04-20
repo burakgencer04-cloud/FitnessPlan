@@ -41,6 +41,7 @@ const TabProgram = lazy(() => import('./features/workout/TabProgram'));
 const TabNutrition = lazy(() => import('./features/nutrition/TabNutrition'));
 const TabProgress = lazy(() => import('./features/progress/ProgressMain')); 
 const TabToday = lazy(() => import('./features/workout/TabToday')); 
+const TabSocial = lazy(() => import('./features/social/TabSocial')); // 🍻 YENİ ROTA
 const TabProfile = lazy(() => import('./features/profile/TabProfile')); 
 
 const fonts = {
@@ -49,12 +50,14 @@ const fonts = {
   mono: "monospace"
 };
 
+// 🧭 NAVİGASYON HARİTASI GÜNCELLENDİ
 const TABS = [
   { id: 0, label: "Antrenmanım", icon: "🏋️‍♂️" },
   { id: 1, label: "Program", icon: "💪" },
   { id: 2, label: "Beslenme", icon: "🥗" },
   { id: 3, label: "İlerleme", icon: "📈" },
-  { id: 4, label: "Profilim", icon: "👤" } 
+  { id: 4, label: "Taverna", icon: "🍻" }, // ⚔️ SOSYAL LİG
+  { id: 5, label: "Profilim", icon: "👤" } 
 ];
 
 const LoadingFallback = ({ C }) => (
@@ -94,7 +97,7 @@ export default function App() {
   
   const C = THEMES[activeThemeId] || THEMES.midnight;
 
-  // --- FIREBASE BEKÇİSİ (Otomatik Giriş Kontrolü) ---
+  // --- FIREBASE BEKÇİSİ ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       setCurrentUser(authUser);
@@ -192,9 +195,8 @@ export default function App() {
   const dayPlan = useMemo(() => activePlan ? activePlan[nutDay] : null, [activePlan, nutDay]);
   const shopping = useMemo(() => buildShoppingList(activePlan), [activePlan]);
 
-  // --- GÜVENLİK KAPILARI (RENDER MANTIĞI) ---
+  // --- GÜVENLİK KAPILARI ---
 
-  // 1. Kapı: Firebase Sunucusu ile İletişim Bekleniyor
   if (isAuthLoading) {
     return (
       <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -204,17 +206,15 @@ export default function App() {
     );
   }
 
-  // 2. Kapı: Kullanıcı Giriş Yapmamış (AuthScreen'e Yönlendir)
   if (!currentUser) {
     return <AuthScreen C={C} />;
   }
 
-  // 3. Kapı: Giriş Yapmış Ama Profil Oluşturulmamış (Onboarding'e Yönlendir)
   if (!user?.hasCompletedOnboarding) {
     return <OnboardingWizard onComplete={handleWizardComplete} themeColors={C} />;
   }
 
-  // 4. Kapı: ANA UYGULAMA
+  // --- ANA UYGULAMA ---
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: fonts.body }}>
       
@@ -232,7 +232,7 @@ export default function App() {
 
       <div style={{ maxWidth: 640, margin: "0 auto", position: "relative" }}>
         
-        {/* Üst Bar ve Çıkış Butonu */}
+        {/* Üst Bar */}
         <div style={{ padding: "24px 24px", background: C.card, borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: C.text }}>Protocol <span style={{color: C.green}}>✓</span></h1>
@@ -288,7 +288,13 @@ export default function App() {
                     onSelectProgram={() => setTab(1)}
                   />
                 )}
-                {tab === 4 && <TabProfile themeColors={C} />}
+                
+                {/* 🍻 TAVERNA SEKMEDE YERİNİ ALDI */}
+                {tab === 4 && <TabSocial themeColors={C} />}
+                
+                {/* 👤 PROFİL ARTIK 5. İNDEKSTE */}
+                {tab === 5 && <TabProfile themeColors={C} />} 
+
               </Suspense>
             </motion.div>
           </AnimatePresence>
@@ -306,7 +312,7 @@ export default function App() {
                 style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', background: isActive ? `${C.green}15` : 'transparent', border: 'none', borderRadius: 20, cursor: 'pointer', padding: '12px 0' }}
               >
                 <div style={{ fontSize: 24, color: isActive ? C.green : C.mute }}>{t.icon}</div>
-                <div style={{ fontSize: 13, color: isActive ? C.green : C.sub, fontWeight: isActive ? 900 : 600, fontFamily: fonts.header }}>{t.label}</div>
+                <div style={{ fontSize: 11, color: isActive ? C.green : C.sub, fontWeight: isActive ? 900 : 600, fontFamily: fonts.header }}>{t.label}</div>
               </motion.button>
             )
           })}
