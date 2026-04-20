@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // --- CORE & ENGINES ---
 import { useAppStore } from '../../core/store';
-import { HapticEngine, SoundEngine } from '../../core/hapticSoundEngine'; // 🔥 YENİ PREMİUM MOTORLARIMIZ
+import { HapticEngine, SoundEngine } from '../../core/hapticSoundEngine';
 
 // --- DATA & UTILS ---
 import { EXERCISE_DB } from './workoutData'; 
@@ -13,6 +13,7 @@ import { fonts, getGlassCardStyle, getGlassInnerStyle, WORKOUT_TIPS, guessTarget
 import SetRow from './SetRow';
 import HistoryBottomSheet from './HistoryBottomSheet';
 import { PlatesModal, SwapModal, VideoModal, SummaryModal } from './WorkoutModals';
+import ShareCard from './ShareCard';
 
 const WorkoutTimer = React.memo(({ sessActive }) => {
   const [elapsed, setElapsed] = useState(0);
@@ -50,7 +51,10 @@ export default function TabToday({
   const [dynamicSetCounts, setDynamicSetCounts] = useState({});
   const [swappedExercises, setSwappedExercises] = useState({});
   const [visibleRestLeft, setVisibleRestLeft] = useState(0);
+  
   const [dailyTip, setDailyTip] = useState(WORKOUT_TIPS[0]);
+  const [showShareCard, setShowShareCard] = useState(false);
+  const [finalStats, setFinalStats] = useState(null);
 
   useEffect(() => {
     const savedSessionStr = localStorage.getItem('activeWorkoutSession');
@@ -111,7 +115,6 @@ export default function TabToday({
     setDailyTip(WORKOUT_TIPS[Math.floor(Math.random() * WORKOUT_TIPS.length)]);
   }, [sessActive]);
 
-  // 🔥 YENİ DİNLENME SÜRESİ EFEKTLERİ (Geri Sayım ve Bitiş)
   useEffect(() => {
     let interval;
     if (visibleRestLeft > 0) {
@@ -162,14 +165,13 @@ export default function TabToday({
     return max;
   }, [sessionSets, activeExIndex, currentSetCount]);
 
-  // 🔥 ANTRENMAN BAŞLATMA EFEKTİ
   const handleWorkoutStart = useCallback(() => {
     if (!sessionExercises.length) return;
     setSessPhase(activePhase);
     setSessDay(activeDay);
     
     HapticEngine.medium();
-    SoundEngine.success(); // Başlangıç melodisi
+    SoundEngine.success(); 
     
     setSessActive(true);
     timer.toggle();
@@ -180,26 +182,50 @@ export default function TabToday({
     HapticEngine.success();
   }, []);
 
+  const workoutSummaryData = useMemo(() => {
+    if (!sessionExercises) return [];
+    return sessionExercises.map((ex, exIdx) => {
+      let maxW = 0; let setsDone = 0;
+      Object.keys(sessionSets).forEach(key => {
+        if (key.startsWith(`${exIdx}-`) && sessionSets[key]?.done) {
+          const w = parseFloat(sessionSets[key].w) || 0;
+          if (w > maxW) maxW = w;
+          setsDone++;
+        }
+      });
+      return { name: ex.name, maxWeight: maxW, sets: setsDone };
+    }).filter(s => s.sets > 0); 
+  }, [sessionSets, sessionExercises]);
+
   const completeAndCloseSession = useCallback(() => {
+    const savedStr = localStorage.getItem('activeWorkoutSession');
+    const saved = savedStr ? JSON.parse(savedStr) : {};
+    const finalSecs = saved.startTime ? Math.floor((Date.now() - saved.startTime) / 1000) : 0;
+    
+    setFinalStats({ 
+      volume: totalVolume, 
+      duration: Math.floor(finalSecs / 60) || 1, 
+      exercises: workoutSummaryData.length,
+      workoutName: currentWorkout?.label || "Antrenman",
+      exercisesList: workoutSummaryData
+    });
+
     setModalState(p => ({ ...p, summary: false }));
     setSessActive(false);
     setVisibleRestLeft(0);
     localStorage.removeItem('activeWorkoutSession'); 
     
-    const savedStr = localStorage.getItem('activeWorkoutSession');
-    const saved = savedStr ? JSON.parse(savedStr) : {};
-    const finalSecs = saved.startTime ? Math.floor((Date.now() - saved.startTime) / 1000) : 0;
     const finalTimeFormatted = `${Math.floor(finalSecs / 60).toString().padStart(2, '0')}:${(finalSecs % 60).toString().padStart(2, '0')}`;
-    
     finishSession({ duration: finalTimeFormatted });
     setSessionSets({}); 
-  }, [finishSession, setSessionSets]);
+
+    setShowShareCard(true);
+  }, [finishSession, setSessionSets, totalVolume, workoutSummaryData, currentWorkout]);
 
   const handleSetUpdate = useCallback((exIdx, setIdx, field, value) => {
     setSessionSets(prev => ({ ...prev, [`${exIdx}-${setIdx}`]: { ...(prev[`${exIdx}-${setIdx}`] || { w: "", r: "", rpe: "", t: "N", done: false }), [field]: value } }));
   }, [setSessionSets]);
 
-  // 🔥 SET BİTİRME EFEKTİ (Apple Watch Tarzı Tok Geri Bildirim)
   const handleSetToggle = useCallback((exIdx, setIdx, restTime, exName) => {
     const key = `${exIdx}-${setIdx}`;
     const currentSet = sessionSets[key] || { w: "", r: "", rpe: "", t: "N", done: false };
@@ -239,7 +265,6 @@ export default function TabToday({
     }
   }, [sessionSets, handleSetUpdate, restT, setWL]);
 
-  // 🔥 SET EKLEME/SİLME HAFİF TIKLAMA EFEKTİ
   const addSet = () => { 
     setDynamicSetCounts(prev => ({ ...prev, [activeExIndex]: currentSetCount + 1 })); 
     HapticEngine.light(); 
@@ -264,21 +289,6 @@ export default function TabToday({
     const targetGroup = activeExerciseDetails?.target || guessTargetMuscle(activeExercise?.name);
     return EXERCISE_DB.filter(e => e.target === targetGroup && e.name !== activeExercise?.name);
   }, [activeExerciseDetails, activeExercise]);
-
-  const workoutSummaryData = useMemo(() => {
-    if (!sessionExercises) return [];
-    return sessionExercises.map((ex, exIdx) => {
-      let maxW = 0; let setsDone = 0;
-      Object.keys(sessionSets).forEach(key => {
-        if (key.startsWith(`${exIdx}-`) && sessionSets[key]?.done) {
-          const w = parseFloat(sessionSets[key].w) || 0;
-          if (w > maxW) maxW = w;
-          setsDone++;
-        }
-      });
-      return { name: ex.name, maxWeight: maxW, sets: setsDone };
-    }).filter(s => s.sets > 0); 
-  }, [sessionSets, sessionExercises]);
 
   const glassCardStyle = getGlassCardStyle(C);
 
@@ -339,7 +349,6 @@ export default function TabToday({
         `}
       </style>
 
-      {/* GPU DOSTU ARKA PLAN */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
         <motion.div animate={{ opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} style={{ position: 'absolute', top: '-20%', left: '-20%', width: '80vw', height: '80vw', background: `radial-gradient(circle, ${C.blue}30 0%, transparent 60%)`, transform: "translateZ(0)" }} />
         <motion.div animate={{ opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }} style={{ position: 'absolute', bottom: '-10%', right: '-20%', width: '70vw', height: '70vw', background: `radial-gradient(circle, ${C.green}20 0%, transparent 60%)`, transform: "translateZ(0)" }} />
@@ -524,6 +533,15 @@ export default function TabToday({
           {modalState.video && activeExerciseDetails && <VideoModal C={C} activeExerciseDetails={activeExerciseDetails} onClose={() => setModalState(p => ({ ...p, video: false }))} />}
           {modalState.summary && <SummaryModal C={C} stats={{ volume: totalVolume }} summaryData={workoutSummaryData} onClose={() => setModalState(p => ({ ...p, summary: false }))} onComplete={completeAndCloseSession} />}
         </AnimatePresence>
+
+        {showShareCard && finalStats && (
+          <ShareCard 
+            stats={finalStats} 
+            C={C} 
+            onClose={() => setShowShareCard(false)} 
+          />
+        )}
+
       </div>
     </div>
   );

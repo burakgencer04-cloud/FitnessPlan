@@ -404,3 +404,14 @@ export const sumTotals = (items) => {
   }), { cal: 0, p: 0, c: 0, f: 0 });
 };
 
+// Eğer FOODS başka bir dosyadaysa import etmelisin, yoksa bu listeyi kullanabilirsin:
+export const FOODS = [
+  { id: 1, name: "Yumurta", p: 13, c: 1, f: 11, cal: 155, type: "protein" },
+  { id: 2, name: "Tavuk Göğsü", p: 31, c: 0, f: 3.6, cal: 165, type: "protein" },
+  { id: 3, name: "Yulaf Ezmesi", p: 13, c: 68, f: 7, cal: 389, type: "carb" },
+  { id: 4, name: "Pirinç (Pişmiş)", p: 2.7, c: 28, f: 0.3, cal: 130, type: "carb" },
+  { id: 5, name: "Zeytinyağı", p: 0, c: 0, f: 100, cal: 884, type: "fat" },
+  { id: 6, name: "Badem", p: 21, c: 22, f: 50, cal: 579, type: "fat" },
+  { id: 7, name: "Lor Peyniri", p: 11, c: 3.4, f: 4.3, cal: 98, type: "protein" }
+];
+

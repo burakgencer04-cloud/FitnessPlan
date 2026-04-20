@@ -2,25 +2,26 @@ import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- 1. CORE (Çekirdek Yapı) ---
-// Store artık /core/store/index.js üzerinden otomatik bağlanıyor
 import { useAppStore } from './core/store'; 
 import { THEMES } from './core/theme'; 
+import { HapticEngine, SoundEngine } from './core/hapticSoundEngine';
 
-// --- 2. DATA (Yeni Yerlerinden Çağırılıyor) ---
-// Antrenman Verileri
+// --- FIREBASE AUTH ---
+import { auth } from './core/firebase'; 
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import AuthScreen from './features/auth/AuthScreen';
+
+// --- 2. DATA ---
 import { 
   PHASES, BADGES, BADGE_ICONS, TOTAL_W, 
   EXERCISE_DB, WORKOUT_PRESETS 
 } from './features/workout/workoutData';
-
-// Beslenme Verileri
 import { 
   FOODS, MEAL_TEMPLATES, MEAL_TYPE_LABELS, 
   DAY_NAMES, MEAL_RATIOS_BY_COUNT 
 } from './features/nutrition/nutritionData';
 
-// --- 3. UTILS (Yeni Yerlerinden Çağırılıyor) ---
-// Beslenme ile ilgili hesaplamalar artık nutritionUtils içinde
+// --- 3. UTILS ---
 import { 
   foodMacros, sumTotals, calcTDEE, 
   generateMealPlan, buildShoppingList 
@@ -35,10 +36,7 @@ import {
 import OnboardingWizard from './features/onboarding/OnboardingWizard';
 import { generatePersonalizedPlan } from './features/onboarding/generatorEngine';
 
-import { HapticEngine, SoundEngine } from './core/hapticSoundEngine';
-
-
-// Sekmeler (Lazy Loading ile performans optimizasyonu)
+// Sekmeler (Lazy Loading)
 const TabProgram = lazy(() => import('./features/workout/TabProgram'));
 const TabNutrition = lazy(() => import('./features/nutrition/TabNutrition'));
 const TabProgress = lazy(() => import('./features/progress/ProgressMain')); 
@@ -64,13 +62,17 @@ const LoadingFallback = ({ C }) => (
     <motion.div 
       animate={{ rotate: 360 }} 
       transition={{ repeat: Infinity, duration: 1, ease: "linear" }} 
-      style={{ width: 40, height: 40, borderRadius: "50%", border: `4px solid ${C.border}`, borderTopColor: C.green, marginBottom: 16 }} 
+      style={{ width: 40, height: 40, borderRadius: "50%", border: `4px solid ${C?.border || '#333'}`, borderTopColor: C?.green || '#2ecc71', marginBottom: 16 }} 
     />
   </div>
 );
 
 export default function App() {
-  // Store'dan verileri çekiyoruz (Slice Pattern sayesinde hepsi useAppStore içinde birleşmiş durumda)
+  // --- FIREBASE AUTH STATE ---
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  // --- APP STORE STATE ---
   const {
     screen, setScreen, user, setUser, macros, setMacros, activeThemeId, 
     completedW, setCW, weightLog, setWL, streak, setST, lastDate, setLD, 
@@ -91,6 +93,24 @@ export default function App() {
   const restT = useRestTimer();
   
   const C = THEMES[activeThemeId] || THEMES.midnight;
+
+  // --- FIREBASE BEKÇİSİ (Otomatik Giriş Kontrolü) ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      setCurrentUser(authUser);
+      setIsAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      HapticEngine.medium();
+    } catch (err) {
+      console.error("Çıkış hatası:", err);
+    }
+  };
 
   const showToast = (icon, text) => {
     setToast({ icon, text });
@@ -160,10 +180,8 @@ export default function App() {
     timer.reset(); 
     restT.stop();
     
-    // --- ESKİ ABES SESİ SİLDİK, YENİ TOK SESİ EKLEDİK ---
     SoundEngine.success(); 
     HapticEngine.success();
-    // ---------------------------------------------------
 
     showToast("🎉", "Antrenman başarıyla kaydedildi!");
   };
@@ -174,32 +192,29 @@ export default function App() {
   const dayPlan = useMemo(() => activePlan ? activePlan[nutDay] : null, [activePlan, nutDay]);
   const shopping = useMemo(() => buildShoppingList(activePlan), [activePlan]);
 
-  if (screen === "landing") return (
-    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: fonts.body }}>
-      <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 72, marginBottom: 16 }}>⚡</div>
-        <h1 style={{ fontSize: "clamp(36px, 10vw, 64px)", fontWeight: 900, color: C.text, margin: "0 0 16px", fontStyle: "italic", fontFamily: fonts.header }}>
-          Fitness Protocol
-        </h1>
-        <motion.button 
-          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-          onClick={() => { 
-  setScreen(user ? "app" : "onboard");
-  HapticEngine.medium();
-  SoundEngine.success(); // Uygulamaya giriş yaparken o tok, şık sesi çal
-}}
-          style={{ background: `linear-gradient(135deg, ${C.green}, ${C.blue})`, padding: "18px 56px", borderRadius: 20, fontWeight: 900, border: "none", cursor: "pointer", fontSize: 16, fontFamily: fonts.header, color: "#fff" }}
-        >
-          SİSTEME GİRİŞ YAP →
-        </motion.button>
-      </motion.div>
-    </div>
-  );
+  // --- GÜVENLİK KAPILARI (RENDER MANTIĞI) ---
 
+  // 1. Kapı: Firebase Sunucusu ile İletişim Bekleniyor
+  if (isAuthLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }} style={{ fontSize: 40, marginBottom: 20 }}>⚡</motion.div>
+        <div style={{ color: C.text, fontSize: 12, fontWeight: 900, letterSpacing: 4, fontFamily: fonts.mono }}>MOTORLAR ISINIYOR...</div>
+      </div>
+    );
+  }
+
+  // 2. Kapı: Kullanıcı Giriş Yapmamış (AuthScreen'e Yönlendir)
+  if (!currentUser) {
+    return <AuthScreen C={C} />;
+  }
+
+  // 3. Kapı: Giriş Yapmış Ama Profil Oluşturulmamış (Onboarding'e Yönlendir)
   if (!user?.hasCompletedOnboarding) {
     return <OnboardingWizard onComplete={handleWizardComplete} themeColors={C} />;
   }
 
+  // 4. Kapı: ANA UYGULAMA
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: fonts.body }}>
       
@@ -217,13 +232,20 @@ export default function App() {
 
       <div style={{ maxWidth: 640, margin: "0 auto", position: "relative" }}>
         
+        {/* Üst Bar ve Çıkış Butonu */}
         <div style={{ padding: "24px 24px", background: C.card, borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: C.text }}>Fitness Protocol</h1>
-            <div style={{ fontSize: 12, color: C.green, fontWeight: 800, marginTop: 4 }}>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: C.text }}>Protocol <span style={{color: C.green}}>✓</span></h1>
+            <div style={{ fontSize: 11, color: C.green, fontWeight: 800, marginTop: 4 }}>
               {user?.activePlanName ? user.activePlanName.toUpperCase() : "AKTİF PROTOKOL"}
             </div>
           </div>
+          <button 
+            onClick={handleLogout}
+            style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.border}`, color: C.mute, padding: '8px 12px', borderRadius: 10, fontSize: 10, fontWeight: 800, cursor: 'pointer' }}
+          >
+            ÇIKIŞ YAP
+          </button>
         </div>
 
         <div style={{ padding: "24px 20px", paddingBottom: 110 }}>
@@ -278,15 +300,11 @@ export default function App() {
             const isActive = tab === t.id;
             return (
               <motion.button 
-  key={t.id} 
-  onClick={() => { 
-    setTab(t.id); 
-    HapticEngine.light(); 
-    SoundEngine.tick(); 
-  }} 
-  whileTap={{ scale: 0.92 }} 
-  style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', background: isActive ? `${C.green}15` : 'transparent', border: 'none', borderRadius: 20, cursor: 'pointer', padding: '12px 0' }}
->
+                key={t.id} 
+                onClick={() => { setTab(t.id); HapticEngine.light(); SoundEngine.tick(); }} 
+                whileTap={{ scale: 0.92 }} 
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', background: isActive ? `${C.green}15` : 'transparent', border: 'none', borderRadius: 20, cursor: 'pointer', padding: '12px 0' }}
+              >
                 <div style={{ fontSize: 24, color: isActive ? C.green : C.mute }}>{t.icon}</div>
                 <div style={{ fontSize: 13, color: isActive ? C.green : C.sub, fontWeight: isActive ? 900 : 600, fontFamily: fonts.header }}>{t.label}</div>
               </motion.button>

@@ -1,4 +1,4 @@
-package com.macropulse.app;
+package com.benimadim.fitness;
 
 import com.getcapacitor.BridgeActivity;
 

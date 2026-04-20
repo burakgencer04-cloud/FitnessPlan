@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.macropulse.app",
+  "applicationId": "com.benimadim.fitness",
   "variantName": "release",
   "elements": [
     {
