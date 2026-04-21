@@ -1,17 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-// import { VitePWA } from 'vite-plugin-pwa' // Beyaz ekran testi için kapalı tutuyoruz
+import path from 'path'
 
 export default defineConfig({
-  base: './', // Beyaz ekranı çözen sihirli ayarımız
+  base: './',
   plugins: [
     react(),
+    // VitePWA eklenecekse buraya aç: VitePWA({...})
   ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    }
+  },
   build: {
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        // 🔥 İŞTE ÇÖZÜM: Obje yerine Fonksiyon kullanıyoruz
         manualChunks(id) {
           if (id.includes('node_modules')) {
             if (id.includes('react') || id.includes('react-dom')) return 'vendor';

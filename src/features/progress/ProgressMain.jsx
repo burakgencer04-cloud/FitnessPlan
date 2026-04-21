@@ -11,6 +11,7 @@ import VolumeChart from './VolumeChart';
 import PRSection from './PRSection';
 import { CNSFatigue, StatBoxes, BadgesSection } from './ProgressStats';
 import { MeasureModal, PhotoSwipeModal, StoryModal, Confetti } from './ProgressModals';
+import MuscleMap from './MuscleMap'; // 🔥 YENİ: HASAR RAPORU
 
 export default function ProgressMain({ 
   totalDone, overallPct, badges = [], BADGES = [], BADGE_ICONS = {}, 
@@ -186,6 +187,23 @@ export default function ProgressMain({
     return dynamicBadges;
   }, [globalTotalVolume, streak, personalRecords, totalDone, progressPhotos, C]);
 
+  const aiAnalysis = useMemo(() => {
+    let mostLoggedEx = "";
+    let maxLogs = 0;
+
+    Object.entries(weightLog).forEach(([exName, logs]) => {
+      const logsArr = Array.isArray(logs) ? logs : [logs];
+      if (logsArr.length > maxLogs) {
+        maxLogs = logsArr.length;
+        mostLoggedEx = exName;
+      }
+    });
+
+    if (totalDone === 0) return { title: "Sessiz Sular", text: "Kaptan, henüz bir idman kaydetmedik. Hedeflerine ulaşmak için ilk adımı at ve sisteme bir antrenman gir.", mood: "info" };
+    if (globalTotalVolume > 10000) return { title: "Yıkıcı Güç", text: `Bu hafta tam anlamıyla fırtına estirdin! Toplamda ${(globalTotalVolume/1000).toFixed(1)} ton yük kaldırdın. Özellikle ${mostLoggedEx} hareketinde harika istikrarın var. Gelecek antrenmanda ağırlıkları artırmaya hazır ol!`, mood: "success" };
+    return { title: "İstikrarlı Seyir", text: `Motorlar çalışıyor kaptan. Şu ana kadar ${totalDone} antrenman tamamladık. ${mostLoggedEx} hareketine daha fazla odaklanmışsın, şimdi diğer kas gruplarına da şok verme vakti!`, mood: "warning" };
+  }, [totalDone, weightLog, globalTotalVolume]);
+
   if (!hasActiveProgram || !selectedProgram) {
     return (
       <div style={{ paddingBottom: 40, fontFamily: fonts.body, color: C.text, position: "relative" }}>
@@ -202,18 +220,8 @@ export default function ProgressMain({
   return (
     <div style={{ paddingBottom: 100, fontFamily: fonts.body, color: C.text, position: "relative" }}>
       
-      {/* 🌌 AMBIENT GLOWING BACKGROUND (ORTAM IŞIKLARI) */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-        <motion.div 
-          animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.25, 0.15], x: [0, 30, 0] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          style={{ position: 'absolute', top: '-10%', left: '-10%', width: '70vw', height: '70vw', background: `radial-gradient(circle, ${C.blue}40 0%, transparent 60%)`, filter: 'blur(100px)' }} 
-        />
-        <motion.div 
-          animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1], y: [0, -40, 0] }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          style={{ position: 'absolute', bottom: '10%', right: '-10%', width: '60vw', height: '60vw', background: `radial-gradient(circle, ${C.green}30 0%, transparent 60%)`, filter: 'blur(100px)' }} 
-        />
+        <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.25, 0.15], x: [0, 30, 0] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} style={{ position: 'absolute', top: '-10%', left: '-10%', width: '70vw', height: '70vw', background: `radial-gradient(circle, ${C.blue}40 0%, transparent 60%)`, filter: 'blur(100px)' }} />
       </div>
 
       <div style={{ position: "relative", zIndex: 1 }}>
@@ -226,13 +234,25 @@ export default function ProgressMain({
           </button>
         </div>
 
-        {/* Bileşenlerin dizilimi aynen korundu */}
-        <StatBoxes streak={streak} globalTotalVolume={globalTotalVolume} C={C} />
+        {/* YAPAY ZEKA ANALİZ KARTI */}
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ ...getGlassCardStyle(C), marginBottom: 24, padding: "28px" }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: aiAnalysis.mood === "success" ? C.green : aiAnalysis.mood === "warning" ? C.yellow : C.blue, boxShadow: `0 0 20px ${aiAnalysis.mood === "success" ? C.green : C.blue}` }} />
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+            <div style={{ fontSize: 36, filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.3))" }}>{aiAnalysis.mood === "success" ? "🚀" : aiAnalysis.mood === "warning" ? "⚓" : "🧭"}</div>
+            <div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 900, letterSpacing: 2, marginBottom: 6, fontFamily: fonts.header }}>AI SEYİR ANALİZİ</div>
+              <h3 style={{ margin: "0 0 8px 0", fontSize: 20, color: "#fff", fontWeight: 900, fontFamily: fonts.header }}>{aiAnalysis.title}</h3>
+              <p style={{ margin: 0, fontSize: 14, color: "rgba(255,255,255,0.8)", lineHeight: 1.6, fontWeight: 500 }}>{aiAnalysis.text}</p>
+            </div>
+          </div>
+        </motion.div>
 
+        {/* 🔥 YENİ: HASAR RAPORU (KAS HARİTASI) */}
+        <MuscleMap weightLog={weightLog} C={C} />
+
+        <StatBoxes streak={streak} globalTotalVolume={globalTotalVolume} C={C} />
         <WorkoutConsistency recentWorkoutsGrid={recentWorkoutsGrid} totalDone={totalDone} progressPhotos={progressPhotos} setPhotoModalIndex={setPhotoModalIndex} C={C} />
-        
         <CNSFatigue cnsFatiguePct={cnsFatiguePct} C={C} />
-        
         <ProgressPhotos progressPhotos={progressPhotos} setPhotoModalIndex={setPhotoModalIndex} handlePhotoUpload={handlePhotoUpload} fileInputRef={fileInputRef} C={C} />
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={glassCardStyle}>
@@ -241,7 +261,6 @@ export default function ProgressMain({
             <button onClick={() => { setMeasureForm(prev => ({...prev, type: selectedChartType})); setShowMeasureModal(true); }} style={{ background: "#fff", color: "#000", border: "none", padding: "10px 20px", borderRadius: 12, fontWeight: 900, cursor: "pointer", fontSize: 13, boxShadow: "0 4px 15px rgba(255,255,255,0.2)" }}>Kayıt Gir</button>
           </div>
 
-          {/* Grafikler aynen duruyor */}
           <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 16, scrollbarWidth: "none", marginBottom: 16 }}>
             {MEASUREMENT_TYPES.map(type => (
               <button 

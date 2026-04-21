@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './App.css' 
 import App from './App.jsx' 
 import GlobalModal from './shared/components/GlobalModal.jsx' 
+import './core/i18n'; // <-- ÇEVİRİ MOTORUNU ATEŞLEYEN KABLO BU!
 
 export default function RootApp() {
   return (

@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next'; // 🌍 ÇEVİRİ EKLENDİ
 
 import { useAppStore } from '../../core/store';
 import { fonts, getMealCategories } from './nutritionUtils';
 import { generateMealPlan } from './nutritionUtils';
 import { SearchFoodModal, FoodDetailModal, BarcodeScannerModal, SamplePlanModal } from './NutritionModals';
 import useModalStore from '../../core/useModalStore';
+import AIVisionModal from './AIVisionModal';
 
 // 1. MAKRO BAR BİLEŞENİ (Premium İnce Tasarım)
 function MacroBar({ label, plannedVal, eatenVal, target, color, C }) {
@@ -30,6 +32,8 @@ function MacroBar({ label, plannedVal, eatenVal, target, color, C }) {
 
 // 2. ANA SAYFA
 export default function NutritionView({ user, macros, regeneratePlan, dayPlan, nutDay, setNutDay, themeColors: C, shoppingList = [], onOpenStock }) {
+  const { t } = useTranslation(); // 🌍 ÇEVİRİ HOOK
+
   const { addConsumedFood, removeConsumedFood, consumedFoods = [], customTargetMacros, mealPlan, setMealPlan } = useAppStore(); 
   const { showConfirm, showAlert } = useModalStore(); 
 
@@ -44,8 +48,9 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
   const [customRecipes, setCustomRecipes] = useState([]);
   const [mealTags, setMealTags] = useState({}); 
   const [isRestDay, setIsRestDay] = useState(false); 
+  const [showAIVision, setShowAIVision] = useState(false);
 
-  const DAYS = ["1. Gün", "2. Gün", "3. Gün", "4. Gün", "5. Gün", "6. Gün", "7. Gün"];
+  const DAYS = [1, 2, 3, 4, 5, 6, 7].map(num => t('nut_day_num', { num }));
   const baseTargetMacros = customTargetMacros || macros || { calories: 2000, protein: 150, carbs: 200, fat: 70 };
   const targetFiber = 30; const targetSugar = 50; const targetWater = 3000; 
 
@@ -97,10 +102,10 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
     if (plannedTotals.cal + newCal > targetMacros.calories + 100) {
       if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
       showConfirm(
-        "Hedefi Aşma Riski", 
-        "Bu besini eklemek günlük kalori hedefini aşmana neden olacak. Yine de eklensin mi?",
+        t('nut_warn_limit_title'), 
+        t('nut_warn_limit_desc'),
         () => executeAddFood(food, customMealIndex, multiplier, finalQty, newCal, isRecipe),
-        { confirmText: "Yine de Ekle", confirmColor: C.yellow }
+        { confirmText: t('nut_add_anyway'), confirmColor: C.yellow }
       );
       return;
     }
@@ -122,7 +127,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
   };
 
   const handleSaveRecipe = (mealItems, mealName) => {
-    const recipeName = prompt("Bu tarif için bir isim girin:", `${mealName} Kombosu`);
+    const recipeName = prompt(t('nut_prompt_recipe_name'), `${mealName} ${t('nut_combo')}`);
     if (!recipeName) return;
     const recipe = {
       id: `rec_${Date.now()}`, name: recipeName, isRecipe: true, items: mealItems,
@@ -131,7 +136,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
     };
     const updatedRecipes = [...customRecipes, recipe];
     setCustomRecipes(updatedRecipes); localStorage.setItem('customRecipes', JSON.stringify(updatedRecipes));
-    showAlert("Başarılı", "Tarif başarıyla kaydedildi!");
+    showAlert(t('nut_success'), t('nut_recipe_saved'));
   };
 
   const handleToggleEaten = (item) => {
@@ -141,21 +146,21 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
   };
 
   const handleDeleteFood = (globalIndex) => { 
-    showConfirm("Yiyeceği Sil", "Bu besini bugünkü planından çıkarmak istediğine emin misin?", () => removeConsumedFood(globalIndex), { confirmText: "Evet, Sil", confirmColor: "#ef4444" });
+    showConfirm(t('nut_delete_food_title'), t('nut_delete_food_desc'), () => removeConsumedFood(globalIndex), { confirmText: t('nut_yes_delete'), confirmColor: "#ef4444" });
   };
 
   const handleApplySamplePlan = () => {
     if (!activePlan || !activePlan.meals) return;
-    showConfirm("Planı Aktar", "Örnek programdaki tüm yiyecekler bugünün planına eklenecek. Onaylıyor musun?", () => {
+    showConfirm(t('nut_apply_plan_title'), t('nut_apply_plan_desc'), () => {
       activePlan.meals.forEach((meal, mi) => { meal.items.forEach((item, idx) => { addConsumedFood({ ...item, qty: item.displayQty || item.qty, nutDay, mealIndex: mi, logTime: Date.now() + idx, isEaten: false }); }); });
       setShowSamplePlan(false);
-    }, { confirmText: "Planı Uygula", confirmColor: C.green });
+    }, { confirmText: t('nut_apply_plan_btn'), confirmColor: C.green });
   };
 
   const handleApplyMealFromSample = (meal, mi) => {
-    showConfirm("Öğünü Ekle", `${meal.label} öğününü bugünün planına eklemek istiyor musun?`, () => {
+    showConfirm(t('nut_add_meal_title'), t('nut_add_meal_desc', { meal: meal.label }), () => {
       meal.items.forEach((item, idx) => { addConsumedFood({ ...item, qty: item.displayQty || item.qty, nutDay, mealIndex: mi, logTime: Date.now() + idx, isEaten: false }); });
-    }, { confirmText: "Öğünü Ekle", confirmColor: C.blue });
+    }, { confirmText: t('nut_add_meal_title'), confirmColor: C.blue });
   };
 
   // 🌟 PREMIUM GLASSMORPHISM STYLES
@@ -190,9 +195,9 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ fontSize: 32, filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.3))" }}>📦</div>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: "#fff", marginBottom: 2, letterSpacing: -0.5 }}>Stoklarım (Kiler)</div>
+            <div style={{ fontSize: 18, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: "#fff", marginBottom: 2, letterSpacing: -0.5 }}>{t('nut_stock_title')}</div>
             <div style={{ fontSize: 12, color: stockSummary.outOfStock > 0 ? C.red : (stockSummary.lowStock > 0 ? C.yellow : "rgba(255,255,255,0.5)"), fontWeight: 700 }}>
-              {stockSummary.outOfStock > 0 ? `🚨 ${stockSummary.outOfStock} Ürün Tükendi!` : (stockSummary.lowStock > 0 ? `⚠️ ${stockSummary.lowStock} Ürün Azalıyor` : "✅ Kiler Dolu & Hazır")}
+              {stockSummary.outOfStock > 0 ? `🚨 ${t('nut_stock_out', { count: stockSummary.outOfStock })}` : (stockSummary.lowStock > 0 ? `⚠️ ${t('nut_stock_low', { count: stockSummary.lowStock })}` : `✅ ${t('nut_stock_full')}`)}
             </div>
           </div>
         </div>
@@ -209,7 +214,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
           ))}
         </div>
         <button onClick={() => { setIsRestDay(!isRestDay); if (navigator.vibrate) navigator.vibrate(15); }} style={{ flexShrink: 0, padding: "10px 16px", borderRadius: 100, background: isRestDay ? `rgba(52, 152, 219, 0.15)` : `rgba(255,255,255,0.05)`, border: `1px solid ${isRestDay ? 'rgba(52, 152, 219, 0.5)' : 'rgba(255,255,255,0.05)'}`, color: isRestDay ? C.blue : "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: fonts.header, backdropFilter: "blur(10px)", transition: "all 0.25s ease" }}>
-          {isRestDay ? "🛋️ DİNLENME" : "🏋️ İDMAN"}
+          {isRestDay ? `🛋️ ${t('nut_rest_badge_full')}` : `🏋️ ${t('nut_workout_badge_full')}`}
         </button>
       </div>
 
@@ -218,7 +223,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
           <div style={{ flex: 1, paddingRight: 24 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 900, letterSpacing: 1.5 }}>ALINAN KALORİ</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 900, letterSpacing: 1.5 }}>{t('nut_taken_cal')}</div>
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
               <div style={{ fontSize: 40, fontWeight: 900, fontFamily: fonts.mono, color: Math.round(eatenTotals.cal) > targetMacros.calories ? C.red : "#fff", lineHeight: 1, letterSpacing: -1 }}>
@@ -229,30 +234,30 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
               </div>
             </div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 700, marginBottom: 20, display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: `rgba(255,255,255,0.2)` }}></span> Planlanan: {Math.round(plannedTotals.cal)} kcal
+              <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: `rgba(255,255,255,0.2)` }}></span> {t('nut_planned_lbl')}: {Math.round(plannedTotals.cal)} kcal
             </div>
             <div style={{ display: 'grid', gap: 16 }}>
-              <MacroBar label="Protein" plannedVal={Math.round(plannedTotals.p)} eatenVal={Math.round(eatenTotals.p)} target={targetMacros.protein} color="#22c55e" C={C} />
-              <MacroBar label="Karbonhidrat" plannedVal={Math.round(plannedTotals.c)} eatenVal={Math.round(eatenTotals.c)} target={targetMacros.carbs} color="#f59e0b" C={C} />
-              <MacroBar label="Yağ" plannedVal={Math.round(plannedTotals.f)} eatenVal={Math.round(eatenTotals.f)} target={targetMacros.fat} color="#a855f7" C={C} />
+              <MacroBar label={t('nut_pro_full')} plannedVal={Math.round(plannedTotals.p)} eatenVal={Math.round(eatenTotals.p)} target={targetMacros.protein} color="#22c55e" C={C} />
+              <MacroBar label={t('nut_carb_full')} plannedVal={Math.round(plannedTotals.c)} eatenVal={Math.round(eatenTotals.c)} target={targetMacros.carbs} color="#f59e0b" C={C} />
+              <MacroBar label={t('nut_fat_full')} plannedVal={Math.round(plannedTotals.f)} eatenVal={Math.round(eatenTotals.f)} target={targetMacros.fat} color="#a855f7" C={C} />
             </div>
           </div>
           
           <div style={{ width: 90, height: 90, borderRadius: '50%', background: conicGradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 10px 20px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.2)`, flexShrink: 0 }}>
             <div style={{ width: 74, height: 74, borderRadius: '50%', background: "rgba(20, 20, 25, 0.9)", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: `1px solid rgba(255,255,255,0.05)`, boxShadow: "inset 0 4px 10px rgba(0,0,0,0.4)" }}>
               <span style={{ fontSize: 18, fontWeight: 900, color: "#fff", fontFamily: fonts.mono, lineHeight: 1.1 }}>%{Math.round((eatenTotals.cal / targetMacros.calories) * 100)}</span>
-              <span style={{ fontSize: 9, fontWeight: 900, color: "rgba(255,255,255,0.4)", fontFamily: fonts.header, letterSpacing: 1, marginTop: 2 }}>ALINAN</span>
+              <span style={{ fontSize: 9, fontWeight: 900, color: "rgba(255,255,255,0.4)", fontFamily: fonts.header, letterSpacing: 1, marginTop: 2 }}>{t('nut_taken')}</span>
             </div>
           </div>
         </div>
         
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, borderTop: `1px solid rgba(255,255,255,0.06)`, paddingTop: 20 }}>
            <div style={{ ...glassInnerStyle, padding: "14px 18px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 900, letterSpacing: 1.5, marginBottom: 6 }}>LİF (FİBER)</div>
+             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 900, letterSpacing: 1.5, marginBottom: 6 }}>{t('nut_fiber')}</div>
              <div style={{ fontSize: 20, fontWeight: 900, fontFamily: fonts.mono, color: eatenTotals.fib >= targetFiber ? C.green : "#fff", letterSpacing: -0.5 }}>{eatenTotals.fib.toFixed(1)}g <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>/ {targetFiber}g</span></div>
            </div>
            <div style={{ ...glassInnerStyle, padding: "14px 18px", boxShadow: "0 4px 15px rgba(0,0,0,0.1)" }}>
-             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 900, letterSpacing: 1.5, marginBottom: 6 }}>ŞEKER</div>
+             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 900, letterSpacing: 1.5, marginBottom: 6 }}>{t('nut_sugar')}</div>
              <div style={{ fontSize: 20, fontWeight: 900, fontFamily: fonts.mono, color: eatenTotals.sug > targetSugar ? C.red : "#fff", letterSpacing: -0.5 }}>{eatenTotals.sug.toFixed(1)}g <span style={{ fontSize: 13, color: "rgba(255,255,255,0.4)" }}>/ {targetSugar}g</span></div>
            </div>
         </div>
@@ -262,7 +267,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
       <div style={{ ...glassCardStyle, background: `linear-gradient(145deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05))`, border: `1px solid rgba(59, 130, 246, 0.3)`, boxShadow: `0 10px 30px rgba(59, 130, 246, 0.15)`, display: "flex", flexDirection: "column", gap: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
-            <div style={{ fontSize: 13, color: C.blue, fontWeight: 900, fontFamily: fonts.header, letterSpacing: 1.5 }}>SU TÜKETİMİ 💧</div>
+            <div style={{ fontSize: 13, color: C.blue, fontWeight: 900, fontFamily: fonts.header, letterSpacing: 1.5 }}>{t('nut_water_cons')}</div>
             <div style={{ fontSize: 32, fontWeight: 900, fontFamily: fonts.mono, color: "#fff", marginTop: 6, letterSpacing: -1 }}>{waterConsumed} <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)" }}>/ {targetWater} ml</span></div>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
@@ -272,17 +277,25 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
         </div>
       </div>
 
-      {/* AI / ÖRNEK PLAN BUTONU */}
+      {/* AI / ÖRNEK PLAN / KAMERA BUTONLARI */}
       <div style={{ display: "flex", gap: 12, marginBottom: 28 }}>
+        <motion.button 
+          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+          onClick={() => setShowAIVision(true)} 
+          style={{ flex: 1, padding: "16px 10px", borderRadius: 24, background: `linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05))`, border: `1px solid rgba(59, 130, 246, 0.3)`, color: C.blue, fontWeight: 900, fontFamily: fonts.header, fontSize: 14, cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 6, backdropFilter: "blur(12px)", boxShadow: "0 10px 25px rgba(59, 130, 246, 0.1)" }}
+        >
+          <span style={{ fontSize: 24 }}>📸</span> {t('nut_ai_lens')}
+        </motion.button>
+
         <motion.button 
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
           onClick={() => {
             if (activePlan && activePlan.meals) setShowSamplePlan(true); 
-            else { try { const newPlan = generateMealPlan(targetMacros, user); if (setMealPlan) setMealPlan(newPlan); if (regeneratePlan) regeneratePlan(); setTimeout(() => setShowSamplePlan(true), 150); } catch(e) { showAlert("Hata", "Lütfen profilden hedeflerinizi kaydedin."); } }
+            else { try { const newPlan = generateMealPlan(targetMacros, user); if (setMealPlan) setMealPlan(newPlan); if (regeneratePlan) regeneratePlan(); setTimeout(() => setShowSamplePlan(true), 150); } catch(e) { showAlert(t('nut_error'), t('nut_error_profile')); } }
           }} 
-          style={{ flex: 1, padding: "20px", borderRadius: 24, background: `linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(46, 204, 113, 0.05))`, border: `1px solid rgba(46, 204, 113, 0.3)`, color: C.green, fontWeight: 900, fontFamily: fonts.header, fontSize: 15, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 10, backdropFilter: "blur(12px)", boxShadow: "0 10px 25px rgba(46, 204, 113, 0.1)" }}
+          style={{ flex: 1, padding: "16px 10px", borderRadius: 24, background: `linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(46, 204, 113, 0.05))`, border: `1px solid rgba(46, 204, 113, 0.3)`, color: C.green, fontWeight: 900, fontFamily: fonts.header, fontSize: 14, cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 6, backdropFilter: "blur(12px)", boxShadow: "0 10px 25px rgba(46, 204, 113, 0.1)" }}
         >
-          {activePlan && activePlan.meals ? "📋 Örnek Planı Gör & Aktar" : "✨ Yapay Zeka ile Plan Oluştur"}
+          <span style={{ fontSize: 24 }}>✨</span> {t('nut_sample_plan_btn')}
         </motion.button>
       </div>
 
@@ -303,11 +316,11 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                     <div style={{ fontSize: 15, fontWeight: 900, color: isEmpty ? "#fff" : C.green, letterSpacing: 0.5, fontFamily: fonts.header, textShadow: isEmpty ? "none" : `0 0 10px ${C.green}40` }}>{mealCat.label.toUpperCase()}</div>
-                    {!isEmpty && currentTag !== "none" && <div style={{ fontSize: 10, fontWeight: 900, background: currentTag === 'pre' ? `rgba(52, 152, 219, 0.15)` : `rgba(231, 76, 60, 0.15)`, color: currentTag === 'pre' ? C.blue : C.red, padding: "4px 10px", borderRadius: 8, border: `1px solid ${currentTag === 'pre' ? 'rgba(52, 152, 219, 0.3)' : 'rgba(231, 76, 60, 0.3)'}` }}>{currentTag === 'pre' ? "PRE-WORKOUT" : "POST-WORKOUT"}</div>}
+                    {!isEmpty && currentTag !== "none" && <div style={{ fontSize: 10, fontWeight: 900, background: currentTag === 'pre' ? `rgba(52, 152, 219, 0.15)` : `rgba(231, 76, 60, 0.15)`, color: currentTag === 'pre' ? C.blue : C.red, padding: "4px 10px", borderRadius: 8, border: `1px solid ${currentTag === 'pre' ? 'rgba(52, 152, 219, 0.3)' : 'rgba(231, 76, 60, 0.3)'}` }}>{currentTag === 'pre' ? t('nut_timing_pre') : t('nut_timing_post')}</div>}
                   </div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                     <div style={{ fontSize: 26, fontWeight: 900, fontFamily: fonts.mono, color: isEmpty ? "rgba(255,255,255,0.4)" : "#fff", letterSpacing: "-1px" }}>{mealEatenCal} <span style={{ fontSize: 14, color: "rgba(255,255,255,0.4)", fontFamily: fonts.body, letterSpacing: 0, fontWeight: 700 }}>kcal</span></div>
-                    {!isEmpty && mealPlannedCal > mealEatenCal && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 700 }}>/ {mealPlannedCal} planlandı</div>}
+                    {!isEmpty && mealPlannedCal > mealEatenCal && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 700 }}>/ {t('nut_planned_cal', { amount: mealPlannedCal })}</div>}
                   </div>
                 </div>
                 <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} style={{ color: "rgba(255,255,255,0.4)", fontWeight: 800, fontSize: 18 }}>▼</motion.div>
@@ -321,15 +334,15 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
                       {!isEmpty && (
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 16, borderBottom: `1px dashed rgba(255,255,255,0.06)` }}>
                           <select value={currentTag} onChange={(e) => saveTags({...mealTags, [`${mi}-${nutDay}`]: e.target.value})} onClick={e => e.stopPropagation()} style={{ background: "rgba(0,0,0,0.4)", border: `1px solid rgba(255,255,255,0.1)`, color: "#fff", padding: "8px 14px", borderRadius: 12, fontSize: 12, outline: "none", fontWeight: 800 }}>
-                            <option value="none">Zamanlama (Yok)</option><option value="pre">⚡ Antrenman Öncesi</option><option value="post">💪 Antrenman Sonrası</option>
+                            <option value="none">{t('nut_timing_none')}</option><option value="pre">{t('nut_timing_pre')}</option><option value="post">{t('nut_timing_post')}</option>
                           </select>
-                          <button onClick={(e) => { e.stopPropagation(); handleSaveRecipe(mealItems, mealCat.label); }} style={{ background: `rgba(52, 152, 219, 0.15)`, color: C.blue, border: "none", padding: "8px 14px", borderRadius: 12, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>💾 Tarif Kaydet</button>
+                          <button onClick={(e) => { e.stopPropagation(); handleSaveRecipe(mealItems, mealCat.label); }} style={{ background: `rgba(52, 152, 219, 0.15)`, color: C.blue, border: "none", padding: "8px 14px", borderRadius: 12, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>{t('nut_save_recipe')}</button>
                         </div>
                       )}
 
                       {isEmpty ? (
                         <div style={{ padding: 36, textAlign: 'center', ...glassInnerStyle }}>
-                          <button onClick={() => setAddItem({ di: nutDay, mi })} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.1)`, color: "#fff", padding: "14px 24px", borderRadius: 16, fontWeight: 800, cursor: 'pointer', fontFamily: fonts.header, fontSize: 15, boxShadow: "0 4px 15px rgba(0,0,0,0.2)" }}>Yiyecek Ekle +</button>
+                          <button onClick={() => setAddItem({ di: nutDay, mi })} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.1)`, color: "#fff", padding: "14px 24px", borderRadius: 16, fontWeight: 800, cursor: 'pointer', fontFamily: fonts.header, fontSize: 15, boxShadow: "0 4px 15px rgba(0,0,0,0.2)" }}>{t('nut_add_food_btn_plus')}</button>
                         </div>
                       ) : (
                         mealItems.map((item, idx) => (
@@ -349,7 +362,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
                           </div>
                         ))
                       )}
-                      {!isEmpty && <motion.button whileHover={{ background: `rgba(255,255,255,0.03)` }} whileTap={{ scale: 0.98 }} onClick={() => setAddItem({ di: nutDay, mi })} style={{ width: '100%', marginTop: 20, padding: "16px", borderRadius: 16, border: `2px dashed rgba(255,255,255,0.1)`, background: 'transparent', color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: fonts.body, transition: "0.2s" }}>+ Plana Yeni Malzeme Ekle</motion.button>}
+                      {!isEmpty && <motion.button whileHover={{ background: `rgba(255,255,255,0.03)` }} whileTap={{ scale: 0.98 }} onClick={() => setAddItem({ di: nutDay, mi })} style={{ width: '100%', marginTop: 20, padding: "16px", borderRadius: 16, border: `2px dashed rgba(255,255,255,0.1)`, background: 'transparent', color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: fonts.body, transition: "0.2s" }}>{t('nut_add_food')}</motion.button>}
                     </div>
                   </motion.div>
                 )}
@@ -363,6 +376,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
       <SearchFoodModal isOpen={!!addItem} onClose={() => setAddItem(null)} onAddFood={handleAddFood} onOpenDetails={setSelectedFoodDetails} onOpenScanner={() => setShowScanner(true)} customRecipes={customRecipes} targetMacros={targetMacros} plannedTotals={plannedTotals} C={C} />
       <FoodDetailModal food={selectedFoodDetails} onClose={() => setSelectedFoodDetails(null)} onAddFood={handleAddFood} C={C} />
       <BarcodeScannerModal isOpen={showScanner} onClose={() => setShowScanner(false)} onProductFound={(food) => { setShowScanner(false); setSelectedFoodDetails(food); }} C={C} />
+      <AIVisionModal isOpen={showAIVision} onClose={() => setShowAIVision(false)} onFoodDetected={(food) => handleAddFood(food, 1, false, false)} C={C} />
       <SamplePlanModal isOpen={showSamplePlan} onClose={() => setShowSamplePlan(false)} activePlan={activePlan} onApplySamplePlan={handleApplySamplePlan} onApplyMealFromSample={handleApplyMealFromSample} DAYS={DAYS} nutDay={nutDay} C={C} />
     </div>
   );

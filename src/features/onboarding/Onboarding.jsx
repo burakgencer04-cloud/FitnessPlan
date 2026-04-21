@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next'; // 🌍 ÇEVİRİ KANCASI
 
 const fonts = {
   header: "'Comucan', system-ui, sans-serif",
@@ -7,7 +8,6 @@ const fonts = {
   mono: "monospace"
 };
 
-// Varsayılan Kullanıcı Şablonunu dışarı aktarıyoruz ki FitnessPlan da kullanabilsin
 export const defaultForm = { 
   age: 25, gender: "erkek", height: 180, weight: 80, 
   activity: "orta", goal: "kilo_ver", mealsPerDay: 4,
@@ -15,6 +15,8 @@ export const defaultForm = {
 };
 
 export default function Onboarding({ onDone, theme, existingUser }) {
+  const { t } = useTranslation(); // 🌍 ÇEVİRİ FONKSİYONU
+  
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(existingUser ? { ...defaultForm, ...existingUser } : defaultForm);
 
@@ -50,9 +52,9 @@ export default function Onboarding({ onDone, theme, existingUser }) {
         </div>
 
         <h2 style={{ textAlign: "center", margin: "0 0 32px 0", fontSize: 28, fontWeight: 900, color: theme.text, letterSpacing: "-1px", fontFamily: fonts.header, fontStyle: "italic" }}>
-          {step === 1 && "Fiziksel Özelliklerin"}
-          {step === 2 && "Beslenme & Yaşam Tarzın"}
-          {step === 3 && "Antrenman Profilin"}
+          {step === 1 && t('onb_title_1')}
+          {step === 2 && t('onb_title_2')}
+          {step === 3 && t('onb_title_3')}
         </h2>
         
         <AnimatePresence mode="wait">
@@ -60,29 +62,29 @@ export default function Onboarding({ onDone, theme, existingUser }) {
             <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
                 <div>
-                  <label style={labelStyle}>CİNSİYET</label>
+                  <label style={labelStyle}>{t('onb_lbl_gender')}</label>
                   <select value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} style={inputStyle}>
-                    <option value="erkek">Erkek</option>
-                    <option value="kadin">Kadın</option>
+                    <option value="erkek">{t('onb_opt_male')}</option>
+                    <option value="kadin">{t('onb_opt_female')}</option>
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>YAŞ</label>
+                  <label style={labelStyle}>{t('onb_lbl_age')}</label>
                   <input type="number" value={form.age} onChange={e => setForm({...form, age: Number(e.target.value)})} style={inputStyle} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 32 }}>
                 <div>
-                  <label style={labelStyle}>BOY (CM)</label>
+                  <label style={labelStyle}>{t('onb_lbl_height')}</label>
                   <input type="number" value={form.height} onChange={e => setForm({...form, height: Number(e.target.value)})} style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>KİLO (KG)</label>
+                  <label style={labelStyle}>{t('onb_lbl_weight')}</label>
                   <input type="number" value={form.weight} onChange={e => setForm({...form, weight: Number(e.target.value)})} style={inputStyle} />
                 </div>
               </div>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={nextStep} style={{ width: "100%", padding: "18px", borderRadius: "18px", background: theme.text, color: theme.bg, fontWeight: 900, fontSize: 16, border: "none", cursor: "pointer", fontFamily: fonts.header }}>
-                Devam Et →
+                {t('onb_btn_next')}
               </motion.button>
             </motion.div>
           )}
@@ -91,35 +93,35 @@ export default function Onboarding({ onDone, theme, existingUser }) {
             <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 32 }}>
                 <div>
-                  <label style={labelStyle}>GÜNLÜK AKTİVİTE</label>
+                  <label style={labelStyle}>{t('onb_lbl_activity')}</label>
                   <select value={form.activity} onChange={e => setForm({...form, activity: e.target.value})} style={inputStyle}>
-                    <option value="sedanter">Masa Başı (Hareketsiz)</option>
-                    <option value="orta">Hafif Hareketli</option>
-                    <option value="aktif">Çok Aktif / Sporcu</option>
+                    <option value="sedanter">{t('onb_act_sedentary')}</option>
+                    <option value="orta">{t('onb_act_light')}</option>
+                    <option value="aktif">{t('onb_act_active')}</option>
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>ANA HEDEFİN</label>
+                  <label style={labelStyle}>{t('onb_lbl_goal')}</label>
                   <select value={form.goal} onChange={e => setForm({...form, goal: e.target.value})} style={inputStyle}>
-                    <option value="kilo_ver">Kilo Ver / Yağ Yak</option>
-                    <option value="koru">Formu Koru / Recomp</option>
-                    <option value="kilo_al">Kas Kütlesi Ekle (Bulk)</option>
-                    <option value="agresif_bulk">Agresif Kilo Alımı</option>
+                    <option value="kilo_ver">{t('onb_goal_lose')}</option>
+                    <option value="koru">{t('onb_goal_maintain')}</option>
+                    <option value="kilo_al">{t('onb_goal_gain')}</option>
+                    <option value="agresif_bulk">{t('onb_goal_aggressive')}</option>
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>GÜNDE KAÇ ÖĞÜN YERSİN?</label>
+                  <label style={labelStyle}>{t('onb_lbl_meals')}</label>
                   <select value={form.mealsPerDay} onChange={e => setForm({...form, mealsPerDay: Number(e.target.value)})} style={inputStyle}>
-                    <option value={2}>2 Öğün (Aralıklı Oruç)</option>
-                    <option value={3}>3 Öğün (Klasik)</option>
-                    <option value={4}>4 Öğün (Ara Öğünlü)</option>
-                    <option value={5}>5 Öğün (Sık Beslenme)</option>
+                    <option value={2}>{t('onb_meal_2')}</option>
+                    <option value={3}>{t('onb_meal_3')}</option>
+                    <option value={4}>{t('onb_meal_4')}</option>
+                    <option value={5}>{t('onb_meal_5')}</option>
                   </select>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={prevStep} style={{ flex: 1, padding: "18px", borderRadius: "18px", background: theme.bg, color: theme.text, border: `1px solid ${theme.border}`, fontWeight: 900, cursor: "pointer", fontFamily: fonts.header }}>← Geri</button>
-                <button onClick={nextStep} style={{ flex: 2, padding: "18px", borderRadius: "18px", background: theme.text, color: theme.bg, border: "none", fontWeight: 900, cursor: "pointer", fontFamily: fonts.header }}>Devam Et →</button>
+                <button onClick={prevStep} style={{ flex: 1, padding: "18px", borderRadius: "18px", background: theme.bg, color: theme.text, border: `1px solid ${theme.border}`, fontWeight: 900, cursor: "pointer", fontFamily: fonts.header }}>{t('onb_btn_back')}</button>
+                <button onClick={nextStep} style={{ flex: 2, padding: "18px", borderRadius: "18px", background: theme.text, color: theme.bg, border: "none", fontWeight: 900, cursor: "pointer", fontFamily: fonts.header }}>{t('onb_btn_next')}</button>
               </div>
             </motion.div>
           )}
@@ -128,38 +130,38 @@ export default function Onboarding({ onDone, theme, existingUser }) {
             <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 32 }}>
                 <div>
-                  <label style={labelStyle}>SPOR GEÇMİŞİN</label>
+                  <label style={labelStyle}>{t('onb_lbl_exp')}</label>
                   <select value={form.experience} onChange={e => setForm({...form, experience: e.target.value})} style={inputStyle}>
-                    <option value="baslangic">Yeni Başlıyorum (0-6 Ay)</option>
-                    <option value="orta">Orta Seviye (6 Ay - 2 Yıl)</option>
-                    <option value="ileri">İleri Seviye (2 Yıl+)</option>
+                    <option value="baslangic">{t('onb_exp_beg')}</option>
+                    <option value="orta">{t('onb_exp_int')}</option>
+                    <option value="ileri">{t('onb_exp_adv')}</option>
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>HAFTADA KAÇ GÜN ANTRENMAN YAPABİLİRSİN?</label>
+                  <label style={labelStyle}>{t('onb_lbl_train_days')}</label>
                   <select value={form.trainDays} onChange={e => setForm({...form, trainDays: Number(e.target.value)})} style={inputStyle}>
-                    <option value={3}>Haftada 3 Gün</option>
-                    <option value={4}>Haftada 4 Gün</option>
-                    <option value={5}>Haftada 5 Gün</option>
-                    <option value={6}>Haftada 6 Gün</option>
+                    <option value={3}>{t('onb_freq_3')}</option>
+                    <option value={4}>{t('onb_freq_4')}</option>
+                    <option value={5}>{t('onb_freq_5')}</option>
+                    <option value={6}>{t('onb_freq_6')}</option>
                   </select>
                 </div>
                 
                 <div style={{ background: `${theme.green}15`, border: `1px solid ${theme.green}40`, padding: 16, borderRadius: 16, marginTop: 8 }}>
-                  <span style={{ fontSize: 12, color: theme.green, fontWeight: 800 }}>💡 BİLGİ:</span>
+                  <span style={{ fontSize: 12, color: theme.green, fontWeight: 800 }}>{t('onb_info_title')}</span>
                   <p style={{ fontSize: 12, color: theme.text, margin: "8px 0 0 0", lineHeight: 1.4 }}>
-                    Verdiğin cevaplara göre sana en uygun antrenman ve beslenme programı otomatik olarak güncellenecek.
+                    {t('onb_info_desc')}
                   </p>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={prevStep} style={{ flex: 1, padding: "18px", borderRadius: "18px", background: theme.bg, color: theme.text, border: `1px solid ${theme.border}`, fontWeight: 900, cursor: "pointer", fontFamily: fonts.header }}>← Geri</button>
+                <button onClick={prevStep} style={{ flex: 1, padding: "18px", borderRadius: "18px", background: theme.bg, color: theme.text, border: `1px solid ${theme.border}`, fontWeight: 900, cursor: "pointer", fontFamily: fonts.header }}>{t('onb_btn_back')}</button>
                 <motion.button 
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                   onClick={() => onDone(form)} 
                   style={{ flex: 2, padding: "18px", borderRadius: "18px", background: `linear-gradient(135deg, ${theme.green}, ${theme.blue})`, color: "#fff", fontWeight: 900, fontSize: 16, border: "none", cursor: "pointer", boxShadow: `0 12px 30px ${theme.green}40`, fontFamily: fonts.header, letterSpacing: 1 }}
                 >
-                  {existingUser ? "PROFİLİ GÜNCELLE" : "PLANIMI OLUŞTUR 🚀"}
+                  {existingUser ? t('onb_btn_update') : t('onb_btn_create')}
                 </motion.button>
               </div>
             </motion.div>

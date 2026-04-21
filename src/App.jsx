@@ -1,48 +1,48 @@
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from 'framer-motion';
 
-// --- 1. CORE (Çekirdek Yapı) ---
-import { useAppStore } from './core/store'; 
-import { THEMES } from './core/theme'; 
-import { HapticEngine, SoundEngine } from './core/hapticSoundEngine';
 
-// --- FIREBASE AUTH ---
-import { auth } from './core/firebase'; 
+// --- CORE ---
+import { useAppStore } from './core/store';
+import { THEMES } from './core/theme';
+import { HapticEngine, SoundEngine } from './core/hapticSoundEngine';
+import { useTranslation } from './hooks/useTranslation';   // ← Yeni ekledik
+
+// --- FIREBASE ---
+import { auth } from './core/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import AuthScreen from './features/auth/AuthScreen';
 
-// --- 2. DATA ---
+// --- DATA ---
 import { 
   PHASES, BADGES, BADGE_ICONS, TOTAL_W, 
   EXERCISE_DB, WORKOUT_PRESETS 
 } from './features/workout/workoutData';
+
 import { 
   FOODS, MEAL_TEMPLATES, MEAL_TYPE_LABELS, 
   DAY_NAMES, MEAL_RATIOS_BY_COUNT 
 } from './features/nutrition/nutritionData';
 
-// --- 3. UTILS ---
+// --- UTILS ---
 import { 
   foodMacros, sumTotals, calcTDEE, 
   generateMealPlan, buildShoppingList 
 } from './features/nutrition/nutritionUtils';
 
-// --- 4. HOOKS ---
-import { 
-  useTimer, useRestTimer, playDing, playFinish 
-} from './features/workout/hooks/useWorkoutTimer';
+// --- HOOKS ---
+import { useTimer, useRestTimer, playDing, playFinish } from './features/workout/hooks/useWorkoutTimer';
 
-// --- 5. FEATURES (Özellik Modülleri) ---
+// --- FEATURES ---
 import OnboardingWizard from './features/onboarding/OnboardingWizard';
 import { generatePersonalizedPlan } from './features/onboarding/generatorEngine';
 
-// Sekmeler (Lazy Loading)
-const TabProgram = lazy(() => import('./features/workout/TabProgram'));
+// Lazy Loading
 const TabNutrition = lazy(() => import('./features/nutrition/TabNutrition'));
-const TabProgress = lazy(() => import('./features/progress/ProgressMain')); 
-const TabToday = lazy(() => import('./features/workout/TabToday')); 
-const TabSocial = lazy(() => import('./features/social/TabSocial')); // 🍻 YENİ ROTA
-const TabProfile = lazy(() => import('./features/profile/TabProfile')); 
+const TabProgress = lazy(() => import('./features/progress/ProgressMain'));
+const TabToday = lazy(() => import('./features/workout/TabToday'));
+const TabProfile = lazy(() => import('./features/profile/TabProfile'));
+const TabSocial = lazy(() => import('./features/social/TabSocial'));
 
 const fonts = {
   header: "'Comucan', system-ui, sans-serif",
@@ -50,14 +50,12 @@ const fonts = {
   mono: "monospace"
 };
 
-// 🧭 NAVİGASYON HARİTASI GÜNCELLENDİ
 const TABS = [
-  { id: 0, label: "Antrenmanım", icon: "🏋️‍♂️" },
-  { id: 1, label: "Program", icon: "💪" },
-  { id: 2, label: "Beslenme", icon: "🥗" },
-  { id: 3, label: "İlerleme", icon: "📈" },
-  { id: 4, label: "Taverna", icon: "🍻" }, // ⚔️ SOSYAL LİG
-  { id: 5, label: "Profilim", icon: "👤" } 
+  { id: 0, label: "Antrenman", icon: "🏋️‍♂️" },
+  { id: 1, label: "Beslenme", icon: "🥗" },
+  { id: 2, label: "İlerleme", icon: "📈" },
+  { id: 3, label: "Topluluk", icon: "👥" },
+  { id: 4, label: "Profilim", icon: "👤" }
 ];
 
 const LoadingFallback = ({ C }) => (
@@ -71,17 +69,20 @@ const LoadingFallback = ({ C }) => (
 );
 
 export default function App() {
-  // --- FIREBASE AUTH STATE ---
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // --- APP STORE STATE ---
+  // Zustand Store
   const {
-    screen, setScreen, user, setUser, macros, setMacros, activeThemeId, 
-    completedW, setCW, weightLog, setWL, streak, setST, lastDate, setLD, 
-    badges, setBD, customWorkouts, setCustomWorkouts, exNotesLog, setExNotesLog, 
-    mealPlan, setMealPlan, setCustomTargetMacros, sessionSets, setSessionSets
+    screen, setScreen, user, setUser, macros, setMacros, activeThemeId, setActiveThemeId,
+    completedW, setCW, weightLog, setWL, streak, setStreak, lastDate, setLastDate,
+    badges, setBD, customWorkouts, setCustomWorkouts, exNotesLog, setExNotesLog,
+    mealPlan, setMealPlan, setCustomTargetMacros, sessionSets, setSessionSets,
+    incrementStreak
   } = useAppStore();
+
+  // i18n
+  const { t, changeLanguage, currentLanguage } = useTranslation();
 
   const [tab, setTab] = useState(0);
   const [activePhase, setActivePhase] = useState(0);
@@ -97,7 +98,7 @@ export default function App() {
   
   const C = THEMES[activeThemeId] || THEMES.midnight;
 
-  // --- FIREBASE BEKÇİSİ ---
+  // Firebase Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       setCurrentUser(authUser);
@@ -123,9 +124,10 @@ export default function App() {
   const handleWizardComplete = (formData, skipWorkoutGen = false) => {
     try {
       const generatedData = generatePersonalizedPlan(formData);
+
       if (setCustomTargetMacros) setCustomTargetMacros(generatedData.macros);
-      setMacros(generatedData.macros); 
-      
+      setMacros(generatedData.macros);
+
       if (skipWorkoutGen) {
         setCustomWorkouts([]);
         setUser({ ...user, ...formData, hasCompletedOnboarding: true, activePlanName: "Kendi Özel Rutinim" });
@@ -137,10 +139,9 @@ export default function App() {
       const newMealPlan = generateMealPlan(generatedData.macros, formData);
       setMealPlan(newMealPlan);
       setScreen("app");
-      
-      setTab(skipWorkoutGen ? 1 : 0);
+      setTab(0);
+
       showToast(skipWorkoutGen ? "🛠️" : "✨", skipWorkoutGen ? "Profil Hazır!" : "Kişisel Protokolün Hazır!");
-      
       if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     } catch (err) {
       console.error("Plan Oluşturma Hatası:", err);
@@ -150,7 +151,7 @@ export default function App() {
   const regeneratePlan = () => {
     if (!macros || !user) return;
     setMealPlan(generateMealPlan(macros, user));
-    showToast("🔄", "Beslenme planı güncellendi!");
+    showToast("🔄", t('msg_saved'));   // Örnek çeviri kullanımı
   };
 
   const checkBadges = useCallback((cw, str) => {
@@ -164,38 +165,38 @@ export default function App() {
 
   const finishSession = (sessionData = {}) => {
     const key = `${sessPhase}-${sessDay}`;
-    const today = new Date().toDateString();
-    const yest = new Date(Date.now() - 86400000).toDateString();
-    const newStreak = lastDate === today ? streak : lastDate === yest ? streak + 1 : 1;
     
-    setST(newStreak);
-    setLD(today);
-    
-    if (sessionData.notes) setExNotesLog(prev => ({ ...prev, ...sessionData.notes }));
-    
+    incrementStreak();
+
+    if (sessionData.notes) {
+      setExNotesLog(prev => ({ ...prev, ...sessionData.notes }));
+    }
+
     setCW(prev => {
       const next = { ...prev, [key]: true };
-      setTimeout(() => checkBadges(next, newStreak), 0);
+      setTimeout(() => checkBadges(next, streak + 1), 0);
       return next;
     });
 
-    setSessActive(false); 
-    timer.reset(); 
+    setSessActive(false);
+    timer.reset();
     restT.stop();
-    
-    SoundEngine.success(); 
-    HapticEngine.success();
 
+    SoundEngine.success();
+    HapticEngine.success();
     showToast("🎉", "Antrenman başarıyla kaydedildi!");
   };
 
   const totalDone = Object.keys(completedW).length;
   const overallPct = Math.round(totalDone / TOTAL_W * 100) || 0;
-  const activePlan = useMemo(() => mealPlan || (macros ? generateMealPlan(macros, user || {}) : null), [mealPlan, macros, user]);
+
+  const activePlan = useMemo(() => 
+    mealPlan || (macros ? generateMealPlan(macros, user || {}) : null), 
+    [mealPlan, macros, user]
+  );
+
   const dayPlan = useMemo(() => activePlan ? activePlan[nutDay] : null, [activePlan, nutDay]);
   const shopping = useMemo(() => buildShoppingList(activePlan), [activePlan]);
-
-  // --- GÜVENLİK KAPILARI ---
 
   if (isAuthLoading) {
     return (
@@ -206,23 +207,23 @@ export default function App() {
     );
   }
 
-  if (!currentUser) {
-    return <AuthScreen C={C} />;
-  }
+  if (!currentUser) return <AuthScreen C={C} />;
+  if (!user?.hasCompletedOnboarding) return <OnboardingWizard onComplete={handleWizardComplete} themeColors={C} />;
 
-  if (!user?.hasCompletedOnboarding) {
-    return <OnboardingWizard onComplete={handleWizardComplete} themeColors={C} />;
-  }
-
-  // --- ANA UYGULAMA ---
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: fonts.body }}>
       
       <AnimatePresence>
         {toast && (
           <motion.div 
-            initial={{ opacity: 0, y: -50, x: "-50%" }} animate={{ opacity: 1, y: 0, x: "-50%" }} exit={{ opacity: 0, y: -50, x: "-50%" }}
-            style={{ position: "fixed", top: 24, left: "50%", background: C.card, border: `1px solid ${C.green}`, padding: "14px 24px", borderRadius: 20, zIndex: 10000, display: "flex", alignItems: "center", gap: 12 }}
+            initial={{ opacity: 0, y: -50, x: "-50%" }} 
+            animate={{ opacity: 1, y: 0, x: "-50%" }} 
+            exit={{ opacity: 0, y: -50, x: "-50%" }}
+            style={{ 
+              position: "fixed", top: 24, left: "50%", background: C.card, 
+              border: `1px solid ${C.green}`, padding: "14px 24px", borderRadius: 20, 
+              zIndex: 10000, display: "flex", alignItems: "center", gap: 12 
+            }}
           >
             <span style={{ fontSize: 24 }}>{toast.icon}</span>
             <span style={{ fontSize: 15, color: C.text, fontWeight: 800, fontFamily: fonts.header }}>{toast.text}</span>
@@ -230,12 +231,14 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <div style={{ maxWidth: 640, margin: "0 auto", position: "relative" }}>
+      <div style={{ maxWidth: 768, margin: "0 auto", position: "relative" }}>
         
-        {/* Üst Bar */}
+        {/* Header */}
         <div style={{ padding: "24px 24px", background: C.card, borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: C.text }}>Protocol <span style={{color: C.green}}>✓</span></h1>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: C.text }}>
+              Protocol <span style={{color: C.green}}>✓</span>
+            </h1>
             <div style={{ fontSize: 11, color: C.green, fontWeight: 800, marginTop: 4 }}>
               {user?.activePlanName ? user.activePlanName.toUpperCase() : "AKTİF PROTOKOL"}
             </div>
@@ -244,64 +247,101 @@ export default function App() {
             onClick={handleLogout}
             style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.border}`, color: C.mute, padding: '8px 12px', borderRadius: 10, fontSize: 10, fontWeight: 800, cursor: 'pointer' }}
           >
-            ÇIKIŞ YAP
+            Çıkış Yap
           </button>
         </div>
 
+        {/* İçerik Alanı */}
         <div style={{ padding: "24px 20px", paddingBottom: 110 }}>
           <AnimatePresence mode="wait">
             <motion.div key={tab} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
               <Suspense fallback={<LoadingFallback C={C} />}>
+                
                 {tab === 0 && (
                   <TabToday 
-                    sessActive={sessActive} setSessActive={setSessActive}
-                    activePhase={activePhase} setActivePhase={setActivePhase}
-                    activeDay={activeDay} setActiveDay={setActiveDay}
-                    sessPhase={sessPhase} setSessPhase={setSessPhase}
-                    sessDay={sessDay} setSessDay={setSessDay}
-                    timer={timer} restT={restT} weightLog={weightLog} setWL={setWL}
-                    completedW={completedW} finishSession={finishSession}
-                    PHASES={PHASES} themeColors={C} playDing={playDing}
-                    sessionSets={sessionSets} setSessionSets={setSessionSets}
-                    customWorkouts={customWorkouts} exNotesLog={exNotesLog} showToast={showToast}
+                    sessActive={sessActive} 
+                    setSessActive={setSessActive}
+                    activePhase={activePhase} 
+                    setActivePhase={setActivePhase}
+                    activeDay={activeDay} 
+                    setActiveDay={setActiveDay}
+                    sessPhase={sessPhase} 
+                    setSessPhase={setSessPhase}
+                    sessDay={sessDay} 
+                    setSessDay={setSessDay}
+                    timer={timer} 
+                    restT={restT} 
+                    weightLog={weightLog} 
+                    setWL={setWL}
+                    completedW={completedW} 
+                    finishSession={finishSession}
+                    PHASES={PHASES} 
+                    themeColors={C} 
+                    playDing={playDing}
+                    sessionSets={sessionSets} 
+                    setSessionSets={setSessionSets}
+                    customWorkouts={customWorkouts} 
+                    setCustomWorkouts={setCustomWorkouts} 
+                    EXERCISE_DB={EXERCISE_DB}
+                    exNotesLog={exNotesLog} 
+                    showToast={showToast}
                   />
                 )}
+
                 {tab === 1 && (
-                  <TabProgram 
-                    phases={PHASES} activePhase={activePhase} setActivePhase={setActivePhase}
-                    activeDay={activeDay} setActiveDay={setActiveDay} completedW={completedW} themeColors={C}
-                    customWorkouts={customWorkouts} setCustomWorkouts={setCustomWorkouts} EXERCISE_DB={EXERCISE_DB}
-                  />
-                )}
-                {tab === 2 && (
                   <TabNutrition 
-                    user={user} macros={macros} regeneratePlan={regeneratePlan}
-                    dayPlan={dayPlan} nutDay={nutDay} setNutDay={setNutDay}
-                    themeColors={C} shoppingList={shopping} 
+                    user={user} 
+                    macros={macros} 
+                    regeneratePlan={regeneratePlan}
+                    dayPlan={dayPlan} 
+                    nutDay={nutDay} 
+                    setNutDay={setNutDay}
+                    themeColors={C} 
+                    shoppingList={shopping} 
                   />
                 )}
-                {tab === 3 && (
+
+                {tab === 2 && (
                   <TabProgress 
-                    totalDone={totalDone} overallPct={overallPct} badges={badges} BADGES={BADGES} BADGE_ICONS={BADGE_ICONS}
-                    weightLog={weightLog} themeColors={C} hasActiveProgram={customWorkouts?.length > 0}
+                    totalDone={totalDone} 
+                    overallPct={overallPct} 
+                    badges={badges} 
+                    BADGES={BADGES} 
+                    BADGE_ICONS={BADGE_ICONS}
+                    weightLog={weightLog} 
+                    themeColors={C} 
+                    hasActiveProgram={customWorkouts?.length > 0}
                     selectedProgram={customWorkouts?.length > 0 ? { name: "Mevcut Rutinim", workouts: customWorkouts } : null}
-                    onSelectProgram={() => setTab(1)}
+                    onSelectProgram={() => setTab(0)} 
                   />
                 )}
-                
-                {/* 🍻 TAVERNA SEKMEDE YERİNİ ALDI */}
-                {tab === 4 && <TabSocial themeColors={C} />}
-                
-                {/* 👤 PROFİL ARTIK 5. İNDEKSTE */}
-                {tab === 5 && <TabProfile themeColors={C} />} 
+
+                {tab === 3 && <TabSocial themeColors={C} />}
+                {tab === 4 && <TabProfile themeColors={C} />} 
 
               </Suspense>
             </motion.div>
           </AnimatePresence>
         </div>
 
-        {/* Alt Menü */}
-        <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 640, background: `${C.card}e6`, backdropFilter: 'blur(16px)', borderTop: `1px solid ${C.border}`, borderTopLeftRadius: 28, borderTopRightRadius: 28, display: 'flex', padding: '12px 12px 24px 12px', zIndex: 1000 }}>
+        {/* Alt Navigasyon */}
+        <div style={{ 
+          position: 'fixed', 
+          bottom: 0, 
+          left: '50%', 
+          transform: 'translateX(-50%)', 
+          width: '100%', 
+          maxWidth: 768, 
+          background: `${C.card}e6`, 
+          backdropFilter: 'blur(16px)', 
+          borderTop: `1px solid ${C.border}`, 
+          borderTopLeftRadius: 28, 
+          borderTopRightRadius: 28, 
+          display: 'flex', 
+          padding: '12px 12px 24px 12px', 
+          paddingBottom: `calc(24px + env(safe-area-inset-bottom, 12px))`, 
+          zIndex: 1000 
+        }}>
           {TABS.map(t => {
             const isActive = tab === t.id;
             return (
@@ -309,12 +349,18 @@ export default function App() {
                 key={t.id} 
                 onClick={() => { setTab(t.id); HapticEngine.light(); SoundEngine.tick(); }} 
                 whileTap={{ scale: 0.92 }} 
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', background: isActive ? `${C.green}15` : 'transparent', border: 'none', borderRadius: 20, cursor: 'pointer', padding: '12px 0' }}
+                style={{ 
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', 
+                  background: isActive ? `${C.green}15` : 'transparent', border: 'none', 
+                  borderRadius: 20, cursor: 'pointer', padding: '12px 0' 
+                }}
               >
                 <div style={{ fontSize: 24, color: isActive ? C.green : C.mute }}>{t.icon}</div>
-                <div style={{ fontSize: 11, color: isActive ? C.green : C.sub, fontWeight: isActive ? 900 : 600, fontFamily: fonts.header }}>{t.label}</div>
+                <div style={{ fontSize: 11, color: isActive ? C.green : C.sub, fontWeight: isActive ? 900 : 600, fontFamily: fonts.header }}>
+                  {t.label}
+                </div>
               </motion.button>
-            )
+            );
           })}
         </div>
       </div>

@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next'; // 🌍 ÇEVİRİ EKLENDİ
+
 import NutritionView from './NutritionView';
 import StockView from './StockView';
 import { normalizeItemName } from './nutritionUtils';
 
 export default function TabNutrition(props) {
+  const { t } = useTranslation(); 
   const [activeView, setActiveView] = useState("nutrition"); 
   const C = props.themeColors;
 
@@ -12,6 +15,8 @@ export default function TabNutrition(props) {
     if (props.shoppingList && props.shoppingList.length > 0) return props.shoppingList;
     if (!props.dayPlan || !props.dayPlan.meals) return [];
     
+    // Not: Veritabanı ve mantık bozulmasın diye buradaki kategoriler sabit Türkçe bırakıldı. 
+    // Görüntüleme kısmında (StockView vb.) çevrilecek.
     const catMap = {
       "Protein Kaynakları": [],
       "Karbonhidrat": [],

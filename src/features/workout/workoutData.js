@@ -1,3 +1,8 @@
+import { EXERCISE_DB } from "../../data/exerciseDatabase";
+
+// Egzersiz veritabanını dışarı aktar
+export { EXERCISE_DB };
+
 // ==========================================
 // 1. ROZETLER VE İLERLEME (BADGES)
 // ==========================================
@@ -23,7 +28,7 @@ export const WORKOUT_PRESETS = [
     icon: "⚡",
     workouts: [
       {
-        day: "Gün 1", label: "Push Dominant (İtiş Ağırlıklı)",
+        label: "Gün 1 - Push Dominant (İtiş Ağırlıklı)",
         exercises: [
           { name: "Squat", target: "Bacak", sets: "4", reps: "8-12", rest: "90sn" },
           { name: "Bench Press", target: "Göğüs", sets: "4", reps: "6-10", rest: "90sn" },
@@ -35,7 +40,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 2", label: "Pull Dominant (Çekiş Ağırlıklı)",
+        label: "Gün 2 - Pull Dominant (Çekiş Ağırlıklı)",
         exercises: [
           { name: "Deadlift", target: "Sırt", sets: "3", reps: "6-10", rest: "120sn" },
           { name: "Bent Over Row", target: "Sırt", sets: "4", reps: "8-10", rest: "90sn" },
@@ -57,7 +62,7 @@ export const WORKOUT_PRESETS = [
     icon: "🔰",
     workouts: [
       {
-        day: "Gün 1", label: "A Günü (Temel Güç)",
+        label: "Gün 1 - A Günü (Temel Güç)",
         exercises: [
           { name: "Back Squat", target: "Bacak", sets: "4", reps: "8-10", rest: "90sn" },
           { name: "Bench Press", target: "Göğüs", sets: "4", reps: "8-10", rest: "90sn" },
@@ -68,7 +73,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 2", label: "B Günü (Hipertrofi)",
+        label: "Gün 2 - B Günü (Hipertrofi)",
         exercises: [
           { name: "Deadlift", target: "Sırt", sets: "3", reps: "6-8", rest: "120sn" },
           { name: "Incline Dumbbell Press", target: "Göğüs", sets: "4", reps: "8-10", rest: "90sn" },
@@ -80,7 +85,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 3", label: "C Günü (İzolasyon & Denge)",
+        label: "Gün 3 - C Günü (İzolasyon & Denge)",
         exercises: [
           { name: "Goblet Squat", target: "Bacak", sets: "3", reps: "10-12", rest: "90sn" },
           { name: "Dumbbell Bench Press", target: "Göğüs", sets: "3", reps: "10-12", rest: "90sn" },
@@ -102,7 +107,7 @@ export const WORKOUT_PRESETS = [
     icon: "⚖️",
     workouts: [
       {
-        day: "Gün 1", label: "Upper A (Güç Odaklı)",
+        label: "Gün 1 - Upper A (Güç Odaklı)",
         exercises: [
           { name: "Bench Press", target: "Göğüs", sets: "4", reps: "6-8", rest: "120sn" },
           { name: "Bent Over Row", target: "Sırt", sets: "4", reps: "6-8", rest: "120sn" },
@@ -114,7 +119,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 2", label: "Lower A (Güç Odaklı)",
+        label: "Gün 2 - Lower A (Güç Odaklı)",
         exercises: [
           { name: "Back Squat", target: "Bacak", sets: "4", reps: "6-10", rest: "120sn" },
           { name: "Romanian Deadlift", target: "Bacak", sets: "4", reps: "8-12", rest: "90sn" },
@@ -125,7 +130,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 3", label: "Upper B (Hipertrofi Odaklı)",
+        label: "Gün 3 - Upper B (Hipertrofi Odaklı)",
         exercises: [
           { name: "Incline Dumbbell Press", target: "Göğüs", sets: "4", reps: "8-12", rest: "90sn" },
           { name: "Seated Cable Row", target: "Sırt", sets: "4", reps: "8-12", rest: "90sn" },
@@ -137,7 +142,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 4", label: "Lower B (Hipertrofi Odaklı)",
+        label: "Gün 4 - Lower B (Hipertrofi Odaklı)",
         exercises: [
           { name: "Front Squat", target: "Bacak", sets: "4", reps: "8-10", rest: "90sn" },
           { name: "Good Morning", target: "Bacak", sets: "3", reps: "10-12", rest: "90sn" },
@@ -158,7 +163,7 @@ export const WORKOUT_PRESETS = [
     icon: "🔥",
     workouts: [
       {
-        day: "Gün 1", label: "Push (İtiş)",
+        label: "Gün 1 - Push (İtiş)",
         exercises: [
           { name: "Flat Bench Press", target: "Göğüs", sets: "4", reps: "8-10", rest: "90sn" },
           { name: "Overhead Press", target: "Omuz", sets: "4", reps: "8-10", rest: "90sn" },
@@ -169,7 +174,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 2", label: "Pull (Çekiş)",
+        label: "Gün 2 - Pull (Çekiş)",
         exercises: [
           { name: "Deadlift", target: "Sırt", sets: "3", reps: "6-8", rest: "120sn" },
           { name: "Lat Pulldown", target: "Sırt", sets: "4", reps: "8-12", rest: "90sn" },
@@ -180,7 +185,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 3", label: "Legs (Bacak)",
+        label: "Gün 3 - Legs (Bacak)",
         exercises: [
           { name: "Squat", target: "Bacak", sets: "4", reps: "8-10", rest: "120sn" },
           { name: "Romanian Deadlift", target: "Bacak", sets: "3", reps: "8-12", rest: "90sn" },
@@ -202,7 +207,7 @@ export const WORKOUT_PRESETS = [
     icon: "🧬",
     workouts: [
       {
-        day: "Gün 1", label: "Push (İtiş)",
+        label: "Gün 1 - Push (İtiş)",
         exercises: [
           { name: "Bench Press", target: "Göğüs", sets: "4", reps: "6-8", rest: "90sn" },
           { name: "Overhead Press", target: "Omuz", sets: "3", reps: "8-10", rest: "90sn" },
@@ -212,7 +217,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 2", label: "Pull (Çekiş)",
+        label: "Gün 2 - Pull (Çekiş)",
         exercises: [
           { name: "Barbell Row", target: "Sırt", sets: "4", reps: "6-8", rest: "90sn" },
           { name: "Lat Pulldown", target: "Sırt", sets: "3", reps: "8-10", rest: "90sn" },
@@ -222,7 +227,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 3", label: "Legs (Bacak)",
+        label: "Gün 3 - Legs (Bacak)",
         exercises: [
           { name: "Squat", target: "Bacak", sets: "4", reps: "6-8", rest: "120sn" },
           { name: "Leg Press", target: "Bacak", sets: "3", reps: "10-12", rest: "90sn" },
@@ -231,7 +236,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 4", label: "Upper (Üst Vücut)",
+        label: "Gün 4 - Upper (Üst Vücut)",
         exercises: [
           { name: "Incline Barbell Press", target: "Göğüs", sets: "3", reps: "8-10", rest: "90sn" },
           { name: "Pull-Up", target: "Sırt", sets: "3", reps: "8-10", rest: "90sn" },
@@ -242,7 +247,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 5", label: "Lower (Alt Vücut)",
+        label: "Gün 5 - Lower (Alt Vücut)",
         exercises: [
           { name: "Romanian Deadlift", target: "Bacak", sets: "4", reps: "8-10", rest: "90sn" },
           { name: "Bulgarian Split Squat", target: "Bacak", sets: "3", reps: "10-12", rest: "90sn" },
@@ -263,7 +268,7 @@ export const WORKOUT_PRESETS = [
     icon: "🦍",
     workouts: [
       {
-        day: "Gün 1", label: "Push A (Göğüs Ağırlıklı)",
+        label: "Gün 1 - Push A (Göğüs Ağırlıklı)",
         exercises: [
           { name: "Bench Press", target: "Göğüs", sets: "4", reps: "6-10", rest: "90sn" },
           { name: "Overhead Press", target: "Omuz", sets: "4", reps: "8-12", rest: "90sn" },
@@ -274,7 +279,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 2", label: "Pull A (Sırt Ağırlıklı)",
+        label: "Gün 2 - Pull A (Sırt Ağırlıklı)",
         exercises: [
           { name: "Deadlift", target: "Sırt", sets: "3", reps: "6-8", rest: "120sn" },
           { name: "Lat Pulldown", target: "Sırt", sets: "4", reps: "8-12", rest: "90sn" },
@@ -285,7 +290,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 3", label: "Legs A (Ön Bacak Odaklı)",
+        label: "Gün 3 - Legs A (Ön Bacak Odaklı)",
         exercises: [
           { name: "Squat", target: "Bacak", sets: "4", reps: "8-10", rest: "120sn" },
           { name: "Romanian Deadlift", target: "Bacak", sets: "4", reps: "8-12", rest: "90sn" },
@@ -296,7 +301,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 4", label: "Push B (Omuz Ağırlıklı)",
+        label: "Gün 4 - Push B (Omuz Ağırlıklı)",
         exercises: [
           { name: "Dumbbell Shoulder Press", target: "Omuz", sets: "4", reps: "8-10", rest: "90sn" },
           { name: "Flat Dumbbell Press", target: "Göğüs", sets: "3", reps: "10", rest: "90sn" },
@@ -307,7 +312,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 5", label: "Pull B (Yoğunluk Odaklı)",
+        label: "Gün 5 - Pull B (Yoğunluk Odaklı)",
         exercises: [
           { name: "Pendlay Row", target: "Sırt", sets: "3", reps: "8", rest: "90sn" },
           { name: "Seated Cable Row", target: "Sırt", sets: "4", reps: "10", rest: "90sn" },
@@ -317,7 +322,7 @@ export const WORKOUT_PRESETS = [
         ]
       },
       {
-        day: "Gün 6", label: "Legs B (Arka Bacak Odaklı)",
+        label: "Gün 6 - Legs B (Arka Bacak Odaklı)",
         exercises: [
           { name: "Front Squat", target: "Bacak", sets: "3", reps: "10", rest: "90sn" },
           { name: "Leg Curl", target: "Bacak", sets: "4", reps: "12", rest: "60sn" },
@@ -331,49 +336,6 @@ export const WORKOUT_PRESETS = [
   }
 ];
 
-// ==========================================
-// 3. FAZLAR (PHASES)
-// ==========================================
-export const PHASES = WORKOUT_PRESETS.map(p => ({ ...p, phase: p.name }));
-
-// ==========================================
-// 4. EGZERSİZ VERİTABANI (EXERCISE_DB)
-// ==========================================
-export const EXERCISE_DB = [
-  // Göğüs
-  { id: "c1", name: "Bench Press", target: "Göğüs", icon: "🏋️‍♂️", video: "vcBig73ojpE" },
-  { id: "c2", name: "Incline Bench Press", target: "Göğüs", icon: "🏋️‍♂️", video: "SrqOu55lrOU" },
-  { id: "c3", name: "Incline Dumbbell Press", target: "Göğüs", icon: "🏋️‍♂️", video: "8iPEnn-ltC8" },
-  { id: "c4", name: "Dumbbell Press", target: "Göğüs", icon: "🏋️‍♂️", video: "YQEQw_aZ1NA" },
-  { id: "c5", name: "Dumbbell Flyes", target: "Göğüs", icon: "🦅", video: "eozdVDA78K0" },
-  { id: "c6", name: "Cable Crossover", target: "Göğüs", icon: "🔗", video: "taI4XduLpTk" },
-
-  // Sırt
-  { id: "b1", name: "Deadlift", target: "Sırt", icon: "🏋️‍♂️", video: "op9kVnSso6Q" },
-  { id: "b2", name: "Pull-Up", target: "Sırt", icon: "🧗", video: "eGo4IYtl4hE" },
-  { id: "b3", name: "Lat Pulldown", target: "Sırt", icon: "🔗", video: "CAwf7n6Luuc" },
-  { id: "b4", name: "Barbell Row", target: "Sırt", icon: "🏋️‍♂️", video: "vT2GjY_Umpw" },
-  { id: "b5", name: "Seated Cable Row", target: "Sırt", icon: "🔗", video: "GZbfZ033f74" },
-  { id: "b6", name: "T-Bar Row", target: "Sırt", icon: "🏋️‍♂️", video: "j3Igk5nyZE4" },
-
-  // Omuz
-  { id: "s1", name: "Overhead Press", target: "Omuz", icon: "🏋️‍♂️", video: "QAQ64hK4Xxs" },
-  { id: "s2", name: "Dumbbell Shoulder Press", target: "Omuz", icon: "🏋️‍♂️", video: "qEwKCR5JCog" },
-  { id: "s3", name: "Lateral Raise", target: "Omuz", icon: "🦅", video: "3VcKaXpzqRo" },
-  { id: "s4", name: "Face Pull", target: "Omuz", icon: "🔗", video: "0QsDEkAOE0w" },
-
-  // Bacak
-  { id: "l1", name: "Back Squat", target: "Bacak", icon: "🦵", video: "bEv6CCg2BC8" },
-  { id: "l2", name: "Front Squat", target: "Bacak", icon: "🦵", video: "uYumuL_G_V0" },
-  { id: "l5", name: "Romanian Deadlift", target: "Bacak", icon: "🏋️‍♂️", video: "JCXUYuzwNrM" },
-  { id: "l7", name: "Leg Press", target: "Bacak", icon: "⚙️", video: "IZxyjW7Xrq8" },
-  { id: "l8", name: "Bulgarian Split Squat", target: "Bacak", icon: "🦵", video: "2C-uNgKwPLE" },
-
-  // Kollar
-  { id: "a1", name: "Barbell Curl", target: "Kol", icon: "💪", video: "kwG2ipFRgfo" },
-  { id: "a6", name: "Triceps Pushdown", target: "Kol", icon: "🔗", video: "2-LAMcpzODU" },
-  { id: "a7", name: "Skullcrushers", target: "Kol", icon: "🏋️‍♂️", video: "d_KZxkY_0cM" },
-
-  // Karın
-  { id: "cr1", name: "Plank", target: "Karın", icon: "⏱️", video: "ASdvN_XEl_c" }
+export const PHASES = [
+  { id: "p1", title: "Aktif Program", weeks: 4, workouts: WORKOUT_PRESETS[0].workouts }
 ];
