@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
+// Eklentiler tamamen kurulup mobil build alacağın zaman alttaki yorum satırını aç:
+// import { Health } from '@awesome-cordova-plugins/health';
 
 const getGlassCardStyle = (C) => ({
   background: `linear-gradient(145deg, rgba(30, 30, 35, 0.6), rgba(15, 15, 20, 0.8))`,
@@ -12,66 +15,140 @@ const getGlassCardStyle = (C) => ({
 export default function HealthSyncWidget({ C }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [healthData, setHealthData] = useState({
+    sleep: "-", steps: "-", hrResting: "-", recoveryBonus: "+%0 CNS Toparlanma"
+  });
 
-  // Sensör verileri simülasyonu
-  const healthData = { sleep: "7s 15dk", steps: "8,432", hrResting: "58 bpm", recoveryBonus: "+%15 CNS Toparlanma" };
-
-  const handleConnect = () => {
+  const handleConnect = async () => {
     setIsLoading(true);
-    // Gerçekte burada OAuth Google Fit / Apple HealthKit tetiklenir
-    setTimeout(() => {
+
+    const platform = Capacitor.getPlatform();
+
+    // 1. SENARYO: BİLGİSAYAR (WEB) TESTİ (Uygulama çökmesin diye)
+    if (platform === 'web') {
+      setTimeout(() => {
+        setHealthData({ sleep: "7s 15dk", steps: "8,432", hrResting: "58 bpm", recoveryBonus: "+%15 CNS Toparlanma" });
+        setIsConnected(true);
+        setIsLoading(false);
+      }, 1500);
+      return;
+    }
+
+    // 2. SENARYO: GERÇEK TELEFON (iOS/Android) ENTEGRASYONU
+    try {
+      /* // 🔥 DİKKAT: Mobil Build alacağın zaman bu bloğun yorum satırlarını kaldır! 🔥
+      
+      // Sağlık verileri destekleniyor mu?
+      const available = await Health.isAvailable();
+      if (!available) throw new Error("Cihaz sağlık verilerini desteklemiyor.");
+
+      // Kullanıcıdan İzin İste
+      await Health.requestAuthorization(['steps', 'sleep', 'heart_rate.resting']);
+
+      const today = new Date();
+      const yesterday = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
+
+      // Adımları Çek (Bugün)
+      const stepsData = await Health.queryAggregated({
+        startDate: new Date(today.setHours(0, 0, 0, 0)),
+        endDate: new Date(),
+        dataType: 'steps'
+      });
+
+      // Uykuyu Çek (Son 24 Saat)
+      const sleepData = await Health.query({
+        startDate: yesterday,
+        endDate: new Date(),
+        dataType: 'sleep'
+      });
+
+      // Dinlenik Nabız Çek
+      const hrData = await Health.query({
+        startDate: yesterday,
+        endDate: new Date(),
+        dataType: 'heart_rate.resting',
+        limit: 1
+      });
+
+      // Gelen verileri senin tasarımına uygun (Saniye -> Saat/Dk) formatla
+      const totalSteps = stepsData.value || 0;
+      const sleepHours = sleepData.length > 0 ? (sleepData[0].value / 60).toFixed(1) : 0;
+      const restingHr = hrData.length > 0 ? hrData[0].value : "-";
+
+      setHealthData({
+        steps: totalSteps.toLocaleString('tr-TR'),
+        sleep: sleepHours > 0 ? `${Math.floor(sleepHours)}s ${Math.round((sleepHours % 1) * 60)}dk` : "-",
+        hrResting: restingHr !== "-" ? `${Math.round(restingHr)} bpm` : "-",
+        recoveryBonus: "+%15 CNS Toparlanma" // Bunu dinamik algoritmaya bağlayabilirsin
+      });
+      
       setIsConnected(true);
       setIsLoading(false);
-      if(navigator.vibrate) navigator.vibrate([30, 50, 30]);
-    }, 1500);
+      */
+
+      // Eklentiyi henüz aktifleştirmediysen mobil cihazda hata vermemesi için güvenli simülasyon:
+      setTimeout(() => {
+        setHealthData({ sleep: "6s 45dk", steps: "11,540", hrResting: "54 bpm", recoveryBonus: "+%18 CNS Toparlanma" });
+        setIsConnected(true);
+        setIsLoading(false);
+      }, 2000);
+
+    } catch (error) {
+      console.error("Health API Bağlantı Hatası:", error);
+      alert("Sağlık verilerine erişilemedi. Lütfen telefon ayarlarından izinleri kontrol et.");
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div style={getGlassCardStyle(C)}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={getGlassCardStyle(C)}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: "#fff" }}>Akıllı Sağlık Senkronu</h3>
-          <p style={{ margin: "4px 0 0 0", fontSize: 12, color: C.sub, fontWeight: 600 }}>Apple Health & Google Fit</p>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: "#fff" }}>Senkronizasyon</h2>
+          <p style={{ margin: "4px 0 0 0", fontSize: 11, color: "rgba(255,255,255,0.5)" }}>Apple Health & Google Fit</p>
         </div>
-        <div style={{ fontSize: 28 }}>⌚</div>
+        <div style={{ fontSize: 24 }}>{Capacitor.getPlatform() === 'ios' ? '🍎' : Capacitor.getPlatform() === 'android' ? '🤖' : '⌚'}</div>
       </div>
 
-      {!isConnected ? (
-        <div>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.5, marginBottom: 20 }}>
-            Uyku, nabız ve adım verilerini bağlayarak CNS (Sinir Sistemi) Yorgunluğu hesaplamalarını yapay zekanın dinamik olarak yönetmesine izin ver.
-          </p>
-          <motion.button 
-            whileTap={{ scale: 0.95 }} onClick={handleConnect} disabled={isLoading}
-            style={{ width: "100%", background: "#fff", color: "#000", border: "none", padding: "16px", borderRadius: 16, fontWeight: 900, fontSize: 14, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 10 }}
-          >
-            {isLoading ? "Bağlanıyor..." : "Cihazı Bağla ➔"}
-          </motion.button>
-        </div>
-      ) : (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-            <div style={{ background: "rgba(59, 130, 246, 0.15)", border: `1px solid rgba(59, 130, 246, 0.3)`, padding: 16, borderRadius: 16 }}>
-              <div style={{ fontSize: 11, color: C.blue, fontWeight: 900, marginBottom: 4 }}>UYKU</div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "#fff", fontFamily: "monospace" }}>{healthData.sleep}</div>
+      <AnimatePresence mode="wait">
+        {!isConnected ? (
+          <motion.div key="connect" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <p style={{ fontSize: 13, color: C.mute, lineHeight: 1.5, marginBottom: 20 }}>
+              Uygulamanın uyku, toparlanma ve kalori ihtiyacını daha hassas hesaplaması için sağlık verilerine erişim izni verin.
+            </p>
+            <button 
+              onClick={handleConnect} 
+              disabled={isLoading}
+              style={{ width: "100%", background: `linear-gradient(135deg, ${C.green}, #22c55e)`, color: "#000", border: "none", padding: "16px", borderRadius: 16, fontWeight: 900, fontSize: 15, cursor: isLoading ? "wait" : "pointer", boxShadow: `0 10px 25px rgba(46, 204, 113, 0.3)` }}
+            >
+              {isLoading ? "Bağlanıyor..." : "Cihaza Bağlan"}
+            </button>
+          </motion.div>
+        ) : (
+          <motion.div key="stats" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+              <div style={{ background: "rgba(59, 130, 246, 0.15)", border: `1px solid rgba(59, 130, 246, 0.3)`, padding: 16, borderRadius: 16 }}>
+                <div style={{ fontSize: 11, color: C.blue, fontWeight: 900, marginBottom: 4 }}>UYKU</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff", fontFamily: "monospace" }}>{healthData.sleep}</div>
+              </div>
+              <div style={{ background: "rgba(46, 204, 113, 0.15)", border: `1px solid rgba(46, 204, 113, 0.3)`, padding: 16, borderRadius: 16 }}>
+                <div style={{ fontSize: 11, color: C.green, fontWeight: 900, marginBottom: 4 }}>ADIM</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff", fontFamily: "monospace" }}>{healthData.steps}</div>
+              </div>
             </div>
-            <div style={{ background: "rgba(46, 204, 113, 0.15)", border: `1px solid rgba(46, 204, 113, 0.3)`, padding: 16, borderRadius: 16 }}>
-              <div style={{ fontSize: 11, color: C.green, fontWeight: 900, marginBottom: 4 }}>ADIM</div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "#fff", fontFamily: "monospace" }}>{healthData.steps}</div>
+            <div style={{ background: "rgba(0,0,0,0.3)", padding: 16, borderRadius: 16, border: `1px solid rgba(255,255,255,0.05)`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+               <div>
+                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 800 }}>DİNLENİK NABIZ</div>
+                 <div style={{ fontSize: 14, color: "#fff", fontWeight: 800 }}>{healthData.hrResting} ❤️</div>
+               </div>
+               <div style={{ textAlign: "right" }}>
+                 <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 800 }}>BONUS</div>
+                 <div style={{ fontSize: 14, color: C.yellow, fontWeight: 900 }}>{healthData.recoveryBonus}</div>
+               </div>
             </div>
-          </div>
-          <div style={{ background: "rgba(0,0,0,0.3)", padding: 16, borderRadius: 16, border: `1px solid rgba(255,255,255,0.05)`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-             <div>
-               <div style={{ fontSize: 11, color: C.mute, fontWeight: 800 }}>DİNLENİK NABIZ</div>
-               <div style={{ fontSize: 14, color: "#fff", fontWeight: 800 }}>{healthData.hrResting} ❤️</div>
-             </div>
-             <div style={{ textAlign: "right" }}>
-               <div style={{ fontSize: 11, color: C.yellow, fontWeight: 800 }}>AI ETKİSİ</div>
-               <div style={{ fontSize: 14, color: C.yellow, fontWeight: 900 }}>{healthData.recoveryBonus}</div>
-             </div>
-          </div>
-        </motion.div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

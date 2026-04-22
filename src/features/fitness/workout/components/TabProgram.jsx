@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { useTranslation } from 'react-i18next'; // 🌍 ÇEVİRİ EKLENDİ
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from "@/app/store.js";
 import { WORKOUT_PRESETS } from "../data/workoutData.js";
+import { analyzeVolumeTrend, generateDeloadProgram } from '../utils/periodizationEngine.js';
 
 const fonts = {
   header: "'Comucan', system-ui, sans-serif", 
@@ -10,7 +11,6 @@ const fonts = {
   mono: "monospace"                           
 };
 
-// 🌟 PREMIUM CAM TASARIMI (GLASSMORPHISM)
 const getGlassCardStyle = (C) => ({
   background: `linear-gradient(145deg, rgba(30, 30, 35, 0.6), rgba(15, 15, 20, 0.8))`,
   backdropFilter: "blur(24px)",
@@ -26,15 +26,13 @@ const getGlassCardStyle = (C) => ({
   willChange: "transform, opacity"
 });
 
-// Egzersiz Ekleme Modalı
 const ExerciseModal = ({ show, onClose, onAdd, C, EXERCISE_DB, customExercises }) => {
-  const { t } = useTranslation(); // 🌍 ÇEVİRİ HOOK
+  const { t } = useTranslation(); 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Tümü");
 
   const combinedDB = [...(Array.isArray(EXERCISE_DB) ? EXERCISE_DB : []), ...customExercises];
   
-  // Arayüz çevirileri, ancak state (veritabanı) eşleşmesi için Türkçe anahtar tutuluyor
   const categories = [
     { id: "Tümü", label: t('prog_cat_all') },
     { id: "Göğüs", label: t('prog_cat_chest') },
@@ -92,7 +90,6 @@ const ExerciseModal = ({ show, onClose, onAdd, C, EXERCISE_DB, customExercises }
 
         <div style={{ flex: 1, overflowY: "auto", padding: "0 24px 30px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
           {filteredDB.map((ex, i) => {
-            // Target ismini de çevirelim (Opsiyonel ama şık durur)
             const targetTransMap = { "Göğüs": t('prog_cat_chest'), "Sırt": t('prog_cat_back'), "Bacak": t('prog_cat_legs'), "Omuz": t('prog_cat_shoulders'), "Kol": t('prog_cat_arms'), "Karın": t('prog_cat_core'), "Kardiyo": t('prog_cat_cardio') };
             const dispTarget = targetTransMap[ex.target] || ex.target || t('prog_cat_other');
 
@@ -120,16 +117,22 @@ const ExerciseModal = ({ show, onClose, onAdd, C, EXERCISE_DB, customExercises }
 export default function TabProgram({ 
   themeColors: C = {}, customWorkouts = [], setCustomWorkouts, EXERCISE_DB = [] 
 }) {
-  const { t } = useTranslation(); // 🌍 ÇEVİRİ HOOK
-
+  const { t } = useTranslation(); 
+  
   const user = useAppStore(state => state.user);
   const setUser = useAppStore(state => state.setUser);
-  
   const customExercises = useAppStore(state => state.customExercises) || [];
   
-  const addCustomExercise = useAppStore(state => state.addCustomExercise);
-  const removeCustomExercise = useAppStore(state => state.removeCustomExercise);
-  
+  // 🧠 KULLANICININ AĞIRLIK GEÇMİŞİNİ AL VE PLATOLARI TESPİT ET
+  const weightLog = useAppStore(state => state.weightLog);
+  const periodizationData = useMemo(() => {
+      try {
+          return analyzeVolumeTrend(weightLog);
+      } catch (e) {
+          return { needsDeload: false };
+      }
+  }, [weightLog]);
+
   const [showPresetsList, setShowPresetsList] = useState(!customWorkouts || customWorkouts.length === 0);
   const [activeTab, setActiveTab] = useState("presets"); 
   const [selectedPreset, setSelectedPreset] = useState(null); 
@@ -138,10 +141,21 @@ export default function TabProgram({
   const [editingWorkout, setEditingWorkout] = useState(null);
   const [swapIndex, setSwapIndex] = useState(null);
   const [showAddExModal, setShowAddExModal] = useState(false);
-  const [newExForm, setNewExForm] = useState({ name: "", target: "Göğüs", icon: "🏋️‍♂️" });
 
   const safeWorkouts = Array.isArray(customWorkouts) ? customWorkouts : [];
   const combinedDB = [...(Array.isArray(EXERCISE_DB) ? EXERCISE_DB : []), ...customExercises];
+
+  // 🛠️ YORGUNLUĞU FARK EDİP DELOAD UYGULAYICI FONKSİYON
+  const applyDeloadWeek = () => {
+    if (customWorkouts?.length > 0) {
+      const deloadPlan = generateDeloadProgram(customWorkouts[0] || { workouts: customWorkouts });
+      if (deloadPlan) {
+        setCustomWorkouts(deloadPlan.workouts || [deloadPlan]);
+        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+        alert("Sistem başarıyla Deload (Aktif Dinlenme) moduna geçirildi.");
+      }
+    }
+  };
 
   const guessTargetMuscle = (exName) => {
     const name = (exName || "").toLowerCase().trim();
@@ -170,11 +184,6 @@ export default function TabProgram({
       setActiveTab("presets");
       if (navigator.vibrate) navigator.vibrate([30, 30, 30]);
     }
-  };
-
-  const handleAddDay = () => {
-    const newDay = { id: Date.now(), day: `${t('prog_day_badge')} ${safeWorkouts.length + 1}`, label: `${safeWorkouts.length + 1}. ${t('prog_workout_label')}`, exercises: [] };
-    setCustomWorkouts([...safeWorkouts, newDay]);
   };
 
   const handleCreateCustom = () => {
@@ -298,7 +307,6 @@ export default function TabProgram({
   }, [editingWorkout?.exercises, combinedDB]);
 
   const glassCardStyle = getGlassCardStyle(C);
-
   const bgPrimary = selectedPreset ? selectedPreset.color : C.blue;
   const bgSecondary = selectedPreset ? selectedPreset.color : C.green;
 
@@ -309,20 +317,6 @@ export default function TabProgram({
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
         <motion.div animate={{ opacity: [0.08, 0.15, 0.08] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} style={{ position: 'absolute', top: '-10%', left: '-10%', width: '70vw', height: '70vw', background: `radial-gradient(circle, ${bgPrimary}40 0%, transparent 60%)`, transform: "translateZ(0)", filter: 'blur(60px)' }} />
         <motion.div animate={{ opacity: [0.05, 0.12, 0.05] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 1 }} style={{ position: 'absolute', bottom: '10%', right: '-10%', width: '60vw', height: '60vw', background: `radial-gradient(circle, ${bgSecondary}30 0%, transparent 60%)`, transform: "translateZ(0)", filter: 'blur(60px)' }} />
-        
-        <AnimatePresence>
-          {selectedPreset && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-              animate={{ opacity: 0.05, scale: 1, rotate: 0 }}
-              exit={{ opacity: 0, scale: 0.8, rotate: -5 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) translateZ(0)', fontSize: '70vw', filter: 'blur(12px)', zIndex: -1, userSelect: 'none' }}
-            >
-              {selectedPreset.icon}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       <div style={{ position: "relative", zIndex: 1 }}>
@@ -336,6 +330,32 @@ export default function TabProgram({
             {t('prog_tab_custom')}
           </button>
         </div>
+
+        {/* 🧠 PERIODİZASYON KOÇU UYARI KARTI (PLATO TESPİTİ) */}
+        <AnimatePresence>
+          {periodizationData?.needsDeload && !customWorkouts?.[0]?.isDeload && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+              style={{ background: `linear-gradient(145deg, rgba(234, 179, 8, 0.15), rgba(202, 138, 4, 0.2))`, border: `1px solid rgba(234, 179, 8, 0.4)`, padding: 20, borderRadius: 24, marginBottom: 24, boxShadow: "0 10px 30px rgba(234, 179, 8, 0.15)" }}
+            >
+              <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                <div style={{ fontSize: 32, filter: "drop-shadow(0 0 10px #eab308)" }}>⚠️</div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: "#eab308", fontFamily: fonts.header, letterSpacing: 1, marginBottom: 6 }}>PLATO TESPİT EDİLDİ</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", lineHeight: 1.5, marginBottom: 12 }}>
+                    Son haftalardaki antrenman hacminde (tonaj) artış görünmüyor. Sinir sisteminin (CNS) resetlenmesi ve kasların yeni adaptasyonlara hazır olması için bu haftayı <strong>Deload (Aktif Dinlenme)</strong> haftası ilan etmeni öneriyorum.
+                  </div>
+                  <button 
+                    onClick={applyDeloadWeek}
+                    style={{ background: "#eab308", color: "#000", border: "none", padding: "10px 16px", borderRadius: 12, fontWeight: 900, fontSize: 13, cursor: "pointer", fontFamily: fonts.header }}
+                  >
+                    Deload Moduna Geç (%60 Ağırlık)
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence mode="wait">
           
@@ -356,23 +376,6 @@ export default function TabProgram({
               ) : (
                 <>
                   <h2 style={{ fontFamily: fonts.header, fontWeight: 900, fontStyle: "italic", fontSize: 26, marginBottom: 20, color: "#fff", letterSpacing: -0.5 }}>{t('prog_system_selection')}</h2>
-
-                  {/* İLERİ SEVİYE KARTI */}
-                  <motion.div
-                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    onClick={handleCreateCustom}
-                    style={{ background: `linear-gradient(145deg, rgba(30, 20, 20, 0.8), rgba(15, 10, 10, 0.9))`, backdropFilter: "blur(20px)", border: `1px solid rgba(231, 76, 60, 0.3)`, borderRadius: 32, padding: 28, cursor: "pointer", boxShadow: `0 15px 35px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)`, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden", marginBottom: 28 }}
-                  >
-                    <div style={{ position: "absolute", right: -30, top: -30, width: 120, height: 120, background: C.red, opacity: 0.2, filter: "blur(50px)", borderRadius: "50%" }} />
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                      <div style={{ fontSize: 44, filter: `drop-shadow(0 0 15px rgba(231, 76, 60, 0.6))` }}>⚙️</div>
-                      <div style={{ background: `rgba(231, 76, 60, 0.2)`, border: `1px solid rgba(231, 76, 60, 0.4)`, color: C.red, padding: "6px 12px", borderRadius: 10, fontSize: 11, fontWeight: 900, letterSpacing: 1.5, textTransform: "uppercase" }}>{t('prog_adv_badge')}</div>
-                    </div>
-                    <h3 style={{ margin: "0 0 8px 0", fontSize: 22, fontWeight: 900, color: "#fff", fontFamily: fonts.header, letterSpacing: -0.5 }}>{t('prog_adv_title')}</h3>
-                    <p style={{ margin: 0, fontSize: 14, color: "rgba(255,255,255,0.6)", lineHeight: 1.6 }}>{t('prog_adv_desc')}</p>
-                  </motion.div>
-
-                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 900, fontFamily: fonts.header, letterSpacing: 1.5, margin: "0 0 16px 8px" }}>{t('prog_popular_systems')}</div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                     {(WORKOUT_PRESETS || []).map((preset) => (
@@ -416,30 +419,6 @@ export default function TabProgram({
                 </div>
                 <h2 style={{ fontFamily: fonts.header, fontWeight: 900, fontStyle: "italic", fontSize: 34, margin: "0 0 14px 0", color: "#fff", letterSpacing: "-1px" }}>{selectedPreset.name}</h2>
                 <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 15, lineHeight: 1.6, margin: "0 0 24px 0" }}>{selectedPreset.desc}</p>
-                
-                <div style={{ background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.05)`, padding: 20, borderRadius: 24, marginBottom: 28 }}>
-                  <div style={{ fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.5)", letterSpacing: 1.5, marginBottom: 16 }}>{t('prog_muscle_focus')}</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {getPresetFocus(selectedPreset).sortedMuscles.length > 0 ? (
-                      getPresetFocus(selectedPreset).sortedMuscles.map(([muscle, count], idx) => {
-                        const pct = Math.round((count / getPresetFocus(selectedPreset).totalExs) * 100);
-                        const transMap = { "Göğüs": t('prog_cat_chest'), "Sırt": t('prog_cat_back'), "Bacak": t('prog_cat_legs'), "Omuz": t('prog_cat_shoulders'), "Kol": t('prog_cat_arms'), "Karın": t('prog_cat_core'), "Kardiyo": t('prog_cat_cardio'), "Diğer": t('prog_cat_other') };
-                        const dispM = transMap[muscle] || muscle;
-                        return (
-                          <div key={idx} style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                            <div style={{ width: 65, fontSize: 13, fontWeight: 800, color: "#fff" }}>{dispM}</div>
-                            <div style={{ flex: 1, height: 8, background: `rgba(255,255,255,0.1)`, borderRadius: 4, overflow: "hidden" }}>
-                              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} style={{ height: "100%", background: selectedPreset.color, borderRadius: 4, boxShadow: `0 0 10px ${selectedPreset.color}80` }} />
-                            </div>
-                            <div style={{ width: 35, fontSize: 12, fontWeight: 800, color: "rgba(255,255,255,0.6)", textAlign: "right", fontFamily: fonts.mono }}>%{pct}</div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontStyle: "italic" }}>{t('prog_no_focus')}</div>
-                    )}
-                  </div>
-                </div>
                 
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => {setPresetSetup(selectedPreset); setIsBeginnerMode(false);}} style={{ width: "100%", padding: "20px", borderRadius: 20, border: "none", background: `linear-gradient(135deg, ${selectedPreset.color}, #2563eb)`, color: "#fff", fontWeight: 900, fontSize: 16, cursor: "pointer", fontFamily: fonts.header, boxShadow: `0 12px 30px ${selectedPreset.color}50` }}>
                   {t('prog_btn_load_sys')}
@@ -537,24 +516,6 @@ export default function TabProgram({
                 <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 900, marginBottom: 10, letterSpacing: 1.5 }}>{t('prog_edit_name_lbl')}</div>
                 <input type="text" value={editingWorkout.label} onChange={e => setEditingWorkout({...editingWorkout, label: e.target.value})} style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: `1px solid rgba(255,255,255,0.05)`, color: "#fff", fontSize: 22, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", padding: "18px 20px", borderRadius: 20, outline: "none", transition: "0.3s", boxSizing: "border-box" }} onFocus={(e) => e.target.style.borderColor = C.green} onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.05)"} />
               </div>
-
-              {builderVolume.length > 0 && (
-                <div style={{ marginBottom: 32, background: "rgba(0,0,0,0.2)", padding: 20, borderRadius: 24, border: `1px dashed rgba(255,255,255,0.1)` }}>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 900, marginBottom: 16, letterSpacing: 1.5 }}>{t('prog_edit_vol_lbl')}</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                    {builderVolume.map((vol, idx) => {
-                       const targetTransMap = { "Göğüs": t('prog_cat_chest'), "Sırt": t('prog_cat_back'), "Bacak": t('prog_cat_legs'), "Omuz": t('prog_cat_shoulders'), "Kol": t('prog_cat_arms'), "Karın": t('prog_cat_core'), "Kardiyo": t('prog_cat_cardio'), "Diğer": t('prog_cat_other') };
-                       const dispM = targetTransMap[vol.name] || vol.name;
-                       return (
-                         <div key={idx} style={{ background: "rgba(255,255,255,0.05)", border: `1px solid rgba(255,255,255,0.08)`, padding: "8px 14px", borderRadius: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                           <span style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>{dispM}</span>
-                           <span style={{ fontSize: 13, fontWeight: 900, color: C.green, fontFamily: fonts.mono }}>{vol.sets} {t('prog_sets')}</span>
-                         </div>
-                       )
-                    })}
-                  </div>
-                </div>
-              )}
 
               <div style={{ marginBottom: 32 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>

@@ -11,12 +11,14 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@awesome-cordova-plugins/health": "^9.1.4",
     "@capacitor/android": "^8.3.1",
     "@capacitor/core": "^8.3.1",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.3.1",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
+    "cordova-plugin-health": "^3.2.4",
     "firebase": "^12.12.0",
     "framer-motion": "^12.38.0",
     "html-to-image": "^1.11.13",

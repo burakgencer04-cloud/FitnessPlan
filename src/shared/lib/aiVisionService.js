@@ -1,160 +1,85 @@
-// src/core/aiVisionService.js
+// src/shared/lib/aiVisionService.js
 
-/**
- * AI Vision Servisi
- * 
- * ⚠️ ÖNEMLİ UYARI:
- * Bu servis şu anda TAMAMEN SİMÜLASYON modundadır.
- * Gerçek bir AI Vision API (Gemini Vision, OpenAI GPT-4 Vision vb.) 
- * entegre edildiğinde IS_AI_VISION_REAL = true yapılmalıdır.
- * 
- * Kullanıcıya "Beta - Simülasyon Modu" ibaresi gösterilmelidir.
- */
+export const IS_AI_VISION_REAL = true;
 
+export const analyzeFoodImage = async (base64Image) => {
+  const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
-export const IS_AI_VISION_REAL = false; // Gerçek API bağlandığında → true yap
+  let API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+  API_KEY = API_KEY.replace(/['"]/g, '').trim(); 
 
-// Mock veri tabanı (gerçekçi besin örnekleri)
-const mockAnalyses = [
-  {
-    name: "Izgara Somon ve Kuşkonmaz",
-    cal: 420,
-    p: 38,
-    c: 12,
-    f: 22,
-    qty: 1,
-    unit: "Tabak",
-    confidence: 0.94
-  },
-  {
-    name: "Fıstık Ezmeli Yulaf Kasesi",
-    cal: 550,
-    p: 18,
-    c: 65,
-    f: 24,
-    qty: 1,
-    unit: "Kase",
-    confidence: 0.89
-  },
-  {
-    name: "Tavuk Göğsü ve Basmati Pirinç",
-    cal: 480,
-    p: 45,
-    c: 55,
-    f: 8,
-    qty: 1,
-    unit: "Porsiyon",
-    confidence: 0.91
-  },
-  {
-    name: "Avokadolu Poşe Yumurta",
-    cal: 320,
-    p: 14,
-    c: 15,
-    f: 26,
-    qty: 1,
-    unit: "Porsiyon",
-    confidence: 0.87
-  },
-  {
-    name: "Büyük Boy Karışık Salata",
-    cal: 180,
-    p: 5,
-    c: 20,
-    f: 12,
-    qty: 1,
-    unit: "Kase",
-    confidence: 0.85
-  },
-  {
-    name: "Filtre Kahve & Badem",
-    cal: 150,
-    p: 4,
-    c: 5,
-    f: 14,
-    qty: 1,
-    unit: "Ara Öğün",
-    confidence: 0.96
-  },
-  {
-    name: "Protein Shake (Whey + Muz)",
-    cal: 280,
-    p: 28,
-    c: 22,
-    f: 6,
-    qty: 1,
-    unit: "Bardak",
-    confidence: 0.88
-  }
-];
-
-/**
- * Yemek fotoğrafını analiz eder
- * @param {File} imageFile - Kullanıcının çektiği yemek fotoğrafı
- * @returns {Promise<Object>} Tespit edilen besin bilgileri
- */
-export const analyzeFoodImage = async (imageFile) => {
-  console.warn("🤖 AI Vision servisi şu anda SİMÜLASYON modunda çalışıyor.");
-
-  // Gerçek API devreye girene kadar 2.5 saniye yapay gecikme
-  await new Promise(resolve => setTimeout(resolve, 2500));
-
-  if (!IS_AI_VISION_REAL) {
-    // === SİMÜLASYON MODU ===
-    const randomIndex = Math.floor(Math.random() * mockAnalyses.length);
-    const detectedFood = mockAnalyses[randomIndex];
-
-    return {
-      ...detectedFood,
-      isMock: true,
-      confidence: detectedFood.confidence || 0.90,
-      message: "Bu analiz şu anda simülasyon modundadır. Gerçek AI Vision yakında aktif olacak.",
-      detectedAt: new Date().toISOString()
-    };
+  if (!API_KEY || API_KEY.includes("BURAYA")) {
+    console.warn("⚠️ VITE_GEMINI_API_KEY bulunamadı! Simülasyon moduna geçiliyor.");
+    return getMockData();
   }
 
-  // === GERÇEK API MODU (İleride burası aktif olacak) ===
   try {
-    // Örnek: OpenAI GPT-4 Vision veya Gemini Vision entegrasyonu
-    /*
-    const formData = new FormData();
-    formData.append("image", imageFile);
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+    const response = await fetch(url, {
+      method: 'POST',
       headers: {
-        "Authorization": `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4-vision-preview",
-        messages: [{ role: "user", content: [...] }]
+        contents: [{
+          parts: [
+            { 
+              text: "Sen uzman bir diyetisyensin. Bu fotoğraftaki yemeği analiz et. Yemeğin adını, tahmini kalorisi ile protein (p), karbonhidrat (c) ve yağ (f) değerlerini gram cinsinden tahmin et. EĞER FOTOĞRAFTA YEMEK YOKSA değerleri sıfırla. LÜTFEN SADECE ŞU JSON FORMATINDA YANIT VER, BAŞKA HİÇBİR AÇIKLAMA VEYA MARKDOWN KULLANMA: {\"name\": \"Yemek Adı\", \"cal\": 450, \"p\": 30, \"c\": 40, \"f\": 15, \"qty\": 1, \"unit\": \"Porsiyon\"}" 
+            },
+            {
+              inlineData: { 
+                mimeType: "image/jpeg",
+                data: base64Data
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.1
+          // 🔥 DÜZELTME: Hataya sebep olan responseMimeType buradan tamamen kaldırıldı!
+        }
       })
     });
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("🔴 GEMİNİ API REDDETTİ. Detaylı Hata:", JSON.stringify(errorData, null, 2));
+      throw new Error(errorData?.error?.message || "API İsteği Başarısız.");
+    }
+
     const data = await response.json();
-    return parseAIResponse(data);
-    */
+    let textResponse = data.candidates[0].content.parts[0].text;
     
-    throw new Error("Gerçek AI Vision API henüz entegre edilmedi.");
+    // 🔥 DÜZELTME 2: Kurşun Geçirmez Markdown Temizleyici
+    // Gemini bazen cevabın başına ve sonuna ```json tagleri koyar. Bu kod onları yok eder.
+    textResponse = textResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
+    
+    const result = JSON.parse(textResponse);
+    
+    return {
+      ...result,
+      isMock: false,
+      confidence: 0.95,
+      message: "AI Vision (Gemini) ile başarıyla analiz edildi."
+    };
+
   } catch (error) {
-  console.error("AI Vision API hatası:", error);
-  // Sonsuz döngü yerine güvenli bir mock/yedek veri döndürüyoruz
-  return { 
-    name: "Tanımlanamayan Öğün", 
-    calories: 250, 
-    protein: 10, 
-    carbs: 20, 
-    fat: 10,
-    isMock: true 
-  };
-}
+    console.error("🔴 YAPAY ZEKA ÇÖKME HATASI:", error);
+    return {
+      name: "Analiz Başarısız",
+      cal: 0, p: 0, c: 0, f: 0, qty: 1, unit: "-",
+      isMock: true,
+      message: "Hata: " + error.message
+    };
+  }
 };
 
-/**
- * Gelecekte gerçek AI cevabını parse etmek için yardımcı fonksiyon
- */
-export const parseAIResponse = (apiResponse) => {
-  // Gerçek API entegrasyonu yapıldığında burası doldurulacak
-  return null;
+const getMockData = () => {
+  return {
+    name: "Simülasyon Yemeği",
+    cal: 420, p: 38, c: 12, f: 22, qty: 1, unit: "Tabak",
+    confidence: 0.94, isMock: true,
+    message: "Gerçek analiz için .env dosyasına VITE_GEMINI_API_KEY ekleyin."
+  };
 };

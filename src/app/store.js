@@ -17,6 +17,10 @@ export const useAppStore = create(
     {
       name: "fitness-app-vault",
       version: 2,
+      partialize: (state) => {
+        const { activeWorkoutSession, toast, progressPhotos, isAuthLoading, ...persistedState } = state;
+        return persistedState;
+      },
       migrate: (persistedState, version) => {
         if (version < 2) {
           if (Array.isArray(persistedState.weightLog)) persistedState.weightLog = {};

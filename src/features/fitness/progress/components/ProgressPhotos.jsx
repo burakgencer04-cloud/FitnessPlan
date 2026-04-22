@@ -1,6 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { fonts, getGlassCardStyle, getGlassInnerStyle } from './progressUtils';
+import { fonts, getGlassCardStyle } from './progressUtils';
+import { get } from 'idb-keyval';
+
+// IndexedDB'den resmi asenkron çeken alt bileşen
+const PhotoItem = ({ photo, onClick, C }) => {
+  const [imgSrc, setImgSrc] = useState(photo.src || null);
+
+  useEffect(() => {
+    if (!photo.src && photo.id) {
+      get(`photo_${photo.id}`).then(data => {
+        if (data) setImgSrc(data);
+      }).catch(console.error);
+    }
+  }, [photo]);
+
+  return (
+    <div onClick={onClick} style={{ position: "relative", width: 100, height: 140, borderRadius: 12, overflow: "hidden", flexShrink: 0, border: `1px solid ${C.border}80`, cursor: "pointer", boxShadow: "0 4px 15px rgba(0,0,0,0.3)" }}>
+      {imgSrc ? (
+        <img src={imgSrc} alt="Progress" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : (
+        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)" }}>⏳</div>
+      )}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", padding: "4px", fontSize: 9, color: "#fff", fontWeight: 700, textAlign: "center", fontFamily: fonts.mono, backdropFilter: "blur(4px)" }}>
+        {photo.date}
+      </div>
+    </div>
+  );
+};
 
 export default function ProgressPhotos({ progressPhotos, setPhotoModalIndex, handlePhotoUpload, fileInputRef, C }) {
   return (
@@ -17,17 +44,13 @@ export default function ProgressPhotos({ progressPhotos, setPhotoModalIndex, han
       {progressPhotos.length > 0 ? (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none" }}>
           {progressPhotos.map((photo, idx) => (
-            <div key={photo.id} onClick={() => setPhotoModalIndex(idx)} style={{ position: "relative", width: 100, height: 140, borderRadius: 12, overflow: "hidden", flexShrink: 0, border: `1px solid ${C.border}80`, cursor: "pointer", boxShadow: "0 4px 15px rgba(0,0,0,0.3)" }}>
-              <img src={photo.src} alt="Progress" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.6)", padding: "4px", fontSize: 9, color: "#fff", fontWeight: 700, textAlign: "center", fontFamily: fonts.mono, backdropFilter: "blur(4px)" }}>
-                {photo.date}
-              </div>
-            </div>
+            <PhotoItem key={photo.id} photo={photo} onClick={() => setPhotoModalIndex(idx)} C={C} />
           ))}
         </div>
       ) : (
-        <div style={{ ...getGlassInnerStyle(C), height: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ color: C.sub, fontSize: 13, fontWeight: 600 }}>İlk Fotoğrafını Ekle</span>
+        <div style={{ padding: 24, textAlign: "center", background: "rgba(0,0,0,0.2)", borderRadius: 16, border: `1px dashed ${C.border}60` }}>
+          <div style={{ fontSize: 40, marginBottom: 8, opacity: 0.5 }}>📸</div>
+          <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>İlk fotoğrafını ekle!</div>
         </div>
       )}
     </motion.div>

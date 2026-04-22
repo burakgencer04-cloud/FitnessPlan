@@ -47,5 +47,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+<string>CNS toparlanmanızı hesaplamak için adım ve uyku verilerinize ihtiyaç duyuyoruz.</string>
+<key>NSHealthUpdateUsageDescription</key>
+<string>Antrenman verilerinizi Apple Health'e yazmak için onayınız gerekiyor.</string>
 </dict>
 </plist>

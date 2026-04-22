@@ -117,15 +117,21 @@ export const generatePersonalizedPlan = (formData) => {
 
   if (WORKOUT_PRESETS && WORKOUT_PRESETS.length > 0) {
     const targetDays = Number(days) || 3;
-    selectedPreset = WORKOUT_PRESETS.find(
-      (p) =>
-        p.daysPerWeek === targetDays &&
-        (normalizedGoal === "cut"
-          ? p.goal === "cut" || p.goal === "endurance"
-          : normalizedGoal === "bulk"
-          ? p.goal === "bulk" || p.goal === "strength"
-          : true)
-    ) || WORKOUT_PRESETS[0];
+    
+    // Eğer form verisinden 'isDeload' isteği gelmişse direkt deload programını seç
+    if (formData.isDeload) {
+      selectedPreset = WORKOUT_PRESETS.find(p => p.isDeload) || WORKOUT_PRESETS[0];
+    } else {
+      selectedPreset = WORKOUT_PRESETS.find(
+        (p) =>
+          p.daysPerWeek === targetDays && !p.isDeload && // Deload harici ara
+          (normalizedGoal === "cut"
+            ? p.goal === "cut" || p.goal === "endurance"
+            : normalizedGoal === "bulk"
+            ? p.goal === "bulk" || p.goal === "strength"
+            : true)
+      ) || WORKOUT_PRESETS[0];
+    }
   }
 
   if (selectedPreset && selectedPreset.workouts) {

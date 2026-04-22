@@ -1,4 +1,3 @@
-// Build hatalarını önlemek için EXERCISE_DB'yi doğru yoldan çekiyoruz
 import { EXERCISE_DB } from "@/features/fitness/workout/data/workoutData.js";
 
 export const guessTargetMuscle = (exName) => {
@@ -27,37 +26,155 @@ export const PART_TO_TARGET = {
   "Bacak (Quad)": "Bacak", "Arka Bacak": "Bacak", "Kalça": "Bacak", "Baldır": "Bacak"
 };
 
-// ============================================================================
-// 🤖 ZEKİ HEDEFLER: PROGRESİF OVERLOAD TAHMİN ALGORİTMASI
-// ============================================================================
-export const predictNextGoal = (lastLog) => {
-  if (!lastLog || !lastLog.sets || lastLog.sets.length === 0) {
-    return { nextWeight: "-", nextReps: "-" };
-  }
+// 🔥 YENİ: PROGRESSIVE OVERLOAD MOTORU (Epley 1RM)
+export const predictNextGoal = (lastLog, targetRepsStr = "10") => {
+  if (!lastLog || !lastLog.sets || lastLog.sets.length === 0) return null;
   
   let bestSet = lastLog.sets[0];
-  for (let set of lastLog.sets) {
-    const setKg = Number(set.kg) || 0;
-    const setReps = Number(set.reps) || 0;
-    const bestKg = Number(bestSet.kg) || 0;
-    const bestReps = Number(bestSet.reps) || 0;
-    
-    if (setKg > bestKg) {
-      bestSet = set;
-    } else if (setKg === bestKg && setReps > bestReps) {
-      bestSet = set;
+  let max1RM = 0;
+
+  // En iyi seti Epley formülü ile bul
+  lastLog.sets.forEach(set => {
+    const w = Number(set.kg) || 0;
+    const r = Number(set.reps) || 0;
+    if (w > 0 && r > 0) {
+      const e1rm = w * (1 + r / 30); // Epley Formula
+      if (e1rm > max1RM) {
+        max1RM = e1rm;
+        bestSet = set;
+      }
     }
+  });
+
+  const currentKg = Number(bestSet.kg) || 0;
+  const currentReps = Number(bestSet.reps) || 0;
+
+  if (currentKg === 0) return null;
+
+  // Hedef Tekrar aralığını al
+  let upperTargetRep = 10;
+  if (typeof targetRepsStr === 'string' && targetRepsStr.includes('-')) {
+     upperTargetRep = parseInt(targetRepsStr.split('-')[1]) || 10;
+  } else {
+     upperTargetRep = parseInt(targetRepsStr) || 10;
   }
 
-  let nextWeight = Number(bestSet.kg) || 0;
-  let nextReps = Number(bestSet.reps) || 0;
+  let nextWeight = currentKg;
+  let nextReps = currentReps;
+  let message = "";
+  let type = "rep";
 
-  if (nextReps >= 12) {
-    nextWeight += 2.5; 
-    nextReps = 8;      
-  } else if (nextReps > 0) {
-    nextReps += 1;
+  // Karar Mekanizması
+  if (currentReps >= upperTargetRep) {
+    const increment = currentKg >= 40 ? 2.5 : 1.25; 
+    nextWeight = currentKg + increment;
+    nextReps = Math.max(6, upperTargetRep - 2); 
+    message = `Seviye atladın! Ağırlığı artır.`;
+    type = "weight";
+  } else {
+    nextReps = currentReps + 1;
+    message = `Daha fazla tekrar!`;
+    type = "rep";
   }
 
-  return { nextWeight, nextReps };
-}
+  return { nextWeight, nextReps, message, type, prev1RM: Math.round(max1RM) };
+};
+
+const parseLogDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  const parts = dateStr.split(' ');
+  if (parts.length !== 2) return new Date();
+  
+  const trMonths = { "Oca": 0, "Şub": 1, "Mar": 2, "Nis": 3, "May": 4, "Haz": 5, "Tem": 6, "Ağu": 7, "Eyl": 8, "Eki": 9, "Kas": 10, "Ara": 11 };
+  const day = parseInt(parts[0]);
+  const month = trMonths[parts[1]];
+  const now = new Date();
+  
+  let logDate = new Date(now.getFullYear(), month, day);
+  if (logDate > now) logDate.setFullYear(now.getFullYear() - 1);
+  return logDate;
+};
+
+export const calculateRealFatigue = (weightLog) => {
+  const fatigueRaw = { "Göğüs": 0, "Sırt": 0, "Bacak": 0, "Omuz": 0, "Kol": 0, "Karın": 0 };
+  const now = new Date();
+
+  const MAX_TOLERANCE = {
+     "Bacak": 8000, "Sırt": 6000, "Göğüs": 5000, "Omuz": 4000, "Kol": 3000, "Karın": 2000
+  };
+
+  Object.entries(weightLog || {}).forEach(([exName, logs]) => {
+     const target = guessTargetMuscle(exName);
+     if (fatigueRaw[target] === undefined) return;
+
+     logs.forEach(log => {
+       const logDate = parseLogDate(log.date);
+       const diffMs = now - logDate;
+       const diffHours = diffMs / (1000 * 60 * 60);
+
+       if (diffHours >= 0 && diffHours < 72) {
+         let logVolume = 0;
+         (log.sets || []).forEach(set => {
+            logVolume += (Number(set.kg) || 0) * (Number(set.reps) || 0);
+         });
+         
+         const decayFactor = 1 - (diffHours / 72);
+         fatigueRaw[target] += (logVolume * decayFactor);
+       }
+     });
+  });
+
+  const fatiguePct = {};
+  Object.keys(fatigueRaw).forEach(m => {
+     const max = MAX_TOLERANCE[m] || 5000;
+     let pct = Math.round((fatigueRaw[m] / max) * 100);
+     if (pct > 100) pct = 100;
+     fatiguePct[m] = pct;
+  });
+
+  return fatiguePct;
+};
+
+export const analyzeAndOptimizeWorkout = (plannedWorkout, weightLog, exerciseDB, forceDemo = false) => {
+  if (!plannedWorkout || !plannedWorkout.exercises) return { workout: plannedWorkout, modified: false, message: null };
+
+  const fatigue = calculateRealFatigue(weightLog);
+  let tiredMuscles = Object.keys(fatigue).filter(m => fatigue[m] >= 75); 
+
+  if (forceDemo && tiredMuscles.length === 0 && plannedWorkout.exercises.length > 0) {
+     tiredMuscles = [guessTargetMuscle(plannedWorkout.exercises[0].name)];
+  }
+
+  if (tiredMuscles.length === 0) {
+     return { workout: plannedWorkout, modified: false, message: "Sinir sistemin ve kasların harika durumda. Orijinal programa tam güç saldırabilirsin!" };
+  }
+
+  const optimizedExercises = [];
+  const freshMuscles = Object.keys(fatigue).filter(m => fatigue[m] <= 30); 
+  const fallbackMuscle = freshMuscles.length > 0 ? freshMuscles[Math.floor(Math.random() * freshMuscles.length)] : "Karın";
+
+  plannedWorkout.exercises.forEach(ex => {
+      const target = guessTargetMuscle(ex.name);
+      
+      if (tiredMuscles.includes(target)) {
+          const alternatives = exerciseDB.filter(d => d.target === fallbackMuscle);
+          const substitute = alternatives[Math.floor(Math.random() * alternatives.length)];
+          
+          if (substitute) {
+              optimizedExercises.push({
+                  ...ex, name: substitute.name, target: substitute.target, isSwappedByAI: true
+              });
+          } else {
+              optimizedExercises.push(ex); 
+          }
+      } else {
+          optimizedExercises.push(ex);
+      }
+  });
+
+  return {
+      workout: { ...plannedWorkout, exercises: optimizedExercises },
+      modified: true,
+      message: `Verilerini taradım. [${tiredMuscles.join(", ")}] bölgende hala %75'in üzerinde hasar var. Overtraining (Sürantrene) olmamak için bu bölgeyi iptal edip yerine toparlanmış olan [${fallbackMuscle}] egzersizlerini ekledim.`
+  };
+};

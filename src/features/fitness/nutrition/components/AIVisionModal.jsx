@@ -32,27 +32,33 @@ export default function AIVisionModal({ isOpen, onClose, onFoodDetected, C }) {
     return () => stopCamera();
   }, [isOpen]);
 
+  // 🔥 ÇÖZÜLEN KISIM: Kurgu Sıralaması Değiştirildi
   const startCamera = async () => {
+    // 1. Önce UI'ı "Kamera Açık" moduna alarak <video> etiketinin DOM'a çizilmesini garanti ediyoruz
+    setIsCameraOpen(true); 
+
     try {
       let stream;
-      // 1. Önce arka kamerayı dene
+      // Arka kamerayı dene
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       } catch (err) {
-        // 2. Arka kamera yoksa (veya PC'deysek) herhangi bir kamerayı aç (Fallback)
+        // Arka kamera yoksa (PC vs) olan kamerayı aç
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
       }
       
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        // iOS Safari siyah ekran hatasını çözmek için yüklenmesini bekle
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play();
-          setIsCameraOpen(true);
-        };
-      }
+      
+      // 2. React'in elementi çizmesi için çok kısa bir an (100ms) bekleyip görüntüyü aktarıyoruz
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play(); // Direkt oynatmayı tetikliyoruz
+        }
+      }, 100);
+
     } catch (err) {
+      setIsCameraOpen(false); // Hata olursa ekranı geri eski haline döndür
       console.error("Kamera açılamadı:", err);
       alert("Kamera izni reddedildi veya cihazda kamera bulunamadı.");
     }
@@ -130,7 +136,7 @@ export default function AIVisionModal({ isOpen, onClose, onFoodDetected, C }) {
           </div>
         )}
 
-        {/* DURUM 2: Canlı Kamera Açık (playsInline ve muted ÇOK ÖNEMLİ) */}
+        {/* DURUM 2: Canlı Kamera Açık */}
         {isCameraOpen && !imageSrc && (
           <div style={{ position: "relative", width: "100%", height: 320, borderRadius: 24, overflow: "hidden", border: `1px solid rgba(255,255,255,0.1)`, background: "#000" }}>
             <video 

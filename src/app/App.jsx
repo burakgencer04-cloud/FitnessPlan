@@ -1,5 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from 'framer-motion';
+import { set as idbSet, get as idbGet } from 'idb-keyval';
 
 // --- DATA & HOOKS & STORE ---
 import { PHASES, BADGES, BADGE_ICONS, EXERCISE_DB, WORKOUT_PRESETS } from '@/features/fitness/workout/data/workoutData.js';
@@ -9,8 +10,10 @@ import { useAppStore } from '@/app/store.js';
 import { THEMES } from '@/shared/ui/theme.js';
 import { HapticEngine, SoundEngine } from '@/shared/lib/hapticSoundEngine.js';
 import { useTranslation } from '@/shared/hooks/useTranslation.js';
-import { auth } from '@/shared/lib/firebase.js';
+import { auth, db } from '@/shared/lib/firebase.js';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { getMessaging, getToken } from "firebase/messaging";
+import { doc, updateDoc } from "firebase/firestore";
 
 // --- COMPONENTS ---
 import AuthScreen from '@/features/user/auth/components/AuthScreen.jsx';
@@ -38,6 +41,28 @@ const LoadingFallback = ({ C }) => (
     <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} style={{ width: 40, height: 40, borderRadius: "50%", border: `4px solid ${C?.border || '#333'}`, borderTopColor: C?.green || '#2ecc71', marginBottom: 16 }} />
   </div>
 );
+
+export const setupNotifications = async (userId) => {
+  if (!userId || userId === "guest") return;
+  try {
+    const messaging = getMessaging();
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      const vapidKey = "VAPID_KEY_BURAYA_GELECEK"; 
+      if (vapidKey.includes("BURAYA")) {
+        console.warn("VAPID KEY eksik olduğu için bildirim servisi atlandı.");
+        return; 
+      }
+      const token = await getToken(messaging, { vapidKey });
+      if (token) {
+        await updateDoc(doc(db, "users", userId), { fcmToken: token });
+        console.log("Bildirim izni alındı, token kaydedildi.");
+      }
+    }
+  } catch (error) {
+    console.log("Bildirim kurulum hatası:", error);
+  }
+};
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -67,7 +92,11 @@ export default function App() {
   const C = THEMES[activeThemeId] || THEMES.midnight;
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (authUser) => { setCurrentUser(authUser); setIsAuthLoading(false); });
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => { 
+      setCurrentUser(authUser); 
+      setIsAuthLoading(false); 
+      if (authUser && authUser.uid) setupNotifications(authUser.uid);
+    });
     return () => unsubscribe();
   }, []);
 
@@ -75,8 +104,6 @@ export default function App() {
   const showToast = (icon, text) => { setToast({ icon, text }); setTimeout(() => setToast(null), 3000); };
 
   const handleWizardComplete = (formData, skipWorkoutGen = false) => {
-    localStorage.clear(); 
-    window.location.reload(); 
     try {
       const resetAllData = useAppStore.getState().resetAllWorkoutData; 
       if (resetAllData) resetAllData(); 
@@ -111,10 +138,12 @@ export default function App() {
     });
   }, [badges, setBadges]);
 
-  const finishSession = (sessionData = {}) => {
+  const finishSession = async (payload = {}) => {
     const key = `${sessPhase}-${sessDay}`;
+    const today = new Date();
+    
     incrementStreak();
-    if (sessionData.notes) setExNotesLog(prev => ({ ...prev, ...sessionData.notes }));
+    if (payload.notes) setExNotesLog(prev => ({ ...prev, ...payload.notes }));
 
     setCW(prev => {
       const next = { ...prev, [key]: true };
@@ -122,13 +151,34 @@ export default function App() {
       return next;
     });
 
+    const newSession = {
+      id: Date.now(),
+      date: today.toLocaleDateString('tr-TR'),
+      timestamp: today.getTime(),
+      workoutName: payload.currentWorkout?.label || "Özel Antrenman",
+      duration: payload.duration || "00:00",
+      totalVolume: payload.totalVolume || 0,
+      exercises: payload.workoutSummaryData || [], 
+      allSets: payload.sessionSets || {}, 
+      notes: payload.notes || ""
+    };
+
+    try {
+      const existingSessions = await idbGet('workout_history') || [];
+      const updatedSessions = [newSession, ...existingSessions].slice(0, 52); 
+      await idbSet('workout_history', updatedSessions);
+      console.log("✅ Antrenman IndexedDB'ye kaydedildi.");
+    } catch (err) {
+      console.error("Session kaydetme hatası:", err);
+    }
+
     setSessActive(false); timer.reset(); restT.stop();
     const setActiveWorkoutSession = useAppStore.getState().setActiveWorkoutSession;
     if (setActiveWorkoutSession) setActiveWorkoutSession(null);
     localStorage.removeItem('activeWorkoutSession'); 
 
     SoundEngine.success(); HapticEngine.success();
-    showToast("🎉", "Antrenman başarıyla kaydedildi!");
+    showToast("🎉", "Antrenman Tarihe Not Düşüldü!");
   };
 
   const total = customWorkouts?.length || 0;
@@ -139,7 +189,6 @@ export default function App() {
   const dayPlan = useMemo(() => activePlan ? activePlan[nutDay] : null, [activePlan, nutDay]);
   const shopping = useMemo(() => buildShoppingList ? buildShoppingList(activePlan) : [], [activePlan]);
 
-  // 🔥 UYGULAMA İÇERİK YÖNETİCİSİ
   const renderContent = () => {
     if (isAuthLoading) {
       return (
@@ -167,7 +216,6 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* HEADER */}
         <div style={{ padding: "24px 20px", background: C.card, borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 10 }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: C.text }}>
@@ -180,7 +228,6 @@ export default function App() {
           <button onClick={handleLogout} style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.border}`, color: C.mute, padding: '8px 12px', borderRadius: 10, fontSize: 10, fontWeight: 800, cursor: 'pointer' }}>Çıkış Yap</button>
         </div>
 
-        {/* İÇERİK - SCROLLABLE */}
         <div className="scrollable-content" style={{ padding: "24px 20px", paddingBottom: 110 }}>
           <AnimatePresence mode="wait">
             <motion.div key={tab} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
@@ -195,9 +242,7 @@ export default function App() {
           </AnimatePresence>
         </div>
 
-        {/* ALT NAVİGASYON (ABSOLUTE YAPILDI) */}
-        {/* ALT NAVİGASYON (Tertemiz Flex Sabitlemesi) */}
-<div style={{ flexShrink: 0, width: '100%', background: `${C.card}e6`, backdropFilter: 'blur(16px)', borderTop: `1px solid ${C.border}`, borderTopLeftRadius: 28, borderTopRightRadius: 28, display: 'flex', padding: '12px 12px 24px 12px', paddingBottom: `calc(12px + env(safe-area-inset-bottom, 12px))`, zIndex: 1000 }}>
+        <div style={{ flexShrink: 0, width: '100%', background: `${C.card}e6`, backdropFilter: 'blur(16px)', borderTop: `1px solid ${C.border}`, borderTopLeftRadius: 28, borderTopRightRadius: 28, display: 'flex', padding: '12px 12px 24px 12px', paddingBottom: `calc(12px + env(safe-area-inset-bottom, 12px))`, zIndex: 1000 }}>
           {TABS.map(t => {
             const isActive = tab === t.id;
             return (

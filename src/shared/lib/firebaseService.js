@@ -14,6 +14,8 @@ import {
   increment,
 } from "firebase/firestore";
 
+import { getMessaging, getToken } from "firebase/messaging";
+
 // --- ÖNBELLEK (CACHE) SİSTEMİ ---
 // Firebase okuma limitlerini korumak için verileri 5 dakika (300.000 ms) boyunca bellekte tutarız.
 const CACHE_DURATION = 5 * 60 * 1000; 
@@ -135,5 +137,59 @@ export const getLeaderboardData = async (forceRefresh = false) => {
     console.error("Bulut Hatası (Get Leaderboard):", error);
     // İnternet koptuysa veya hata olduysa, boş dönmek yerine eski veriyi göster
     return leaderboardCache.data.length > 0 ? leaderboardCache.data : [];
+  }
+};
+
+// src/shared/lib/firebaseService.js
+
+/**
+ * Bir kullanıcıyı takip etmeyi başlatır veya durdurur.
+ * @param {string} currentUserId - Giriş yapan kullanıcının ID'si
+ * @param {string} targetUserId - Takip edilecek kullanıcının ID'si
+ */
+export const toggleFollow = async (currentUserId, targetUserId) => {
+  const userRef = doc(db, 'users', currentUserId);
+  const userSnap = await getDoc(userRef);
+
+  if (!userSnap.exists()) return;
+
+  const following = userSnap.data().following || [];
+  const isFollowing = following.includes(targetUserId);
+
+  try {
+    await updateDoc(userRef, {
+      following: isFollowing ? arrayRemove(targetUserId) : arrayUnion(targetUserId)
+    });
+    return !isFollowing; // Yeni takip durumunu döner
+  } catch (error) {
+    console.error("Takip işlemi başarısız:", error);
+    throw error;
+  }
+};
+
+export const requestNotificationPermission = async (userId) => {
+  if (!userId || userId === "guest") return;
+
+  try {
+    const messaging = getMessaging();
+    const permission = await Notification.requestPermission();
+    
+    if (permission === 'granted') {
+      // DİKKAT: 1. Adımda kopyaladığın VAPID Key'i buraya yapıştır!
+      const currentToken = await getToken(messaging, { 
+        vapidKey: "BURAYA_VAPID_KEY_GELECEK" 
+      });
+
+      if (currentToken) {
+        // Token'ı kullanıcının veritabanına kaydet
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, { fcmToken: currentToken });
+        console.log("🔔 Bildirim izni alındı ve Token kaydedildi.");
+      }
+    } else {
+      console.log("🔕 Bildirim izni reddedildi.");
+    }
+  } catch (error) {
+    console.error("Bildirim ayarlanırken hata oluştu:", error);
   }
 };

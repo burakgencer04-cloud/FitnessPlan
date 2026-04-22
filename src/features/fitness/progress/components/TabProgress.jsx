@@ -1,9 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, ReferenceLine, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useAppStore } from "@/app/store.js";
 import { fonts, MEASUREMENT_TYPES, CORE_LIFTS, guessTargetMuscle, getGlassCardStyle, getGlassInnerStyle } from "../utils/progressUtils.jsx";
 import { InfoTooltip, Confetti, MeasureModal, PhotoSwipeModal, StoryModal } from './ProgressModals';
+import { calculateTrend } from '../utils/trendAnalysis.js'; 
+
+// 🔥 YENİ EKLENDİ
+import SessionHistory from './SessionHistory.jsx';
 
 export default function TabProgress({ 
   totalDone, overallPct, badges = [], BADGES = [], BADGE_ICONS = {}, 
@@ -24,6 +28,7 @@ export default function TabProgress({
 
   const isOlder = user?.age >= 50;
   const currentWeight = bodyMeasurements.filter(m => m.type === 'weight').sort((a,b) => new Date(b.date) - new Date(a.date))[0]?.value || user?.weight || 80;
+  const targetWeight = user?.targetWeight ? parseFloat(user.targetWeight) : null;
 
   const glassCardStyle = getGlassCardStyle(C);
   const glassInnerStyle = getGlassInnerStyle(C);
@@ -100,9 +105,22 @@ export default function TabProgress({
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
+  const trendInfo = useMemo(() => {
+    if (selectedChartType !== "weight") return null;
+    const weightData = bodyMeasurements.filter(m => m.type === 'weight').map(m => ({ date: m.date, weight: m.value }));
+    return calculateTrend(weightData, targetWeight);
+  }, [bodyMeasurements, targetWeight, selectedChartType]);
+
   const chartData = useMemo(() => {
-    return bodyMeasurements.filter(m => m.type === selectedChartType).sort((a, b) => new Date(a.id) - new Date(b.id)); 
-  }, [bodyMeasurements, selectedChartType]);
+    let base = bodyMeasurements.filter(m => m.type === selectedChartType).sort((a, b) => new Date(a.id || a.date) - new Date(b.id || b.date));
+    base = base.map(m => ({ ...m, value: parseFloat(m.value) }));
+
+    if (selectedChartType === "weight" && trendInfo?.projectionData) {
+       const projections = trendInfo.projectionData.map(p => ({ date: p.date, projectedValue: p.projectedWeight }));
+       return [...base, ...projections];
+    }
+    return base;
+  }, [bodyMeasurements, selectedChartType, trendInfo]);
 
   const volumeTrendData = useMemo(() => {
     const dailyVolumes = {};
@@ -181,9 +199,10 @@ export default function TabProgress({
   }, [globalTotalVolume, streak, personalRecords, C]);
 
   const deltaInfo = useMemo(() => {
-    if (chartData.length < 2) return null;
-    const first = chartData[0].value;
-    const last = chartData[chartData.length - 1].value;
+    const realData = chartData.filter(d => d.value !== undefined);
+    if (realData.length < 2) return null;
+    const first = realData[0].value;
+    const last = realData[realData.length - 1].value;
     const diff = last - first;
     const typeDef = MEASUREMENT_TYPES.find(t => t.id === selectedChartType);
     let isPositiveProgress = typeDef.reverseGoal ? diff < 0 : diff > 0;
@@ -196,12 +215,18 @@ export default function TabProgress({
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+      const data = payload[0];
+      const val = data.dataKey === 'projectedValue' ? data.payload.projectedValue : data.payload.value;
+      const color = data.dataKey === 'projectedValue' ? C.blue : C.text;
+      const title = data.dataKey === 'projectedValue' ? "AI Tahmini" : "Ölçüm";
+      
       return (
         <div style={{ ...glassInnerStyle, padding: "12px", boxShadow: `0 10px 20px rgba(0,0,0,0.3)` }}>
           <p style={{ margin: "0 0 6px 0", fontSize: 11, fontWeight: 800, color: C.sub, fontFamily: fonts.header }}>{label}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: payload[0].color }} />
-            <span style={{ fontSize: 14, color: payload[0].color, fontFamily: fonts.mono, fontWeight: 900 }}>{payload[0].value}</span>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
+            <span style={{ fontSize: 14, color: color, fontFamily: fonts.mono, fontWeight: 900 }}>{val}</span>
+            <span style={{ fontSize: 10, color: C.mute, fontWeight: 700 }}>({title})</span>
           </div>
         </div>
       );
@@ -225,7 +250,6 @@ export default function TabProgress({
   return (
     <div style={{ paddingBottom: 40, fontFamily: fonts.body, color: C.text, position: "relative" }}>
       
-      {/* 🌌 AMBIENT GLOWING BACKGROUND (ORTAM IŞIKLARI) */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
         <motion.div 
           animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3], x: [0, 20, 0] }}
@@ -358,6 +382,18 @@ export default function TabProgress({
           )}
         </motion.div>
 
+        <AnimatePresence>
+          {trendInfo && selectedChartType === 'weight' && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              style={{ background: `linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15))`, border: `1px solid rgba(59, 130, 246, 0.4)`, padding: 20, borderRadius: 24, marginBottom: 24, boxShadow: "0 10px 30px rgba(59, 130, 246, 0.15)" }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 900, color: "#3b82f6", letterSpacing: 1, marginBottom: 6, fontFamily: fonts.header }}>🧠 KOMPOZİSYON TAHMİNİ (AI)</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>{trendInfo.targetMessage}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={glassCardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, fontFamily: fonts.header, color: C.text }}>Vücut Ölçüleri</h2>
@@ -384,18 +420,36 @@ export default function TabProgress({
           )}
           
           {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={chartData} margin={{ top: 10, right: 0, bottom: 0, left: -24 }}>
-                <defs>
-                  <linearGradient id="colorMeasure" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.text} stopOpacity={0.3}/><stop offset="95%" stopColor={C.text} stopOpacity={0}/></linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={`${C.border}40`} vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: C.mute, fontSize: 10, fontFamily: fonts.mono }} axisLine={false} tickLine={false} dy={10} />
-                <YAxis domain={['dataMin - 2', 'dataMax + 2']} tick={{ fill: C.mute, fontSize: 10, fontFamily: fonts.mono }} axisLine={false} tickLine={false} dx={-10} />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: `${C.border}80`, strokeWidth: 1 }} />
-                <Area type="monotone" dataKey="value" stroke={C.text} strokeWidth={3} fill="url(#colorMeasure)" activeDot={{ r: 5, fill: C.text, stroke: C.bg, strokeWidth: 2 }} />
-              </AreaChart>
-            </ResponsiveContainer>
+            selectedChartType === 'weight' ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: -24 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={`${C.border}40`} vertical={false} />
+                  <XAxis dataKey="date" tick={{ fill: C.mute, fontSize: 10, fontFamily: fonts.mono }} axisLine={false} tickLine={false} dy={10} />
+                  <YAxis domain={['dataMin - 2', 'dataMax + 2']} tick={{ fill: C.mute, fontSize: 10, fontFamily: fonts.mono }} axisLine={false} tickLine={false} dx={-10} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: `${C.border}80`, strokeWidth: 1 }} />
+                  
+                  <Line type="monotone" dataKey="value" name="Gerçek Kilo" stroke={C.text} strokeWidth={3} dot={{ r: 4, fill: C.text }} activeDot={{ r: 6 }} connectNulls />
+                  <Line type="monotone" dataKey="projectedValue" name="AI Tahmini" stroke={C.blue} strokeWidth={3} strokeDasharray="5 5" dot={false} connectNulls />
+                  
+                  {targetWeight && (
+                    <ReferenceLine y={targetWeight} stroke={C.yellow} strokeDasharray="3 3" label={{ position: 'top', value: `Hedef: ${targetWeight}kg`, fill: C.yellow, fontSize: 10, fontWeight: 'bold' }} />
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 0, bottom: 0, left: -24 }}>
+                  <defs>
+                    <linearGradient id="colorMeasure" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.text} stopOpacity={0.3}/><stop offset="95%" stopColor={C.text} stopOpacity={0}/></linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={`${C.border}40`} vertical={false} />
+                  <XAxis dataKey="date" tick={{ fill: C.mute, fontSize: 10, fontFamily: fonts.mono }} axisLine={false} tickLine={false} dy={10} />
+                  <YAxis domain={['dataMin - 2', 'dataMax + 2']} tick={{ fill: C.mute, fontSize: 10, fontFamily: fonts.mono }} axisLine={false} tickLine={false} dx={-10} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: `${C.border}80`, strokeWidth: 1 }} />
+                  <Area type="monotone" dataKey="value" stroke={C.text} strokeWidth={3} fill="url(#colorMeasure)" activeDot={{ r: 5, fill: C.text, stroke: C.bg, strokeWidth: 2 }} connectNulls />
+                </AreaChart>
+              </ResponsiveContainer>
+            )
           ) : (
             <div style={{ ...glassInnerStyle, height: 140, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ color: C.sub, fontSize: 13, fontWeight: 600 }}>Ölçüm verisi yok.</span>
@@ -497,9 +551,11 @@ export default function TabProgress({
           </div>
         </motion.div>
 
+        {/* 🔥 YENİ: INDEXEDDB'DEN ÇEKİLEN SESSION GEÇMİŞİ */}
+        <SessionHistory C={C} />
+
       </div> 
 
-      {/* 🚀 MODALLAR GELDİ (MeasureModal, PhotoSwipeModal, StoryModal) */}
       <MeasureModal show={showMeasureModal} onClose={() => setShowMeasureModal(false)} form={measureForm} setForm={setMeasureForm} onSave={handleAddMeasure} C={C} />
       <PhotoSwipeModal index={photoModalIndex} setIndex={setPhotoModalIndex} photos={progressPhotos} onDelete={handleDeletePhoto} C={C} />
       <StoryModal show={storyModal} onClose={() => setStoryModal(false)} streak={streak} globalTotalVolume={globalTotalVolume} personalRecords={personalRecords} C={C} />

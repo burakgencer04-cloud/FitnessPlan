@@ -19,6 +19,42 @@ export const BADGES = [
 // ==========================================
 export const WORKOUT_PRESETS = [
   {
+    id: "deload_3",
+    name: "🏖️ Deload / Aktif Dinlenme (3 Günlük)",
+    desc: "Kasların toparlanması ve sinir sisteminin resetlenmesi için düşük set ve %60 ağırlıkla yapılan aktif dinlenme haftası. Platoları kırmak için şarttır.",
+    level: "Orta",
+    daysPerWeek: 3,
+    color: "#10b981", 
+    icon: "🏖️",
+    isDeload: true, // Yapay zeka bu bayrağı okuyacak
+    workouts: [
+      {
+        label: "Gün 1 - Hafif Tüm Vücut",
+        exercises: [
+          { name: "Goblet Squat", target: "Bacak", sets: "2", reps: "10", rest: "60sn" },
+          { name: "Push-ups", target: "Göğüs", sets: "2", reps: "10", rest: "60sn" },
+          { name: "Lat Pulldown", target: "Sırt", sets: "2", reps: "10", rest: "60sn" }
+        ]
+      },
+      {
+        label: "Gün 2 - Hafif Tüm Vücut",
+        exercises: [
+          { name: "Romanian Deadlift", target: "Bacak", sets: "2", reps: "10", rest: "60sn" },
+          { name: "Dumbbell Shoulder Press", target: "Omuz", sets: "2", reps: "10", rest: "60sn" },
+          { name: "Seated Row", target: "Sırt", sets: "2", reps: "10", rest: "60sn" }
+        ]
+      },
+      {
+        label: "Gün 3 - Hafif Tüm Vücut + Core",
+        exercises: [
+          { name: "Walking Lunges", target: "Bacak", sets: "2", reps: "12", rest: "60sn" },
+          { name: "Incline Dumbbell Press", target: "Göğüs", sets: "2", reps: "10", rest: "60sn" },
+          { name: "Plank", target: "Karın", sets: "3", reps: "45sn", rest: "60sn" }
+        ]
+      }
+    ]
+  },
+  {
     id: "fb_2",
     name: "Full Body (2 Günlük)",
     desc: "Vakti çok kısıtlı olanlar için tasarlandı. Haftada sadece 2 gün ayırarak tüm kas gruplarını uyarmanı sağlayan yoğun sistem.",

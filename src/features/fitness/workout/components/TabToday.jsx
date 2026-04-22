@@ -2,16 +2,13 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from 'react-i18next';
 import { getLocalIsoDate } from '@/shared/utils/dateUtils.js';
-import { EXERCISE_DB, WORKOUT_PRESETS } from '../data/workoutData.js'; // WORKOUT_PRESETS eklendi
-
+import { EXERCISE_DB, WORKOUT_PRESETS } from '../data/workoutData.js'; 
 import { useAppStore } from '@/app/store.js';
 import { HapticEngine, SoundEngine } from '@/shared/lib/hapticSoundEngine.js';
-
 import { getDailyQuests } from '../data/questData.js';
 import { guessTargetMuscle } from '../utils/workoutAnalyzer.jsx'; 
 import { WORKOUT_TIPS } from '../utils/tabTodayUtils.js';
 import { globalFonts as fonts, getGlobalGlassStyle, getGlobalGlassInnerStyle as getGlassInnerStyle, getMainButtonStyle } from '@/shared/ui/globalStyles.js';
-
 import SetRow from './SetRow.jsx';
 import HistoryBottomSheet from './HistoryBottomSheet.jsx';
 import { PlatesModal, SwapModal, VideoModal, SummaryModal } from './WorkoutModals.jsx';
@@ -51,9 +48,11 @@ const WorkoutTimer = React.memo(({ sessActive }) => {
 });
 
 export default function TabToday({
-  sessActive, setSessActive, sessPhase, setSessPhase, sessDay, setSessDay, timer, restT, weightLog, setWL,
-  finishSession, PHASES, themeColors: C, sessionSets = {}, setSessionSets,
-  activePhase, setActivePhase, activeDay, setActiveDay, completedW, customWorkouts, setCustomWorkouts, exNotesLog
+  sessActive, setSessActive, sessPhase, setSessPhase, sessDay, setSessDay,
+  activePhase, setActivePhase, activeDay, setActiveDay, timer, restT,
+  weightLog, setWL, completedW, finishSession, PHASES, themeColors: C,
+  playDing, sessionSets, setSessionSets, customWorkouts, setCustomWorkouts,
+  EXERCISE_DB, exNotesLog, showToast
 }) {
   const { t } = useTranslation(); 
   const user = useAppStore(state => state.user);
@@ -204,6 +203,7 @@ export default function TabToday({
     const savedStr = localStorage.getItem('activeWorkoutSession');
     const saved = savedStr ? JSON.parse(savedStr) : {};
     const finalSecs = saved.startTime ? Math.floor((Date.now() - saved.startTime) / 1000) : 0;
+    const finalTimeFormatted = `${Math.floor(finalSecs / 60).toString().padStart(2, '0')}:${(finalSecs % 60).toString().padStart(2, '0')}`;
     
     setFinalStats({ 
       volume: totalVolume, duration: Math.floor(finalSecs / 60) || 1, 
@@ -211,17 +211,19 @@ export default function TabToday({
     });
 
     setModalState(p => ({ ...p, summary: false }));
-    setSessActive(false); 
     
-    localStorage.removeItem('activeWorkoutSession'); 
-    localStorage.removeItem('workoutTimer_state');
+    // GÜNCELLENEN KISIM: App.jsx'e tüm veriyi gönder
+    finishSession({ 
+      duration: finalTimeFormatted, 
+      notes: safeNotes,
+      totalVolume,
+      workoutSummaryData,
+      currentWorkout,
+      sessionSets
+    });
     
-    const finalTimeFormatted = `${Math.floor(finalSecs / 60).toString().padStart(2, '0')}:${(finalSecs % 60).toString().padStart(2, '0')}`;
-    finishSession({ duration: finalTimeFormatted, notes: safeNotes });
-    
-    setSessionSets({}); 
     setShowShareCard(true);
-  }, [finishSession, setSessionSets, totalVolume, workoutSummaryData, currentWorkout]);
+  }, [finishSession, setSessionSets, totalVolume, workoutSummaryData, currentWorkout, sessionSets]);
 
   const handleSetUpdate = useCallback((exIdx, setIdx, field, value) => {
     setSessionSets(prev => ({ ...prev, [`${exIdx}-${setIdx}`]: { ...(prev[`${exIdx}-${setIdx}`] || { w: "", r: "", rpe: "", t: "N", done: false }), [field]: value } }));
@@ -274,7 +276,6 @@ export default function TabToday({
     return EXERCISE_DB.filter(e => e.target === targetGroup && e.name !== activeExercise?.name);
   }, [activeExerciseDetails, activeExercise]);
 
-  // 🔥 YEPYENİ KUTUSUZ, İÇE GÖLGELİ, İTALİK VE SİYAH/GRİ STİL
   const sleekRowStyle = {
     background: "linear-gradient(145deg, rgba(15, 15, 20, 0.8) 0%, rgba(40, 40, 45, 0.2) 100%)",
     backdropFilter: "blur(16px)",
