@@ -1,33 +1,26 @@
 import { useCallback } from 'react';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
 export function useHaptics() {
-  // Cihazın titreşim motorunu destekleyip desteklemediğini kontrol et
-  const isSupported = typeof navigator !== 'undefined' && 'vibrate' in navigator;
+  const lightTap = useCallback(async () => {
+    try { await Haptics.impact({ style: ImpactStyle.Light }); } catch(e){}
+  }, []);
 
-  // 1. Hafif Dokunuş (Küçük butonlar, set onaylama)
-  const lightTap = useCallback(() => {
-    if (isSupported) navigator.vibrate(15);
-  }, [isSupported]);
+  const mediumTap = useCallback(async () => {
+    try { await Haptics.impact({ style: ImpactStyle.Medium }); } catch(e){}
+  }, []);
 
-  // 2. Orta Dokunuş (Menü geçişleri, sekme değişimleri)
-  const mediumTap = useCallback(() => {
-    if (isSupported) navigator.vibrate(30);
-  }, [isSupported]);
+  const heavyImpact = useCallback(async () => {
+    try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch(e){}
+  }, []);
 
-  // 3. Ağır Vuruş (Antrenmana başlama, büyük eylemler)
-  const heavyImpact = useCallback(() => {
-    if (isSupported) navigator.vibrate(50);
-  }, [isSupported]);
+  const successPulse = useCallback(async () => {
+    try { await Haptics.notification({ type: NotificationType.Success }); } catch(e){}
+  }, []);
 
-  // 4. Başarı Ritmi (Antrenman bitişi, seviye atlama - "Ta-da-dam!")
-  const successPulse = useCallback(() => {
-    if (isSupported) navigator.vibrate([30, 60, 50, 60, 100]);
-  }, [isSupported]);
-
-  // 5. Uyarı / Hata Ritmi (Eksik bilgi, silme onayı)
-  const warningPulse = useCallback(() => {
-    if (isSupported) navigator.vibrate([50, 100, 50]);
-  }, [isSupported]);
+  const warningPulse = useCallback(async () => {
+    try { await Haptics.notification({ type: NotificationType.Warning }); } catch(e){}
+  }, []);
 
   return { lightTap, mediumTap, heavyImpact, successPulse, warningPulse };
 }

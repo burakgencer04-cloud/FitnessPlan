@@ -1,8 +1,9 @@
-// HistoryBottomSheet.jsx
+import { WORKOUT_PRESETS } from "../data/workoutData.js";
 import React, { useMemo } from 'react';
 import { motion } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { fonts } from '@/features/fitness/workout/utils/tabTodayUtils';
+import { globalFonts as fonts, getGlobalGlassStyle, getGlobalGlassInnerStyle, getMainButtonStyle } from '@/shared/ui/globalStyles.js';
+
 
 export default function HistoryBottomSheet({ exName, history = [], onClose, C }) {
   const chartData = useMemo(() => {
