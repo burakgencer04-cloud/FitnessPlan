@@ -9,6 +9,9 @@ import { getMealCategories, generateMealPlan, cycleMacros } from "../utils/nutri
 import { SearchFoodModal, FoodDetailModal, BarcodeScannerModal, SamplePlanModal } from './NutritionModals.jsx';
 import AIVisionModal from "./AIVisionModal.jsx";
 
+// ============================================================================
+// 1. UI BİLEŞENİ: İlerleme Çubukları
+// ============================================================================
 function MacroBar({ label, plannedVal, eatenVal, target, color, C }) {
   const plannedPct = Math.min(100, (plannedVal / target) * 100) || 0;
   const eatenPct = Math.min(100, (eatenVal / target) * 100) || 0;
@@ -29,10 +32,10 @@ function MacroBar({ label, plannedVal, eatenVal, target, color, C }) {
   );
 }
 
-export default function NutritionView({ regeneratePlan, dayPlan, nutDay, setNutDay, themeColors: C, shoppingList = [], onOpenStock }) {
-  const { t } = useTranslation(); 
-  
-  // 🔥 YENİ: lastDate verisini Store'dan alarak bugünün antrenman günü olup olmadığını kontrol edeceğiz.
+// ============================================================================
+// 2. MANTIK BİLEŞENİ (BEYİN): Tüm Karmaşık Hesaplamalar Burada
+// ============================================================================
+function useNutritionTracker({ dayPlan, nutDay, shoppingList, t }) {
   const { user, macros, addConsumedFood, removeConsumedFood, updateConsumedFood, consumedFoods = [], customTargetMacros, mealPlan, setMealPlan, lastDate } = useAppStore(); 
 
   const currentMealPlan = Array.isArray(mealPlan) ? mealPlan[nutDay] : mealPlan;
@@ -47,16 +50,13 @@ export default function NutritionView({ regeneratePlan, dayPlan, nutDay, setNutD
   const [mealTags, setMealTags] = useState({}); 
   const [showAIVision, setShowAIVision] = useState(false);
 
-  // 🧠 🔥 YENİ: OTOMATİK REST DAY (MACRO CYCLING) MOTORU
   const todayIso = getLocalIsoDate();
-  const autoRestDay = lastDate !== todayIso; // Eğer bugün antrenman yapılmamışsa = Rest Day
-  const [manualOverride, setManualOverride] = useState(null); // Kullanıcı ezmek isterse
+  const autoRestDay = lastDate !== todayIso; 
+  const [manualOverride, setManualOverride] = useState(null); 
   const isRestDay = manualOverride !== null ? manualOverride : autoRestDay;
 
-  const DAYS = [1, 2, 3, 4, 5, 6, 7].map(num => t('nut_day_num', { num }));
   const targetFiber = 30; const targetSugar = 50; const targetWater = 3000; 
 
-  // 🔥 YENİ: Makrolar artık düz bir baseTargetMacros yerine cycleMacros fonksiyonundan filtrelenerek geçiyor.
   const targetMacros = useMemo(() => {
     const base = customTargetMacros || macros || { calories: 2000, protein: 150, carbs: 200, fat: 70 };
     return cycleMacros(base, isRestDay, user?.dietType);
@@ -96,16 +96,6 @@ export default function NutritionView({ regeneratePlan, dayPlan, nutDay, setNutD
     } catch(e) { return { outOfStock: 0, lowStock: 0 }; }
   }, [shoppingList]);
 
-  const handleAddFood = (food, selectedQuantity, isPortion = false, isRecipe = false) => {
-    const customMealIndex = addItem?.mi;
-    const multiplier = isPortion ? selectedQuantity : (selectedQuantity / (food.qty || 1));
-    const finalQty = isPortion ? selectedQuantity * (food.qty || 100) : selectedQuantity;
-    const newCal = food.cal * multiplier;
-    
-    executeAddFood(food, customMealIndex, multiplier, finalQty, newCal, isRecipe);
-    if (navigator.vibrate) navigator.vibrate(20); 
-  };
-
   const executeAddFood = (food, customMealIndex, multiplier, finalQty, newCal, isRecipe) => {
     if (isRecipe && food.items) {
       food.items.forEach((item, idx) => { addConsumedFood({ ...item, nutDay, mealIndex: customMealIndex, logTime: Date.now() + idx, isEaten: false }); });
@@ -118,6 +108,15 @@ export default function NutritionView({ regeneratePlan, dayPlan, nutDay, setNutD
       }); 
     }
     setAddItem(null); setSelectedFoodDetails(null);
+  };
+
+  const handleAddFood = (food, selectedQuantity, isPortion = false, isRecipe = false) => {
+    const customMealIndex = addItem?.mi;
+    const multiplier = isPortion ? selectedQuantity : (selectedQuantity / (food.qty || 1));
+    const finalQty = isPortion ? selectedQuantity * (food.qty || 100) : selectedQuantity;
+    const newCal = food.cal * multiplier;
+    executeAddFood(food, customMealIndex, multiplier, finalQty, newCal, isRecipe);
+    if (navigator.vibrate) navigator.vibrate(20); 
   };
 
   const handleSaveRecipe = (mealItems, mealName) => {
@@ -155,10 +154,43 @@ export default function NutritionView({ regeneratePlan, dayPlan, nutDay, setNutD
     if (navigator.vibrate) navigator.vibrate(30);
   };
 
+  return {
+    user, activePlan, setMealPlan,
+    expandMeal, setExpandMeal, addItem, setAddItem,
+    selectedFoodDetails, setSelectedFoodDetails, showScanner, setShowScanner,
+    showSamplePlan, setShowSamplePlan, customRecipes,
+    mealTags, saveTags, showAIVision, setShowAIVision,
+    manualOverride, setManualOverride, isRestDay, targetFiber, targetSugar, targetWater,
+    targetMacros, mealCategories, consumedForDay, plannedTotals, eatenTotals,
+    waterConsumed, conicGradient, stockSummary,
+    handleAddWater, handleRemoveWater, handleAddFood, handleSaveRecipe,
+    handleToggleEaten, handleDeleteFood, handleApplySamplePlan, handleApplyMealFromSample
+  };
+}
+
+// ============================================================================
+// 3. GÖRÜNÜM BİLEŞENİ (VIEW): Sadece Çizim Yapar
+// ============================================================================
+export default function NutritionView({ regeneratePlan, dayPlan, nutDay, setNutDay, themeColors: C, shoppingList = [], onOpenStock }) {
+  const { t } = useTranslation(); 
+  const DAYS = [1, 2, 3, 4, 5, 6, 7].map(num => t('nut_day_num', { num }));
+  const WATER_PER_BOTTLE = 250;
+
+  // Tüm Veri ve Fonksiyonları Beyinden Çek
+  const {
+    user, activePlan, setMealPlan, expandMeal, setExpandMeal, addItem, setAddItem,
+    selectedFoodDetails, setSelectedFoodDetails, showScanner, setShowScanner,
+    showSamplePlan, setShowSamplePlan, customRecipes, mealTags, saveTags, 
+    showAIVision, setShowAIVision, manualOverride, setManualOverride, isRestDay, 
+    targetFiber, targetSugar, targetWater, targetMacros, mealCategories, 
+    consumedForDay, plannedTotals, eatenTotals, waterConsumed, conicGradient, 
+    stockSummary, handleAddWater, handleRemoveWater, handleAddFood, handleSaveRecipe,
+    handleToggleEaten, handleDeleteFood, handleApplySamplePlan, handleApplyMealFromSample
+  } = useNutritionTracker({ dayPlan, nutDay, shoppingList, t });
+
+  const totalBottles = Math.ceil(targetWater / WATER_PER_BOTTLE); 
   const glassCardStyle = getGlobalGlassStyle(C);
   const glassInnerStyle = getGlobalGlassInnerStyle(C);
-
-  const WATER_PER_BOTTLE = 250; const totalBottles = Math.ceil(targetWater / WATER_PER_BOTTLE); 
 
   return (
     <div style={{ paddingBottom: 80, fontFamily: fonts.body, color: C.text }}>
@@ -188,7 +220,6 @@ export default function NutritionView({ regeneratePlan, dayPlan, nutDay, setNutD
             </button> 
           ))}
         </div>
-        {/* 🔥 YENİ: OTOMATİK/MANUEL OVERRIDE İÇEREN BUTON */}
         <button onClick={() => { setManualOverride(!isRestDay); if (navigator.vibrate) navigator.vibrate(15); }} style={{ flexShrink: 0, padding: "8px 12px", borderRadius: 100, background: isRestDay ? `rgba(52, 152, 219, 0.15)` : `rgba(255,255,255,0.05)`, border: `1px solid ${isRestDay ? 'rgba(52, 152, 219, 0.5)' : 'rgba(255,255,255,0.05)'}`, color: isRestDay ? C.blue : "#fff", fontWeight: 800, fontSize: 11, cursor: "pointer", fontFamily: fonts.header, backdropFilter: "blur(10px)", transition: "all 0.25s ease" }}>
           {isRestDay ? `🛋️ Dinlenme (Düşük Karb) ${manualOverride !== null ? '⚙️' : '🤖'}` : `🏋️ İdman (Yüksek Karb) ${manualOverride !== null ? '⚙️' : '🤖'}`}
         </button>
