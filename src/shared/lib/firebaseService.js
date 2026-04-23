@@ -12,22 +12,19 @@ import {
   getDoc,
   updateDoc,
   increment,
+  arrayUnion,
+  arrayRemove,
+  where
 } from "firebase/firestore";
 
 import { getMessaging, getToken } from "firebase/messaging";
 
-// --- ÖNBELLEK (CACHE) SİSTEMİ ---
-// Firebase okuma limitlerini korumak için verileri 5 dakika (300.000 ms) boyunca bellekte tutarız.
 const CACHE_DURATION = 5 * 60 * 1000; 
 let feedCache = { data: [], lastFetch: 0 };
 let leaderboardCache = { data: [], lastFetch: 0 };
-// --------------------------------
 
-// 1. Taverna'ya (Feed) Gönderi Atma
 export const addWorkoutToFeed = async (userProfile, stats) => {
   if (!auth.currentUser) throw new Error("Bu işlem için giriş yapmalısınız.");
-
-  // Misafir kullanıcılar sosyal özelliklere erişemez
   if (auth.currentUser.isAnonymous) {
     throw new Error("Sosyal özellikleri kullanmak için bir hesap oluşturmalısınız.");
   }
@@ -44,7 +41,6 @@ export const addWorkoutToFeed = async (userProfile, stats) => {
       createdAt: serverTimestamp(),
     });
 
-    // Liderlik Tablosunu Güncelle
     const userRef = doc(db, "leaderboard", auth.currentUser.uid);
     const userSnap = await getDoc(userRef);
 
@@ -63,7 +59,6 @@ export const addWorkoutToFeed = async (userProfile, stats) => {
       });
     }
     
-    // Yeni bir gönderi atıldığında cache'i temizle ki hemen güncel veri çekilsin
     feedCache.lastFetch = 0; 
     leaderboardCache.lastFetch = 0;
 
@@ -74,79 +69,50 @@ export const addWorkoutToFeed = async (userProfile, stats) => {
   }
 };
 
-// 2. Taverna Canlı Akışını Çekme
 export const getLiveFeed = async (forceRefresh = false) => {
   try {
     const now = Date.now();
-    
-    // Eğer forceRefresh (zorunlu yenileme) istenmediyse ve veriler yeniyse (5 dk geçmediyse) Cache'den ver.
     if (!forceRefresh && (now - feedCache.lastFetch < CACHE_DURATION) && feedCache.data.length > 0) {
-      console.log("⚡ Feed verisi Cache'den yüklendi (Tasarruf sağlandı)");
       return feedCache.data;
     }
 
-    const q = query(
-      collection(db, "feed"),
-      orderBy("createdAt", "desc"),
-      limit(20)
-    );
+    const q = query(collection(db, "feed"), orderBy("createdAt", "desc"), limit(20));
     const querySnapshot = await getDocs(q);
     const feedList = [];
     querySnapshot.forEach((document) => {
       feedList.push({ id: document.id, ...document.data() });
     });
     
-    // Yeni çekilen veriyi Cache'e kaydet
     feedCache = { data: feedList, lastFetch: now };
-    
     return feedList;
   } catch (error) {
     console.error("Bulut Hatası (Get Feed):", error);
-    // İnternet koptuysa veya hata olduysa, boş dönmek yerine eski veriyi göster
     return feedCache.data.length > 0 ? feedCache.data : [];
   }
 };
 
-// 3. Liderlik Tablosunu Çekme
 export const getLeaderboardData = async (forceRefresh = false) => {
   try {
     const now = Date.now();
-    
-    // Aynı Cache mantığı Liderlik tablosu için de geçerli
     if (!forceRefresh && (now - leaderboardCache.lastFetch < CACHE_DURATION) && leaderboardCache.data.length > 0) {
-      console.log("⚡ Leaderboard verisi Cache'den yüklendi (Tasarruf sağlandı)");
       return leaderboardCache.data;
     }
 
-    const q = query(
-      collection(db, "leaderboard"),
-      orderBy("totalVolume", "desc"),
-      limit(10)
-    );
+    const q = query(collection(db, "leaderboard"), orderBy("totalVolume", "desc"), limit(10));
     const querySnapshot = await getDocs(q);
     const boardList = [];
     querySnapshot.forEach((document) => {
       boardList.push({ id: document.id, ...document.data() });
     });
     
-    // Yeni çekilen veriyi Cache'e kaydet
     leaderboardCache = { data: boardList, lastFetch: now };
-    
     return boardList;
   } catch (error) {
     console.error("Bulut Hatası (Get Leaderboard):", error);
-    // İnternet koptuysa veya hata olduysa, boş dönmek yerine eski veriyi göster
     return leaderboardCache.data.length > 0 ? leaderboardCache.data : [];
   }
 };
 
-// src/shared/lib/firebaseService.js
-
-/**
- * Bir kullanıcıyı takip etmeyi başlatır veya durdurur.
- * @param {string} currentUserId - Giriş yapan kullanıcının ID'si
- * @param {string} targetUserId - Takip edilecek kullanıcının ID'si
- */
 export const toggleFollow = async (currentUserId, targetUserId) => {
   const userRef = doc(db, 'users', currentUserId);
   const userSnap = await getDoc(userRef);
@@ -160,13 +126,44 @@ export const toggleFollow = async (currentUserId, targetUserId) => {
     await updateDoc(userRef, {
       following: isFollowing ? arrayRemove(targetUserId) : arrayUnion(targetUserId)
     });
-    return !isFollowing; // Yeni takip durumunu döner
+    return !isFollowing; 
   } catch (error) {
     console.error("Takip işlemi başarısız:", error);
     throw error;
   }
 };
 
+// 🔥 YENİ: İstemci tarafında kullanıcının kendi istatistiklerini anlık çekebilmesi için
+export const getUserWeeklyStats = async (userId) => {
+  if (!userId || userId === "guest") return null;
+
+  try {
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const q = query(
+      collection(db, "feed"),
+      where("userId", "==", userId),
+      where("createdAt", ">=", oneWeekAgo)
+    );
+
+    const querySnapshot = await getDocs(q);
+    let totalVolume = 0;
+    let totalWorkouts = 0;
+
+    querySnapshot.forEach((doc) => {
+      totalVolume += (doc.data().volume || 0);
+      totalWorkouts++;
+    });
+
+    return { totalVolume, totalWorkouts };
+  } catch (error) {
+    console.error("İstatistikler çekilirken hata:", error);
+    return null;
+  }
+};
+
+// 🔥 FIX: VAPID Key güvenli olarak .env'den çekiliyor
 export const requestNotificationPermission = async (userId) => {
   if (!userId || userId === "guest") return;
 
@@ -175,21 +172,46 @@ export const requestNotificationPermission = async (userId) => {
     const permission = await Notification.requestPermission();
     
     if (permission === 'granted') {
-      // DİKKAT: 1. Adımda kopyaladığın VAPID Key'i buraya yapıştır!
-      const currentToken = await getToken(messaging, { 
-        vapidKey: "BURAYA_VAPID_KEY_GELECEK" 
-      });
+      const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY; 
+      
+      if (!vapidKey) {
+         console.warn("⚠️ VITE_FIREBASE_VAPID_KEY eksik. Push Notification token alınamadı.");
+         return;
+      }
+
+      const currentToken = await getToken(messaging, { vapidKey });
 
       if (currentToken) {
-        // Token'ı kullanıcının veritabanına kaydet
         const userRef = doc(db, 'users', userId);
         await updateDoc(userRef, { fcmToken: currentToken });
-        console.log("🔔 Bildirim izni alındı ve Token kaydedildi.");
+        console.log("🔔 Bildirim izni alındı ve Token Firebase'e başarıyla kaydedildi.");
       }
     } else {
-      console.log("🔕 Bildirim izni reddedildi.");
+      console.log("🔕 Bildirim izni kullanıcı tarafından reddedildi.");
     }
   } catch (error) {
     console.error("Bildirim ayarlanırken hata oluştu:", error);
+  }
+};
+
+// 🔥 YENİ: RAKİP BULMA MOTORU
+export const getRivalData = async (currentVolume) => {
+  try {
+    // Toplam hacmi bizimkinden BÜYÜK olanları küçükten büyüğe sırala ve sadece 1 kişiyi al
+    const q = query(
+      collection(db, "leaderboard"),
+      where("totalVolume", ">", currentVolume),
+      orderBy("totalVolume", "asc"),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { id: doc.id, ...doc.data() };
+    }
+    return null; // Önünde kimse yok
+  } catch (error) {
+    console.error("Rakip bulma hatası:", error);
+    return null;
   }
 };

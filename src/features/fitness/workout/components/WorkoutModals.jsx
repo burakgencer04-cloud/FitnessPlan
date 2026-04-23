@@ -1,6 +1,8 @@
 // WorkoutModals.jsx
-import React from 'react';
-import { motion } from "framer-motion";
+import React, { useState } from 'react'; // 🔥 useState eklendi
+import { motion, AnimatePresence } from "framer-motion";
+
+// ... (Geri kalan SummaryModal ve diğer modallar aynı kalsın)
 
 export const ModalOverlay = ({ children, onClose }) => (
   <motion.div 
@@ -111,8 +113,15 @@ export const VideoModal = ({ C, activeExerciseDetails, onClose }) => (
   </ModalOverlay>
 );
 
-// 🚀 YENİ: ZENGİNLEŞTİRİLMİŞ ANTRENMAN BİTİŞ ÖZETİ
 export const SummaryModal = ({ C, stats, summaryData, onClose, onComplete }) => {
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+
+  const handleFinish = () => {
+    // Şablon adını onComplete'e paslıyoruz
+    onComplete(null, saveAsTemplate ? (templateName || "Favori Şablonum") : null);
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -128,7 +137,7 @@ export const SummaryModal = ({ C, stats, summaryData, onClose, onComplete }) => 
           <p style={{ color: C.sub, fontSize: 15, marginTop: 8, fontWeight: 600 }}>Harika bir iş çıkardın, antrenman tamamlandı.</p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 32 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
            <div style={{ background: `linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.2))`, border: `1px solid rgba(255,255,255,0.05)`, padding: 20, borderRadius: 24, textAlign: "center" }}>
               <div style={{ fontSize: 11, color: C.sub, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>TOPLAM HACİM</div>
               <div style={{ fontSize: 24, fontWeight: 900, color: C.yellow, fontFamily: "monospace" }}>{stats.volume.toLocaleString()} <span style={{fontSize: 14, color: C.mute}}>kg</span></div>
@@ -139,8 +148,24 @@ export const SummaryModal = ({ C, stats, summaryData, onClose, onComplete }) => 
            </div>
         </div>
 
+        {/* 🔥 ŞABLON OLARAK KAYDET */}
+        <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 20, padding: 20, marginBottom: 32, border: `1px solid ${C.border}40` }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: saveAsTemplate ? 16 : 0 }}>
+             <input type="checkbox" checked={saveAsTemplate} onChange={e => setSaveAsTemplate(e.target.checked)} style={{ width: 20, height: 20, accentColor: C.green }} />
+             <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>Bu kombinasyonu "Şablon" olarak kaydet</span>
+          </label>
+          
+          <AnimatePresence>
+            {saveAsTemplate && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+                 <input type="text" placeholder="Örn: Hızlı Kol İdmanı" value={templateName} onChange={e => setTemplateName(e.target.value)} style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}40`, padding: 14, borderRadius: 12, color: "#fff", outline: "none", fontSize: 14, boxSizing: "border-box" }} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         <button 
-          onClick={onComplete}
+          onClick={handleFinish}
           style={{ width: "100%", background: `linear-gradient(135deg, ${C.green}, #22c55e)`, color: "#000", border: "none", padding: "20px", borderRadius: 20, fontWeight: 900, fontSize: 16, cursor: "pointer", boxShadow: `0 10px 30px ${C.green}40` }}
         >
           KAYDET VE BİTİR ✓

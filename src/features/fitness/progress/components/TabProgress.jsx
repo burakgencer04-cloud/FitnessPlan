@@ -5,15 +5,15 @@ import { useAppStore } from "@/app/store.js";
 import { fonts, MEASUREMENT_TYPES, CORE_LIFTS, guessTargetMuscle, getGlassCardStyle, getGlassInnerStyle } from "../utils/progressUtils.jsx";
 import { InfoTooltip, Confetti, MeasureModal, PhotoSwipeModal, StoryModal } from './ProgressModals';
 import { calculateTrend } from '../utils/trendAnalysis.js'; 
-
-// 🔥 YENİ EKLENDİ
+import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
+import { auth } from '@/shared/lib/firebase.js'; 
 import SessionHistory from './SessionHistory.jsx';
 
 export default function TabProgress({ 
   totalDone, overallPct, badges = [], BADGES = [], BADGE_ICONS = {}, 
   weightLog = {}, themeColors: C, selectedProgram, hasActiveProgram, onSelectProgram
 }) {
-  const { user, bodyMeasurements = [], streak, lastDate } = useAppStore();
+  const { user, bodyMeasurements = [], streak, lastDate, addMeasurement } = useAppStore(); // 🔥 HOOK BURAYA EKLENDİ
   
   const [showMeasureModal, setShowMeasureModal] = useState(false);
   const [measureForm, setMeasureForm] = useState({ date: new Date().toISOString().split('T')[0], type: "weight", value: "" });
@@ -33,13 +33,6 @@ export default function TabProgress({
   const glassCardStyle = getGlassCardStyle(C);
   const glassInnerStyle = getGlassInnerStyle(C);
 
-  const isStreakAtRisk = useMemo(() => {
-    if (streak <= 0) return false;
-    const today = new Date().toDateString();
-    const yest = new Date(Date.now() - 86400000).toDateString();
-    return lastDate !== today && lastDate !== yest;
-  }, [streak, lastDate]);
-
   useEffect(() => {
     const savedPhotos = JSON.parse(localStorage.getItem('progressPhotos') || '[]');
     setProgressPhotos(savedPhotos);
@@ -54,14 +47,30 @@ export default function TabProgress({
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
+      const base64String = reader.result;
       const todayDate = new Date().toLocaleDateString('tr-TR');
-      const todayLogVolumes = volumeTrendData.find(v => v.rawDate === todayDate)?.Hacim || 0;
-      const newPhoto = { id: Date.now(), date: todayDate, src: reader.result, volume: todayLogVolumes, note: "Güncel Form" };
-      const updatedPhotos = [newPhoto, ...progressPhotos].slice(0, 20); 
-      setProgressPhotos(updatedPhotos);
-      localStorage.setItem('progressPhotos', JSON.stringify(updatedPhotos));
-      triggerConfetti();
+      const tempId = Date.now();
+      let newPhoto = { id: tempId, date: todayDate, src: base64String, note: "Yükleniyor..." };
+      setProgressPhotos(prev => [newPhoto, ...prev].slice(0, 20));
+
+      try {
+        const storage = getStorage();
+        const userId = auth.currentUser?.uid || "guest";
+        const storageRef = ref(storage, `progress_photos/${userId}/${tempId}.jpg`);
+        await uploadString(storageRef, base64String, 'data_url');
+        const downloadURL = await getDownloadURL(storageRef);
+
+        newPhoto = { id: tempId, date: todayDate, src: downloadURL, note: "Güncel Form" };
+        setProgressPhotos(prev => {
+          const updated = prev.map(p => p.id === tempId ? newPhoto : p);
+          localStorage.setItem('progressPhotos', JSON.stringify(updated));
+          return updated;
+        });
+        triggerConfetti();
+      } catch (error) {
+        console.error("Fotoğraf yükleme hatası:", error);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -75,16 +84,19 @@ export default function TabProgress({
     }
   };
 
-  const handleAddMeasure = () => {
-    if (!measureForm.value) return;
-    useAppStore.getState().addMeasurement({
-      date: new Date(measureForm.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }),
-      type: measureForm.type,
-      value: parseFloat(measureForm.value)
-    });
-    setMeasureForm({ ...measureForm, value: "" });
+  // src/features/fitness/progress/components/TabProgress.jsx (Satır ~70)
+
+  const handleAddMeasure = (formData) => {
+    // 🔥 FIX: formData.date zaten "YYYY-MM-DD" formatında geliyor (<input type="date">)
+    // Artık bunu toLocaleDateString ile BOZMUYORUZ. Doğrudan kaydediyoruz.
+    const isoDate = formData.date; 
+    
+    if (formData.weight) addMeasurement({ date: isoDate, type: 'weight', value: parseFloat(formData.weight) });
+    if (formData.bodyFat) addMeasurement({ date: isoDate, type: 'bodyFat', value: parseFloat(formData.bodyFat) });
+    if (formData.waist) addMeasurement({ date: isoDate, type: 'waist', value: parseFloat(formData.waist) });
+    if (formData.neck) addMeasurement({ date: isoDate, type: 'neck', value: parseFloat(formData.neck) });
+
     setShowMeasureModal(false);
-    if (navigator.vibrate) navigator.vibrate(20);
     triggerConfetti();
   };
 
@@ -112,15 +124,48 @@ export default function TabProgress({
   }, [bodyMeasurements, targetWeight, selectedChartType]);
 
   const chartData = useMemo(() => {
-    let base = bodyMeasurements.filter(m => m.type === selectedChartType).sort((a, b) => new Date(a.id || a.date) - new Date(b.id || b.date));
-    base = base.map(m => ({ ...m, value: parseFloat(m.value) }));
+    let base = bodyMeasurements.filter(m => m.type === selectedChartType).sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    return base.map(m => {
+      // Sadece ekranda göstermek için kısa formata çeviriyoruz
+      const displayDate = new Date(m.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+      return { ...m, value: parseFloat(m.value), displayDate }; 
+    });
+  }, [bodyMeasurements, selectedChartType]);
+  
+  const recompData = useMemo(() => {
+    const grouped = {};
+    bodyMeasurements.forEach(m => {
+      if (!grouped[m.date]) grouped[m.date] = {};
+      grouped[m.date][m.type] = parseFloat(m.value);
+    });
 
-    if (selectedChartType === "weight" && trendInfo?.projectionData) {
-       const projections = trendInfo.projectionData.map(p => ({ date: p.date, projectedValue: p.projectedWeight }));
-       return [...base, ...projections];
-    }
-    return base;
-  }, [bodyMeasurements, selectedChartType, trendInfo]);
+    const recomp = [];
+    Object.entries(grouped).forEach(([date, data]) => {
+      if (data.weight && data.bodyFat) {
+        const fatMass = data.weight * (data.bodyFat / 100);
+        const leanMass = data.weight - fatMass;
+        recomp.push({ 
+          date, 
+          weight: data.weight, 
+          bodyFat: data.bodyFat, 
+          fatMass: parseFloat(fatMass.toFixed(1)), 
+          leanMass: parseFloat(leanMass.toFixed(1)) 
+        });
+      }
+    });
+    return recomp.sort((a,b) => new Date(a.date) - new Date(b.date));
+  }, [bodyMeasurements]);
+
+  const recompDelta = useMemo(() => {
+    if (recompData.length < 2) return null;
+    const first = recompData[0];
+    const last = recompData[recompData.length - 1];
+    return {
+      fatDiff: (last.fatMass - first.fatMass).toFixed(1),
+      leanDiff: (last.leanMass - first.leanMass).toFixed(1)
+    };
+  }, [recompData]);
 
   const volumeTrendData = useMemo(() => {
     const dailyVolumes = {};

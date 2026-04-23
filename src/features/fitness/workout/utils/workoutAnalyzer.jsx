@@ -26,23 +26,26 @@ export const PART_TO_TARGET = {
   "Bacak (Quad)": "Bacak", "Arka Bacak": "Bacak", "Kalça": "Bacak", "Baldır": "Bacak"
 };
 
-// 🔥 YENİ: PROGRESSIVE OVERLOAD MOTORU (Epley 1RM)
+// 🔥 YENİ: EPLEY FORMÜLÜ İLE E1RM HESAPLAYICI
+export const calculateE1RM = (kg, reps) => {
+  const w = Number(kg) || 0;
+  const r = Number(reps) || 0;
+  if (w === 0 || r === 0) return 0;
+  if (r === 1) return w; // 1 tekrar zaten 1RM'dir
+  return Math.round(w * (1 + r / 30));
+};
+
 export const predictNextGoal = (lastLog, targetRepsStr = "10") => {
   if (!lastLog || !lastLog.sets || lastLog.sets.length === 0) return null;
   
   let bestSet = lastLog.sets[0];
   let max1RM = 0;
 
-  // En iyi seti Epley formülü ile bul
   lastLog.sets.forEach(set => {
-    const w = Number(set.kg) || 0;
-    const r = Number(set.reps) || 0;
-    if (w > 0 && r > 0) {
-      const e1rm = w * (1 + r / 30); // Epley Formula
-      if (e1rm > max1RM) {
-        max1RM = e1rm;
-        bestSet = set;
-      }
+    const e1rm = calculateE1RM(set.kg, set.reps);
+    if (e1rm > max1RM) {
+      max1RM = e1rm;
+      bestSet = set;
     }
   });
 
@@ -51,7 +54,6 @@ export const predictNextGoal = (lastLog, targetRepsStr = "10") => {
 
   if (currentKg === 0) return null;
 
-  // Hedef Tekrar aralığını al
   let upperTargetRep = 10;
   if (typeof targetRepsStr === 'string' && targetRepsStr.includes('-')) {
      upperTargetRep = parseInt(targetRepsStr.split('-')[1]) || 10;
@@ -64,7 +66,6 @@ export const predictNextGoal = (lastLog, targetRepsStr = "10") => {
   let message = "";
   let type = "rep";
 
-  // Karar Mekanizması
   if (currentReps >= upperTargetRep) {
     const increment = currentKg >= 40 ? 2.5 : 1.25; 
     nextWeight = currentKg + increment;
@@ -98,10 +99,7 @@ const parseLogDate = (dateStr) => {
 export const calculateRealFatigue = (weightLog) => {
   const fatigueRaw = { "Göğüs": 0, "Sırt": 0, "Bacak": 0, "Omuz": 0, "Kol": 0, "Karın": 0 };
   const now = new Date();
-
-  const MAX_TOLERANCE = {
-     "Bacak": 8000, "Sırt": 6000, "Göğüs": 5000, "Omuz": 4000, "Kol": 3000, "Karın": 2000
-  };
+  const MAX_TOLERANCE = { "Bacak": 8000, "Sırt": 6000, "Göğüs": 5000, "Omuz": 4000, "Kol": 3000, "Karın": 2000 };
 
   Object.entries(weightLog || {}).forEach(([exName, logs]) => {
      const target = guessTargetMuscle(exName);
@@ -145,9 +143,7 @@ export const analyzeAndOptimizeWorkout = (plannedWorkout, weightLog, exerciseDB,
      tiredMuscles = [guessTargetMuscle(plannedWorkout.exercises[0].name)];
   }
 
-  if (tiredMuscles.length === 0) {
-     return { workout: plannedWorkout, modified: false, message: "Sinir sistemin ve kasların harika durumda. Orijinal programa tam güç saldırabilirsin!" };
-  }
+  if (tiredMuscles.length === 0) return { workout: plannedWorkout, modified: false, message: "Sinir sistemin harika durumda. Orijinal programa tam güç saldırabilirsin!" };
 
   const optimizedExercises = [];
   const freshMuscles = Object.keys(fatigue).filter(m => fatigue[m] <= 30); 
@@ -155,18 +151,11 @@ export const analyzeAndOptimizeWorkout = (plannedWorkout, weightLog, exerciseDB,
 
   plannedWorkout.exercises.forEach(ex => {
       const target = guessTargetMuscle(ex.name);
-      
       if (tiredMuscles.includes(target)) {
           const alternatives = exerciseDB.filter(d => d.target === fallbackMuscle);
           const substitute = alternatives[Math.floor(Math.random() * alternatives.length)];
-          
-          if (substitute) {
-              optimizedExercises.push({
-                  ...ex, name: substitute.name, target: substitute.target, isSwappedByAI: true
-              });
-          } else {
-              optimizedExercises.push(ex); 
-          }
+          if (substitute) optimizedExercises.push({ ...ex, name: substitute.name, target: substitute.target, isSwappedByAI: true });
+          else optimizedExercises.push(ex); 
       } else {
           optimizedExercises.push(ex);
       }
@@ -175,6 +164,6 @@ export const analyzeAndOptimizeWorkout = (plannedWorkout, weightLog, exerciseDB,
   return {
       workout: { ...plannedWorkout, exercises: optimizedExercises },
       modified: true,
-      message: `Verilerini taradım. [${tiredMuscles.join(", ")}] bölgende hala %75'in üzerinde hasar var. Overtraining (Sürantrene) olmamak için bu bölgeyi iptal edip yerine toparlanmış olan [${fallbackMuscle}] egzersizlerini ekledim.`
+      message: `Verilerini taradım. [${tiredMuscles.join(", ")}] bölgende %75'in üzerinde yorgunluk var. Overtraining olmamak için bu bölgeyi toparlanmış olan [${fallbackMuscle}] egzersizleriyle değiştirdim.`
   };
 };

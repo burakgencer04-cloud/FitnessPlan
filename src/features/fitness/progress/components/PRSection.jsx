@@ -1,9 +1,23 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fonts, getGlassCardStyle, getGlassInnerStyle } from './progressUtils';
-import { InfoTooltip } from './ProgressModals';
+import { fonts, getGlassCardStyle, getGlassInnerStyle } from './progressUtils.jsx';
+import { InfoTooltip } from './ProgressModals.jsx';
+import { useAppStore } from '@/app/store.js';
 
-export default function PRSection({ personalRecords, currentWeight, isOlder, C }) {
+export default function PRSection({ currentWeight, isOlder, C }) {
+  // 🔥 Veriyi doğrudan merkezi state'ten çek
+  const personalRecordsObj = useAppStore(state => state.personalRecords || {});
+
+  const personalRecords = useMemo(() => {
+    return Object.entries(personalRecordsObj).map(([exName, data]) => ({
+      exName,
+      oneRM: data.e1rm,
+      date: data.date,
+      rawWeight: data.kg,
+      rawReps: data.reps
+    })).sort((a, b) => b.oneRM - a.oneRM).slice(0, 4); // En yüksek 4 E1RM'i al
+  }, [personalRecordsObj]);
+
   return (
     <AnimatePresence>
       {personalRecords.length > 0 && (

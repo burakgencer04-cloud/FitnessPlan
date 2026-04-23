@@ -35,7 +35,6 @@ export const guessAisle = (itemName) => {
   return "Diğer (Market)";
 };
 
-// 🎯 YENİ: İSİM NORMALİZASYONU (Çiğ/Haşlanmış gibi detayları temizler, birleştirir)
 export const normalizeItemName = (name) => {
   if (!name) return "";
   let lower = name.toLowerCase();
@@ -49,8 +48,6 @@ export const normalizeItemName = (name) => {
   if (lower.includes('tam buğday') && lower.includes('ekmek')) return 'Tam Buğday Ekmeği';
   if (lower.includes('makarna')) return 'Makarna';
   if (lower.includes('süt') && !lower.includes('fıstık')) return 'Süt';
-  
-  // Genel Temizlik: (Haşlanmış), (Çiğ), (Pişmiş) gibi kelimeleri sil
   return name.replace(/\s*\(.*?\)\s*/g, '').trim();
 };
 
@@ -63,16 +60,13 @@ export const formatGroceryAmount = (itemName, rawAmount) => {
   let val = parseFloat(match[1].replace(',', '.'));
   let unit = (match[2] || "").toLowerCase();
 
-  // Ekmek
   if (unit.includes('dilim') || name.includes('ekmek')) return val <= 15 ? "1 Paket / Somun" : Math.ceil(val / 15) + " Paket / Somun";
-  // Yumurta
   if (name.includes('yumurta')) {
     if (val <= 15) return "15'li Koli";
     if (val <= 30) return "30'lu Koli";
     return Math.ceil(val / 30) + " Koli";
   }
   
-  // Gramajlar
   if (unit === 'g' || unit === 'gr' || unit === 'gram') {
     if (name.includes('et') || name.includes('tavuk') || name.includes('balık') || name.includes('somon') || name.includes('ton') || name.includes('kıyma') || name.includes('peynir') || name.includes('lor')) {
        if (val <= 250) return "250 g";
@@ -96,7 +90,7 @@ export const formatGroceryAmount = (itemName, rawAmount) => {
        return Math.ceil(val / 500) + " Kutu/Paket";
     }
     if (val >= 1000) return (Math.ceil(val / 500) * 0.5) + " kg";
-    return Math.ceil(val / 50) * 50 + " g"; // En yakın 50g'a yuvarla
+    return Math.ceil(val / 50) * 50 + " g"; 
   }
   
   if (unit === 'ml') {
@@ -104,7 +98,6 @@ export const formatGroceryAmount = (itemName, rawAmount) => {
     if (val <= 1000) return "1 Litre";
     return Math.ceil(val / 1000) + " Litre";
   }
-  
   return rawAmount; 
 };
 
@@ -135,9 +128,6 @@ export const formatRemaining = (num, origUnitStr) => {
   return `${Math.round(num)} ${s.includes('g') ? 'g' : 'Br'}`;
 };
 
-// ============================================================================
-// 🧠 ŞABLON BAZLI (TEMPLATE-DRIVEN) 7 GÜNLÜK BESLENME OLUŞTURUCU
-// ============================================================================
 export const generateMealPlan = (targetMacros, user) => {
   const diet = user?.dietType || 'standart';
   const isVegan = diet === 'vegan';
@@ -151,10 +141,7 @@ export const generateMealPlan = (targetMacros, user) => {
   const sweetKeywords = ['sütlaç', 'puding', 'tatlı', 'çikolata', 'pasta', 'kek', 'dondurma', 'waffle', 'pankek', 'kruvasan', 'gofret', 'brownie'];
 
   let availableFoods = FOODS.filter(f => !isDisliked(f, dislikes));
-
-  if (!allowSweets) {
-    availableFoods = availableFoods.filter(f => !matchName(f.name, sweetKeywords));
-  }
+  if (!allowSweets) availableFoods = availableFoods.filter(f => !matchName(f.name, sweetKeywords));
 
   if (isVegan) {
     availableFoods = availableFoods.filter(f => !matchName(f.name, ['tavuk', 'et', 'balık', 'süt', 'peynir', 'yumurta', 'yoğurt', 'kefir', 'somon', 'hindi', 'kıyma', 'dana', 'kuzu', 'peynir altı', 'whey']));
@@ -162,16 +149,10 @@ export const generateMealPlan = (targetMacros, user) => {
     availableFoods = availableFoods.filter(f => !matchName(f.name, ['tavuk', 'et', 'balık', 'somon', 'hindi', 'ton', 'kıyma', 'dana', 'kuzu']));
   }
 
-  // 🎯 YENİ: Güvenlik Ağı (Eğer filtreler sonucu havuz boşalırsa sistemi kurtar)
-  if (!availableFoods || availableFoods.length === 0) {
-    availableFoods = FOODS; 
-  }
+  if (!availableFoods || availableFoods.length === 0) availableFoods = FOODS; 
 
   const T = {
-    brkProtein: availableFoods.filter(f => 
-      matchName(f.name, ['yumurta', 'peynir', 'lor', 'tofu', 'protein tozu', 'chia']) || 
-      (f.name.toLowerCase().includes('süt') && !f.name.toLowerCase().includes('sütlaç'))
-    ),
+    brkProtein: availableFoods.filter(f => matchName(f.name, ['yumurta', 'peynir', 'lor', 'tofu', 'protein tozu', 'chia']) || (f.name.toLowerCase().includes('süt') && !f.name.toLowerCase().includes('sütlaç'))),
     brkCarb: availableFoods.filter(f => matchName(f.name, ['yulaf', 'ekmek', 'gevrek', 'pirinç patlağı', 'galeta'])),
     mainProtein: availableFoods.filter(f => matchName(f.name, ['tavuk', 'et', 'balık', 'somon', 'hindi', 'kıyma', 'tofu', 'mercimek', 'nohut', 'ton balığı', 'dana'])),
     complexCarb: availableFoods.filter(f => matchName(f.name, ['pirinç', 'bulgur', 'makarna', 'patates', 'karabuğday', 'kinoa', 'erişte'])),
@@ -185,13 +166,10 @@ export const generateMealPlan = (targetMacros, user) => {
     T.snack = [...T.snack, ...sweets];
   }
 
-  // 🎯 YENİ: Akıllı Fallback (Eğer bir diyet türünde kategori boş kalırsa rastgele güvenli ürün seçer)
   const getF = (category, fallbackKeyword) => {
     const pool = (T[category] && T[category].length > 0) ? T[category] : availableFoods;
-    const selected = getSmartFood(pool, likes) || 
-                     pool.find(f => matchName(f.name, [fallbackKeyword])) || 
-                     pool[Math.floor(Math.random() * pool.length)];
-    return selected || FOODS[0]; // Sistemin asla çökmemesini garanti eder
+    const selected = getSmartFood(pool, likes) || pool.find(f => matchName(f.name, [fallbackKeyword])) || pool[Math.floor(Math.random() * pool.length)];
+    return selected || FOODS[0]; 
   };
 
   const mealRatios = [
@@ -208,20 +186,15 @@ export const generateMealPlan = (targetMacros, user) => {
     let totalCalculatedCal = 0;
 
     mealRatios.forEach((ratio, index) => {
-      const target = {
-        p: targetMacros.protein * ratio.pctP, 
-        c: targetMacros.carbs * ratio.pctC, 
-        f: targetMacros.fat * ratio.pctF
-      };
+      const target = { p: targetMacros.protein * ratio.pctP, c: targetMacros.carbs * ratio.pctC, f: targetMacros.fat * ratio.pctF };
       let items = [];
 
-      if (index === 0) { // Kahvaltı
+      if (index === 0) { 
         const protein = getF('brkProtein', 'yumurta');
         const carb = getF('brkCarb', 'yulaf');
         const fat = getF('healthyFat', 'zeytin');
         const veggie = getF('veggie', 'domates');
 
-        // 🎯 YENİ: Dinamik sınırlar. Kalori açığı oluşmaması için clamp değerleri yüksek tutuldu.
         const pQty = clamp((target.p * 0.90) / (protein.p || 1) * 100, 30, 400); 
         const cQty = isKeto ? 0 : clamp((target.c * 0.90) / (carb.c || 1) * 100, 20, 300);
         const fQty = clamp((target.f * 0.85) / (fat.f || 1) * 100, 10, 150);
@@ -231,7 +204,7 @@ export const generateMealPlan = (targetMacros, user) => {
         if (fQty > 5) items.push({ ...fat, qty: Math.round(fQty) });
         items.push({ ...veggie, qty: 100 });
       }
-      else if (index === 1 || index === 3) { // Ana Öğünler
+      else if (index === 1 || index === 3) { 
         const protein = getF('mainProtein', 'tavuk');
         const carb = getF('complexCarb', 'pirinç');
         const veggie = getF('veggie', 'salata');
@@ -249,7 +222,7 @@ export const generateMealPlan = (targetMacros, user) => {
           items.push({ ...fat, qty: Math.round(fQty) });
         }
       }
-      else if (index === 2) { // Ara Öğün
+      else if (index === 2) { 
         const snack = getF('snack', 'elma');
         const fat = getF('healthyFat', 'badem');
         
@@ -261,32 +234,24 @@ export const generateMealPlan = (targetMacros, user) => {
       }
 
       let tCal=0, tP=0, tC=0, tF=0;
-      
       const formattedItems = items.map(item => {
         const ratio = item.qty / 100;
         const finalCal = Math.round(item.cal * ratio);
         const finalP = Number((item.p * ratio).toFixed(1));
         const finalC = Number((item.c * ratio).toFixed(1));
         const finalF = Number((item.f * ratio).toFixed(1));
-        
-        // Varsa lif ve şeker değerlerini de oranla
         const finalFib = Number(((item.fib || 0) * ratio).toFixed(1));
         const finalSug = Number(((item.sug || 0) * ratio).toFixed(1));
 
         tCal += finalCal; tP += finalP; tC += finalC; tF += finalF;
-
-        // 🎯 YENİ: Sadece qty var, karmaşa yaratan displayQty tamamen silindi.
         return { ...item, cal: finalCal, p: finalP, c: finalC, f: finalF, fib: finalFib, sug: finalSug, qty: item.qty };
       });
 
       totalCalculatedCal += tCal;
-
       meals.push({ label: ratio.label, items: formattedItems, totals: { cal: Math.round(tCal), p: Math.round(tP), c: Math.round(tC), f: Math.round(tF) } });
     });
-
     weeklyPlan.push({ day, meals, totalCal: Math.round(totalCalculatedCal) });
   }
-
   return weeklyPlan;
 };
 
@@ -328,6 +293,32 @@ export const calculateMacros = (user) => {
   };
 };
 
+// 🔥 YENİ: OTOMATİK MAKRO DÖNGÜSÜ (CARB CYCLING) HESAPLAYICISI
+export const cycleMacros = (baseMacros, isRestDay, dietType) => {
+  if (!baseMacros) return { calories: 2000, protein: 150, carbs: 200, fat: 70 };
+  const isKeto = dietType === 'keto';
+
+  if (isRestDay) {
+    // Dinlenme günü: Karbonhidrat düşer, Protein biraz artar, Yağ artar, Toplam kalori açığı oluşur.
+    return {
+      ...baseMacros,
+      calories: Math.max(1200, baseMacros.calories - 300), // 300 kcal daha az
+      carbs: isKeto ? baseMacros.carbs : Math.max(30, Math.round(baseMacros.carbs * 0.6)), // Karb %40 azalır
+      protein: Math.round(baseMacros.protein * 1.1), // Kas onarımı için protein %10 artar
+      fat: Math.round(baseMacros.fat * 1.15) // Enerji açığını kapatmak için sağlıklı yağ artar
+    };
+  } else {
+    // Antrenman günü: Karbonhidrat yüklemesi (Glikojen için)
+    return {
+      ...baseMacros,
+      calories: baseMacros.calories + 200, // 200 kcal ek enerji
+      carbs: isKeto ? baseMacros.carbs : Math.round(baseMacros.carbs * 1.2), // Karb %20 artar
+      protein: baseMacros.protein,
+      fat: Math.round(baseMacros.fat * 0.9) // Sindirimi hızlandırmak için yağ biraz kısılır
+    };
+  }
+};
+
 export const matchName = (foodName, keywords) => {
   if (!foodName) return false;
   const name = foodName.toLowerCase();
@@ -362,7 +353,7 @@ export const buildShoppingList = (dayPlan) => {
       
       const cleanName = item.name.trim();
       const existing = catMap[cat].find(i => i.name === cleanName);
-      const qty = parseFloat(item.qty || 100); // 🎯 DÜZELTME: displayQty tamamen kaldırıldı
+      const qty = parseFloat(item.qty || 100); 
       const unit = item.unit || "g";
       
       if (existing) {
@@ -404,7 +395,6 @@ export const sumTotals = (items) => {
   }), { cal: 0, p: 0, c: 0, f: 0 });
 };
 
-// Eğer FOODS başka bir dosyadaysa import etmelisin, yoksa bu listeyi kullanabilirsin:
 export const FOODS = [
   { id: 1, name: "Yumurta", p: 13, c: 1, f: 11, cal: 155, type: "protein" },
   { id: 2, name: "Tavuk Göğsü", p: 31, c: 0, f: 3.6, cal: 165, type: "protein" },
@@ -414,4 +404,3 @@ export const FOODS = [
   { id: 6, name: "Badem", p: 21, c: 22, f: 50, cal: 579, type: "fat" },
   { id: 7, name: "Lor Peyniri", p: 11, c: 3.4, f: 4.3, cal: 98, type: "protein" }
 ];
-

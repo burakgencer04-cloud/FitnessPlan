@@ -1,7 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fonts, MEASUREMENT_TYPES, MEASURE_TIPS } from "../utils/progressUtils.jsx";
+import { globalFonts as fonts } from '@/shared/ui/globalStyles.js';
+import { calculateUSNavyBodyFat } from '../utils/progressUtils.jsx';
+import { useAppStore } from "@/app/store.js";
 
+// 1. ÖLÇÜM MODALI (VÜCUT ANALİZİ)
+export const MeasureModal = ({ show, onClose, onSave, C }) => {
+  const user = useAppStore(state => state.user);
+  
+  const [form, setForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    weight: "",
+    waist: "",
+    neck: "",
+    hip: "",
+    bodyFat: "" 
+  });
+
+  useEffect(() => {
+    if (form.waist && form.neck && user?.height) {
+      const bf = calculateUSNavyBodyFat(user?.gender || 'male', user.height, form.neck, form.waist, form.hip);
+      if (bf) setForm(prev => ({ ...prev, bodyFat: bf.toFixed(1) }));
+    }
+  }, [form.waist, form.neck, form.hip, user?.height, user?.gender]);
+
+  const handleSave = () => {
+    if (!form.weight) return alert("Kilo girmek zorunludur.");
+    onSave(form);
+  };
+
+  if (!show) return null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: "blur(10px)" }}>
+      <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} style={{ background: "rgba(20,20,25,0.9)", border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 32, padding: 32, width: '90%', maxWidth: 400, boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
+        <h3 style={{ margin: "0 0 20px 0", fontSize: 22, fontWeight: 900, color: "#fff", fontFamily: fonts.header }}>Vücut Analizi Gir</h3>
+        
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+          <div style={{ gridColumn: "span 2" }}>
+            <label style={{ fontSize: 11, color: C.mute, fontWeight: 800 }}>Tarih</label>
+            <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} style={{ width: "100%", background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.1)`, color: "#fff", padding: 14, borderRadius: 16, outline: "none", boxSizing: "border-box" }} />
+          </div>
+          
+          <div style={{ gridColumn: "span 2" }}>
+             <label style={{ fontSize: 11, color: C.mute, fontWeight: 800 }}>Kilo (kg)</label>
+             <input type="number" placeholder="Örn: 82.5" value={form.weight} onChange={e => setForm({...form, weight: e.target.value})} style={{ width: "100%", background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.1)`, color: "#fff", padding: 14, borderRadius: 16, outline: "none", fontSize: 18, fontWeight: 900, boxSizing: "border-box" }} />
+          </div>
+
+          <div>
+             <label style={{ fontSize: 11, color: C.mute, fontWeight: 800 }}>Bel (cm)</label>
+             <input type="number" placeholder="Göbek deliği" value={form.waist} onChange={e => setForm({...form, waist: e.target.value})} style={{ width: "100%", background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.1)`, color: "#fff", padding: 14, borderRadius: 16, outline: "none", boxSizing: "border-box" }} />
+          </div>
+          <div>
+             <label style={{ fontSize: 11, color: C.mute, fontWeight: 800 }}>Boyun (cm)</label>
+             <input type="number" placeholder="Adem elması" value={form.neck} onChange={e => setForm({...form, neck: e.target.value})} style={{ width: "100%", background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.1)`, color: "#fff", padding: 14, borderRadius: 16, outline: "none", boxSizing: "border-box" }} />
+          </div>
+
+          <div style={{ gridColumn: "span 2", background: `rgba(59, 130, 246, 0.1)`, padding: 16, borderRadius: 16, border: `1px solid rgba(59, 130, 246, 0.3)`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 11, color: C.blue, fontWeight: 900 }}>Tahmini Yağ Oranı (US Navy)</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }}>Otomatik hesaplanır veya elle girin</div>
+            </div>
+            <input type="number" placeholder="%" value={form.bodyFat} onChange={e => setForm({...form, bodyFat: e.target.value})} style={{ width: 80, background: "transparent", border: "none", color: C.blue, fontSize: 24, fontWeight: 900, textAlign: "right", outline: "none" }} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: "16px", borderRadius: 16, border: `1px solid rgba(255,255,255,0.1)`, background: "transparent", color: "#fff", fontWeight: 800 }}>İptal</button>
+          <button onClick={handleSave} style={{ flex: 1, padding: "16px", borderRadius: 16, border: "none", background: C.green, color: "#000", fontWeight: 900 }}>Kaydet</button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+// 2. BİLGİ ARAÇ İPUCU (TOOLTIP)
 export const InfoTooltip = ({ title, text, C }) => {
   const [show, setShow] = useState(false);
   return (
@@ -23,6 +96,7 @@ export const InfoTooltip = ({ title, text, C }) => {
   );
 };
 
+// 3. KUTLAMA EFEKTİ (CONFETTI)
 export const Confetti = ({ C }) => {
   const pieces = Array.from({ length: 50 });
   return (
@@ -34,55 +108,7 @@ export const Confetti = ({ C }) => {
   );
 };
 
-export const MeasureModal = ({ show, onClose, form, setForm, onSave, C }) => (
-  <AnimatePresence>
-    {show && (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        <div style={{ position: "absolute", inset: 0, background: "rgba(5,8,12,0.6)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }} onClick={onClose} />
-        
-        <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} onClick={e => e.stopPropagation()} style={{ background: `linear-gradient(145deg, rgba(30, 30, 35, 0.8), rgba(15, 15, 20, 0.9))`, backdropFilter: "blur(32px)", WebkitBackdropFilter: "blur(32px)", borderRadius: 36, padding: 32, width: '100%', maxWidth: 400, border: `1px solid rgba(255,255,255,0.1)`, boxShadow: "0 30px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)", position: "relative" }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
-            <div>
-              <h3 style={{ margin: 0, fontFamily: fonts.header, fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: -0.5 }}>Kayıt Ekle</h3>
-              <div style={{ fontSize: 11, color: "#000", background: "#fff", fontWeight: 900, marginTop: 6, textTransform: 'uppercase', letterSpacing: 1.5, display: 'inline-block', padding: '4px 10px', borderRadius: 8 }}>
-                {MEASUREMENT_TYPES.find(t => t.id === form.type)?.label.split(" ")[0]}
-              </div>
-            </div>
-            <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: `none`, color: "#fff", width: 36, height: 36, borderRadius: 12, cursor: 'pointer', fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", transition: "0.2s" }}>✕</button>
-          </div>
-          
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 900, marginBottom: 8, letterSpacing: 1.5 }}>TARİH</label>
-              <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: `1px solid rgba(255,255,255,0.1)`, color: "#fff", padding: "16px 20px", borderRadius: 16, outline: "none", fontFamily: fonts.mono, fontSize: 15, boxSizing: "border-box" }} />
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: `linear-gradient(135deg, rgba(255,255,255,0.03), rgba(0,0,0,0.3))`, padding: "28px 20px", borderRadius: 24, border: `1px solid rgba(255,255,255,0.05)`, boxShadow: "inset 0 4px 15px rgba(0,0,0,0.2)" }}>
-              <label style={{ display: "block", fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 900, marginBottom: 12, letterSpacing: 2 }}>ÖLÇÜM</label>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <input type="number" step="0.1" placeholder="0.0" value={form.value} onChange={e => setForm({...form, value: e.target.value})} style={{ width: 120, background: "transparent", border: "none", borderBottom: `2px solid #fff`, color: "#fff", padding: "8px 0", outline: "none", fontFamily: fonts.mono, fontSize: 40, fontWeight: 900, textAlign: "center" }} />
-                <span style={{ fontSize: 16, color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>{form.type === "weight" ? "kg" : "cm"}</span>
-              </div>
-            </div>
-
-            <div style={{ background: `rgba(52, 152, 219, 0.1)`, border: `1px solid rgba(52, 152, 219, 0.3)`, padding: 16, borderRadius: 16, display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <div style={{ fontSize: 20 }}>💡</div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 900, color: C.blue, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>İPUCU</div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>{MEASURE_TIPS[form.type]}</div>
-              </div>
-            </div>
-          </div>
-
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onSave} style={{ width: "100%", marginTop: 28, padding: "18px", borderRadius: 16, background: "#fff", border: "none", color: "#000", fontWeight: 900, fontFamily: fonts.header, fontSize: 15, cursor: "pointer", boxShadow: `0 10px 25px rgba(255,255,255,0.2)` }}>
-            KAYDET
-          </motion.button>
-        </motion.div>
-      </motion.div>
-    )}
-  </AnimatePresence>
-);
-
+// 4. FOTOĞRAF GALERİSİ (SWIPE MODAL)
 export const PhotoSwipeModal = ({ index, setIndex, photos, onDelete, C }) => (
   <AnimatePresence>
     {index !== null && photos[index] && (
@@ -108,7 +134,7 @@ export const PhotoSwipeModal = ({ index, setIndex, photos, onDelete, C }) => (
                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
                  <div>
                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 900, letterSpacing: 1.5, marginBottom: 6 }}>O GÜNKÜ HACİM</div>
-                   <div style={{ fontSize: 24, color: "#fff", fontWeight: 900, fontFamily: fonts.mono }}>{(photos[index].volume / 1000).toFixed(1)} <span style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>ton</span></div>
+                   <div style={{ fontSize: 24, color: "#fff", fontWeight: 900, fontFamily: fonts.mono }}>{((photos[index].volume || 0) / 1000).toFixed(1)} <span style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>ton</span></div>
                  </div>
                  <button onClick={() => onDelete(photos[index].id)} style={{ background: "rgba(231, 76, 60, 0.15)", color: C.red, border: `1px solid rgba(231, 76, 60, 0.3)`, padding: "10px 18px", borderRadius: 12, fontWeight: 900, fontSize: 13, cursor: "pointer" }}>SİL</button>
                </div>
@@ -138,6 +164,7 @@ export const PhotoSwipeModal = ({ index, setIndex, photos, onDelete, C }) => (
   </AnimatePresence>
 );
 
+// 5. HİKAYE PAYLAŞIM MODALI (STORY)
 export const StoryModal = ({ show, onClose, streak, globalTotalVolume, personalRecords, C }) => (
   <AnimatePresence>
     {show && (
@@ -145,7 +172,6 @@ export const StoryModal = ({ show, onClose, streak, globalTotalVolume, personalR
         <div style={{ position: "absolute", inset: 0, background: "rgba(5,8,12,0.85)", backdropFilter: "blur(32px)", WebkitBackdropFilter: "blur(32px)" }} />
 
         <div style={{ width: "100%", maxWidth: 380, aspectRatio: "9/16", background: `linear-gradient(145deg, rgba(20,20,25,0.9), rgba(10,10,15,1))`, borderRadius: 40, padding: 36, display: "flex", flexDirection: "column", justifyContent: "space-between", border: `1px solid rgba(255,255,255,0.1)`, position: "relative", overflow: "hidden", zIndex: 1, boxShadow: "0 30px 60px rgba(0,0,0,0.6)" }}>
-          {/* Neon Işıklar */}
           <div style={{ position: "absolute", top: -60, right: -60, width: 250, height: 250, background: C.blue, filter: "blur(100px)", opacity: 0.35 }} />
           <div style={{ position: "absolute", bottom: -60, left: -60, width: 250, height: 250, background: C.green, filter: "blur(100px)", opacity: 0.25 }} />
           

@@ -2,13 +2,13 @@ import { globalFonts as fonts, getGlobalGlassStyle, getGlobalGlassInnerStyle, ge
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next'; 
+import { getLocalIsoDate } from '@/shared/utils/dateUtils.js';
 
 import { useAppStore } from '@/app/store.js';
-import { getMealCategories, generateMealPlan } from "../utils/nutritionUtils.js";
+import { getMealCategories, generateMealPlan, cycleMacros } from "../utils/nutritionUtils.js";
 import { SearchFoodModal, FoodDetailModal, BarcodeScannerModal, SamplePlanModal } from './NutritionModals.jsx';
 import AIVisionModal from "./AIVisionModal.jsx";
 
-// 1. MAKRO BAR BİLEŞENİ (Daha ince ve zarif)
 function MacroBar({ label, plannedVal, eatenVal, target, color, C }) {
   const plannedPct = Math.min(100, (plannedVal / target) * 100) || 0;
   const eatenPct = Math.min(100, (eatenVal / target) * 100) || 0;
@@ -29,11 +29,11 @@ function MacroBar({ label, plannedVal, eatenVal, target, color, C }) {
   );
 }
 
-// 2. ANA SAYFA
-export default function NutritionView({ user, macros, regeneratePlan, dayPlan, nutDay, setNutDay, themeColors: C, shoppingList = [], onOpenStock }) {
+export default function NutritionView({ regeneratePlan, dayPlan, nutDay, setNutDay, themeColors: C, shoppingList = [], onOpenStock }) {
   const { t } = useTranslation(); 
-
-  const { addConsumedFood, removeConsumedFood, updateConsumedFood, consumedFoods = [], customTargetMacros, mealPlan, setMealPlan } = useAppStore(); 
+  
+  // 🔥 YENİ: lastDate verisini Store'dan alarak bugünün antrenman günü olup olmadığını kontrol edeceğiz.
+  const { user, macros, addConsumedFood, removeConsumedFood, updateConsumedFood, consumedFoods = [], customTargetMacros, mealPlan, setMealPlan, lastDate } = useAppStore(); 
 
   const currentMealPlan = Array.isArray(mealPlan) ? mealPlan[nutDay] : mealPlan;
   const activePlan = (dayPlan && dayPlan.meals) ? dayPlan : currentMealPlan;
@@ -45,17 +45,22 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
   const [showSamplePlan, setShowSamplePlan] = useState(false); 
   const [customRecipes, setCustomRecipes] = useState([]);
   const [mealTags, setMealTags] = useState({}); 
-  const [isRestDay, setIsRestDay] = useState(false); 
   const [showAIVision, setShowAIVision] = useState(false);
 
+  // 🧠 🔥 YENİ: OTOMATİK REST DAY (MACRO CYCLING) MOTORU
+  const todayIso = getLocalIsoDate();
+  const autoRestDay = lastDate !== todayIso; // Eğer bugün antrenman yapılmamışsa = Rest Day
+  const [manualOverride, setManualOverride] = useState(null); // Kullanıcı ezmek isterse
+  const isRestDay = manualOverride !== null ? manualOverride : autoRestDay;
+
   const DAYS = [1, 2, 3, 4, 5, 6, 7].map(num => t('nut_day_num', { num }));
-  const baseTargetMacros = customTargetMacros || macros || { calories: 2000, protein: 150, carbs: 200, fat: 70 };
   const targetFiber = 30; const targetSugar = 50; const targetWater = 3000; 
 
+  // 🔥 YENİ: Makrolar artık düz bir baseTargetMacros yerine cycleMacros fonksiyonundan filtrelenerek geçiyor.
   const targetMacros = useMemo(() => {
-    if (!isRestDay) return baseTargetMacros;
-    return { ...baseTargetMacros, calories: baseTargetMacros.calories - 200, carbs: Math.round(baseTargetMacros.carbs * 0.75), fat: Math.round(baseTargetMacros.fat * 1.1) };
-  }, [baseTargetMacros, isRestDay]);
+    const base = customTargetMacros || macros || { calories: 2000, protein: 150, carbs: 200, fat: 70 };
+    return cycleMacros(base, isRestDay, user?.dietType);
+  }, [customTargetMacros, macros, isRestDay, user?.dietType]);
 
   useEffect(() => {
     setCustomRecipes(JSON.parse(localStorage.getItem('customRecipes') || '[]'));
@@ -160,7 +165,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
       
       <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
-      {/* KİLER BUTONU (WIDGET TARZI) - Daha İnce */}
+      {/* KİLER BUTONU (WIDGET TARZI) */}
       <motion.div onClick={onOpenStock} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={{ ...glassCardStyle, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", border: `1px solid ${stockSummary.outOfStock > 0 ? 'rgba(231, 76, 60, 0.5)' : (stockSummary.lowStock > 0 ? 'rgba(241, 196, 15, 0.5)' : 'rgba(255,255,255,0.05)')}`, marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ fontSize: 26, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" }}>📦</div>
@@ -174,7 +179,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
         <div style={{ fontSize: 16, color: "rgba(255,255,255,0.3)" }}>➔</div>
       </motion.div>
 
-      {/* iOS TARZI GÜN SEÇİCİ - Daha Kompakt */}
+      {/* iOS TARZI GÜN SEÇİCİ VE YENİ DİNAMİK REST DAY BUTONU */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 8 }}>
         <div className="hide-scrollbar" style={{ display: "flex", gap: 4, overflowX: "auto", padding: "4px", background: "rgba(25, 25, 30, 0.5)", borderRadius: 100, border: "1px solid rgba(255,255,255,0.04)", backdropFilter: "blur(10px)", flex: 1 }}>
           {DAYS.map((d, i) => ( 
@@ -183,12 +188,13 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
             </button> 
           ))}
         </div>
-        <button onClick={() => { setIsRestDay(!isRestDay); if (navigator.vibrate) navigator.vibrate(15); }} style={{ flexShrink: 0, padding: "8px 12px", borderRadius: 100, background: isRestDay ? `rgba(52, 152, 219, 0.15)` : `rgba(255,255,255,0.05)`, border: `1px solid ${isRestDay ? 'rgba(52, 152, 219, 0.5)' : 'rgba(255,255,255,0.05)'}`, color: isRestDay ? C.blue : "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: fonts.header, backdropFilter: "blur(10px)", transition: "all 0.25s ease" }}>
-          {isRestDay ? `🛋️ ${t('nut_rest_badge_full')}` : `🏋️ ${t('nut_workout_badge_full')}`}
+        {/* 🔥 YENİ: OTOMATİK/MANUEL OVERRIDE İÇEREN BUTON */}
+        <button onClick={() => { setManualOverride(!isRestDay); if (navigator.vibrate) navigator.vibrate(15); }} style={{ flexShrink: 0, padding: "8px 12px", borderRadius: 100, background: isRestDay ? `rgba(52, 152, 219, 0.15)` : `rgba(255,255,255,0.05)`, border: `1px solid ${isRestDay ? 'rgba(52, 152, 219, 0.5)' : 'rgba(255,255,255,0.05)'}`, color: isRestDay ? C.blue : "#fff", fontWeight: 800, fontSize: 11, cursor: "pointer", fontFamily: fonts.header, backdropFilter: "blur(10px)", transition: "all 0.25s ease" }}>
+          {isRestDay ? `🛋️ Dinlenme (Düşük Karb) ${manualOverride !== null ? '⚙️' : '🤖'}` : `🏋️ İdman (Yüksek Karb) ${manualOverride !== null ? '⚙️' : '🤖'}`}
         </button>
       </div>
 
-      {/* ANA MAKRO KARTI - Küçültülmüş Fontlar ve Çember */}
+      {/* ANA MAKRO KARTI */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ ...glassCardStyle, padding: "20px", marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ flex: 1, paddingRight: 16 }}>
@@ -215,7 +221,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
           
           <div style={{ width: 76, height: 76, borderRadius: '50%', background: conicGradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 8px 16px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2)`, flexShrink: 0 }}>
             <div style={{ width: 64, height: 64, borderRadius: '50%', background: "rgba(20, 20, 25, 0.9)", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: `1px solid rgba(255,255,255,0.05)`, boxShadow: "inset 0 4px 10px rgba(0,0,0,0.4)" }}>
-              <span style={{ fontSize: 16, fontWeight: 900, color: "#fff", fontFamily: fonts.mono, lineHeight: 1.1 }}>%{Math.round((eatenTotals.cal / targetMacros.calories) * 100)}</span>
+              <span style={{ fontSize: 16, fontWeight: 900, color: "#fff", fontFamily: fonts.mono, lineHeight: 1.1 }}>%{Math.round((eatenTotals.cal / targetMacros.calories) * 100) || 0}</span>
               <span style={{ fontSize: 8, fontWeight: 900, color: "rgba(255,255,255,0.4)", fontFamily: fonts.header, letterSpacing: 1, marginTop: 2 }}>{t('nut_taken')}</span>
             </div>
           </div>
@@ -233,7 +239,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
         </div>
       </motion.div>
 
-      {/* SU TAKİBİ - Daha Kompakt */}
+      {/* SU TAKİBİ */}
       <div style={{ ...glassCardStyle, padding: "20px", display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
@@ -267,9 +273,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
         </div>
       </div>
 
-     {/* AI / ÖRNEK PLAN KARTLARI - Daha İnce */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
-        
         <motion.button 
           onClick={() => setShowAIVision(true)} whileTap={{ scale: 0.98 }}
           style={{ ...glassCardStyle, width: "100%", padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: 0, textAlign: "left", background: "linear-gradient(145deg, rgba(139, 92, 246, 0.05), rgba(0,0,0,0.4))", border: "1px solid rgba(139, 92, 246, 0.15)" }}
@@ -314,7 +318,7 @@ export default function NutritionView({ user, macros, regeneratePlan, dayPlan, n
 
       </div>
 
-      {/* ÖĞÜNLER (AKORDİYON) - Daha Dar ve İnce */}
+      {/* ÖĞÜNLER (AKORDİYON) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {mealCategories.map((mealCat) => {
           const mi = mealCat.id;

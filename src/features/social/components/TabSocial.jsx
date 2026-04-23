@@ -5,9 +5,11 @@ import { globalFonts as fonts } from '@/shared/ui/globalStyles.js';
 import { HapticEngine, SoundEngine } from '@/shared/lib/hapticSoundEngine.js';
 import { useAppStore } from '@/app/store.js';
 
-import { getLiveFeed, getLeaderboardData } from '@/shared/lib/firebaseService';
+// 🔥 getRivalData eklendi
+import { getLiveFeed, getLeaderboardData, getRivalData } from '@/shared/lib/firebaseService';
 import { auth, db } from '@/shared/lib/firebase';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
+import { useCoopSession } from '../hooks/useCoopSession.js';
 
 const sleekRowStyle = {
   background: "linear-gradient(145deg, rgba(15, 15, 20, 0.8) 0%, rgba(40, 40, 45, 0.2) 100%)",
@@ -39,9 +41,7 @@ const calculatePowerScore = (liftWeight, bodyWeight = 75, exerciseName = "") => 
 const getMajorLifts = (exercisesList) => {
   if (!exercisesList || !Array.isArray(exercisesList)) return [];
   const majors = ["bench press", "squat", "deadlift", "overhead press", "incline", "barbell row"];
-  return exercisesList.filter(ex => 
-    majors.some(m => ex.name.toLowerCase().includes(m)) && ex.maxWeight > 0
-  );
+  return exercisesList.filter(ex => majors.some(m => ex.name.toLowerCase().includes(m)) && ex.maxWeight > 0);
 };
 
 const UserProfileModal = ({ user, onClose, C, isFollowing, onToggleFollow }) => {
@@ -91,15 +91,6 @@ const UserProfileModal = ({ user, onClose, C, isFollowing, onToggleFollow }) => 
             </div>
           </div>
 
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 900, letterSpacing: 1.5, marginBottom: 8, fontStyle: "italic" }}>KULLANDIĞI PROGRAMLAR</div>
-          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 12 }}>
-            {user.programs?.length > 0 ? user.programs.map((prog, i) => (
-              <div key={i} style={{ background: "rgba(59, 130, 246, 0.1)", border: "1px solid rgba(59, 130, 246, 0.3)", color: "#3b82f6", padding: "6px 12px", borderRadius: 10, fontSize: 11, fontWeight: 900, flexShrink: 0, fontStyle: "italic" }}>
-                📋 {prog}
-              </div>
-            )) : <div style={{color: "rgba(255,255,255,0.3)", fontSize: 11, fontStyle: "italic"}}>Gizli veya girilmemiş.</div>}
-          </div>
-
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 900, letterSpacing: 1.5, marginBottom: 8, fontStyle: "italic" }}>KİŞİSEL REKORLAR (PR)</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
             {user.prs?.length > 0 ? user.prs.map((pr, i) => {
@@ -120,10 +111,6 @@ const UserProfileModal = ({ user, onClose, C, isFollowing, onToggleFollow }) => 
                 </div>
               );
             }) : <div style={{color: "rgba(255,255,255,0.3)", fontSize: 11, fontStyle: "italic", textAlign: "center", padding: 16}}>Kayıtlı PR bulunamadı.</div>}
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 10, color: "rgba(255,255,255,0.4)", lineHeight: 1.5, fontStyle: "italic", background: "rgba(0,0,0,0.3)", padding: "12px", borderRadius: 12, border: "1px dashed rgba(255,255,255,0.05)" }}>
-             <span style={{ fontSize: 20 }}>{isDataHidden ? '🔒' : '🌍'}</span> {user.privacyWarning}
           </div>
         </div>
       </motion.div>
@@ -182,24 +169,29 @@ const CommentsModal = ({ post, onClose, C, onAddComment, currentUserName }) => {
 export default function TabSocial({ themeColors: C }) {
   const { t } = useTranslation();
   
-  const currentUser = useAppStore(state => state.user);
+  const { user: currentUser, updateUser } = useAppStore();
   const currentUserName = currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName?.[0] || ''}.` : "Kullanıcı";
   const currentUserId = auth?.currentUser?.uid || "guest";
 
   const [activeTab, setActiveTab] = useState('feed'); 
   const [feedFilter, setFeedFilter] = useState('all'); 
-  const [selectedEx, setSelectedEx] = useState('Bench Press');
+  const [selectedEx, setSelectedEx] = useState('Tonnage');
   
   const [feedData, setFeedData] = useState([]);
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 🔥 YENİ: Rakip Analiz State'i
+  const [rivalData, setRivalData] = useState(null);
+
   const [viewUser, setViewUser] = useState(null);
   const [viewCommentsPost, setViewCommentsPost] = useState(null);
   const [following, setFollowing] = useState([]); 
-
-  // 🔥 GİZLİLİK BUTONU STATE'İ
   const [isPrivateProfile, setIsPrivateProfile] = useState(currentUser?.isPrivate ?? true);
+
+  const { coopId, coopData, createRoom, joinRoom, endSession } = useCoopSession();
+  const [joinCode, setJoinCode] = useState("");
+  const [coopLoading, setCoopLoading] = useState(false);
 
   const timeAgo = (dateInput) => {
     if (!dateInput) return t('soc_time_just_now', 'Az önce');
@@ -220,54 +212,52 @@ export default function TabSocial({ themeColors: C }) {
       if (activeTab === "feed") {
         const liveFeed = await getLiveFeed();
         const enrichedFeed = liveFeed.map(post => ({
-          ...post,
-          likes: post.likes || 0,
-          likedBy: post.likedBy || [],
-          comments: post.comments || [],
-          reactions: post.reactions || []
+          ...post, likes: post.likes || 0, likedBy: post.likedBy || [],
+          comments: post.comments || [], reactions: post.reactions || []
         }));
         setFeedData(enrichedFeed);
-      } else {
+      } 
+      else if (activeTab === "leaderboard") {
         const boardData = await getLeaderboardData();
         setLeaderboardData(boardData);
+
+        // 🔥 YENİ: RAKİP ANALİZİ HESAPLAMALARI
+        let myVol = 0;
+        const myEntry = boardData.find(b => b.userId === currentUserId);
+        
+        if (myEntry) {
+          myVol = myEntry.totalVolume;
+        } else if (currentUserId !== "guest") {
+          try {
+            const myDoc = await getDoc(doc(db, "leaderboard", currentUserId));
+            if (myDoc.exists()) myVol = myDoc.data().totalVolume || 0;
+          } catch (e) {}
+        }
+
+        if (myEntry && boardData.indexOf(myEntry) === 0) {
+           setRivalData({ type: 'first' }); // Lider benim
+        } else if (myVol >= 0) {
+           const rData = await getRivalData(myVol);
+           if (rData) {
+             setRivalData({ type: 'rival', data: rData, gap: rData.totalVolume - myVol });
+           }
+        }
       }
       setIsLoading(false);
     };
     fetchData();
   }, [activeTab]);
 
-
-
-  // 🔥 FIREBASE & STORE UPDATE: Gizlilik Ayarı Değiştirme
   const handleTogglePrivacy = async () => {
     const newStatus = !isPrivateProfile;
-    
-    // 1. Ekranı anında değiştir (Titreşim ve Ses ile)
     setIsPrivateProfile(newStatus);
-    HapticEngine.medium();
-    SoundEngine.tick();
+    HapticEngine.medium(); SoundEngine.tick();
     
-    const warningText = newStatus 
-      ? "Bu kullanıcı vücut verilerini gizli tutmaktadır." 
-      : "Bu profil vücut verilerini açıkça paylaşmaktadır.";
+    const warningText = newStatus ? "Bu kullanıcı vücut verilerini gizli tutmaktadır." : "Bu profil vücut verilerini açıkça paylaşmaktadır.";
+    updateUser({ isPrivate: newStatus, privacyWarning: warningText });
 
-    // 2. Global Store'u anında güncelle ki sekme değiştirince eski haline dönmesin
-    if (updateUser) {
-      updateUser({ isPrivate: newStatus, privacyWarning: warningText });
-    }
-
-    // 3. Eğer giriş yapmış bir kullanıcıysa Firebase'e kalıcı olarak yaz
     if (currentUserId && currentUserId !== "guest") {
-      try {
-        const userRef = doc(db, 'users', currentUserId);
-        await updateDoc(userRef, { 
-          isPrivate: newStatus,
-          privacyWarning: warningText
-        });
-      } catch (err) {
-        console.error("Gizlilik ayarı Firebase'e yazılamadı, ancak lokalde güncellendi:", err);
-        // Hata olsa bile ekranı geri zıplatmıyoruz, kullanıcı deneyimini bozmuyoruz.
-      }
+      try { await updateDoc(doc(db, 'users', currentUserId), { isPrivate: newStatus, privacyWarning: warningText }); } catch (err) {}
     }
   };
 
@@ -286,40 +276,21 @@ export default function TabSocial({ themeColors: C }) {
 
     try {
       const postRef = doc(db, 'feed', postId);
-      if (hasLiked) {
-        await updateDoc(postRef, { likedBy: arrayRemove(currentUserId), likes: increment(-1) });
-      } else {
-        await updateDoc(postRef, { likedBy: arrayUnion(currentUserId), likes: increment(1) });
-      }
-    } catch (err) { console.error("Beğeni hatası:", err); }
+      if (hasLiked) await updateDoc(postRef, { likedBy: arrayRemove(currentUserId), likes: increment(-1) });
+      else await updateDoc(postRef, { likedBy: arrayUnion(currentUserId), likes: increment(1) });
+    } catch (err) {}
   };
 
   const handleAddReaction = async (postId, emoji, e) => {
     e.stopPropagation(); HapticEngine.medium();
-    
-    setFeedData(prev => prev.map(p => {
-      if(p.id === postId) return { ...p, reactions: [...(p.reactions||[]), emoji] };
-      return p;
-    }));
-
-    try {
-      const postRef = doc(db, 'feed', postId);
-      await updateDoc(postRef, { reactions: arrayUnion(emoji) });
-    } catch (err) { console.error("Emoji hatası:", err); }
+    setFeedData(prev => prev.map(p => p.id === postId ? { ...p, reactions: [...(p.reactions||[]), emoji] } : p));
+    try { await updateDoc(doc(db, 'feed', postId), { reactions: arrayUnion(emoji) }); } catch (err) {}
   };
 
   const handleAddComment = async (postId, userName, text) => {
     const newComment = { user: userName, text: text };
-    
-    setFeedData(prev => prev.map(p => {
-      if(p.id === postId) return { ...p, comments: [...(p.comments||[]), newComment] };
-      return p;
-    }));
-
-    try {
-      const postRef = doc(db, 'feed', postId);
-      await updateDoc(postRef, { comments: arrayUnion(newComment) });
-    } catch (err) { console.error("Yorum hatası:", err); }
+    setFeedData(prev => prev.map(p => p.id === postId ? { ...p, comments: [...(p.comments||[]), newComment] } : p));
+    try { await updateDoc(doc(db, 'feed', postId), { comments: arrayUnion(newComment) }); } catch (err) {}
   };
 
   const handleToggleFollow = (targetUserId) => {
@@ -330,11 +301,7 @@ export default function TabSocial({ themeColors: C }) {
     const uid = post.userId || post.userName; 
     if(!uid) return;
     
-    let profileData = {
-      id: uid, name: post.userName || "Kullanıcı", avatar: post.userAvatar || "👤",
-      level: 1, title: "Üye", bodyWeight: "-", height: "-", age: "-",
-      programs: [], badges: ["🔥"], prs: [], privacyWarning: "Veriler yükleniyor...", isPrivate: true, isMe: uid === currentUserId
-    };
+    let profileData = { id: uid, name: post.userName || "Kullanıcı", avatar: post.userAvatar || "👤", level: 1, title: "Üye", bodyWeight: "-", height: "-", age: "-", programs: [], badges: ["🔥"], prs: [], privacyWarning: "Veriler yükleniyor...", isPrivate: true, isMe: uid === currentUserId };
     setViewUser(profileData); 
 
     try {
@@ -342,7 +309,6 @@ export default function TabSocial({ themeColors: C }) {
       const snap = await getDoc(userRef);
       if(snap.exists()) {
          const ud = snap.data();
-         
          let formattedPrs = [];
          if(ud.weightLog) {
             Object.keys(ud.weightLog).forEach(exName => {
@@ -353,64 +319,43 @@ export default function TabSocial({ themeColors: C }) {
                }
             });
          }
-
-         setViewUser({
-           ...profileData,
-           level: ud.level || 1, title: ud.title || "Üye",
-           bodyWeight: ud.weight || "-", height: ud.height || "-", age: ud.age || "-",
-           programs: ud.activePlanName ? [ud.activePlanName] : [],
-           badges: ud.badges || ["🔥"], prs: formattedPrs,
-           isPrivate: ud.isPrivate ?? true,
-           privacyWarning: ud.privacyWarning || (ud.isPrivate ? "Bu kullanıcı vücut verilerini gizli tutmaktadır." : "Bu profil tamamen açıktır.")
-         });
-      } else {
-         setViewUser({...profileData, privacyWarning: "Kullanıcı veritabanında bulunamadı."});
-      }
-    } catch(e) {
-       setViewUser({...profileData, privacyWarning: "Veri çekilirken bağlantı hatası oluştu."});
-    }
+         setViewUser({ ...profileData, level: ud.level || 1, title: ud.title || "Üye", bodyWeight: ud.weight || "-", height: ud.height || "-", age: ud.age || "-", programs: ud.activePlanName ? [ud.activePlanName] : [], badges: ud.badges || ["🔥"], prs: formattedPrs, isPrivate: ud.isPrivate ?? true, privacyWarning: ud.privacyWarning || (ud.isPrivate ? "Bu kullanıcı vücut verilerini gizli tutmaktadır." : "Bu profil tamamen açıktır.") });
+      } else setViewUser({...profileData, privacyWarning: "Kullanıcı veritabanında bulunamadı."});
+    } catch(e) { setViewUser({...profileData, privacyWarning: "Veri çekilirken hata oluştu."}); }
   };
 
-  const displayFeed = feedFilter === 'all' 
-    ? feedData 
-    : feedData.filter(post => following.includes(post.userId || post.userName));
+  const handleCreateRoom = async () => { setCoopLoading(true); await createRoom(); setCoopLoading(false); };
+  const handleJoinRoom = async () => {
+    if (!joinCode) return;
+    setCoopLoading(true);
+    const success = await joinRoom(joinCode);
+    if (!success) alert("Oda bulunamadı veya kod hatalı!");
+    setCoopLoading(false);
+  };
 
+  const displayFeed = feedFilter === 'all' ? feedData : feedData.filter(post => following.includes(post.userId || post.userName));
   const QUICK_EMOJIS = ["💪", "🦍", "🚀", "🎯"];
 
   return (
     <div style={{ minHeight: '100%', paddingBottom: 80, color: C.text, position: "relative" }}>
-      
       <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
-      {/* ARKA PLAN */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
         <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.2, 0.1], x: [0, -30, 0] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} style={{ position: 'absolute', top: '-10%', right: '-10%', width: '80vw', height: '80vw', background: `radial-gradient(circle, ${C.yellow}30 0%, transparent 60%)`, filter: 'blur(100px)' }} />
       </div>
 
       <div style={{ position: "relative", zIndex: 1, padding: "0 4px" }}>
         
-        {/* ÜST BAŞLIK VE GİZLİLİK BUTONU */}
         <div style={{ ...sleekRowStyle, padding: "20px", marginBottom: 24, display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: "#fff", fontFamily: fonts.header, fontStyle: "italic", letterSpacing: -0.5 }}>{t('soc_title', 'Topluluk & Rekabet')} 🍻</h2>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 6, fontStyle: "italic" }}>{t('soc_desc', 'Takip et, motive ol, sınırlarını zorla.')}</div>
           </div>
           
-          <button 
-            onClick={handleTogglePrivacy}
-            style={{ 
-              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, 
-              background: isPrivateProfile ? "rgba(46, 204, 113, 0.05)" : "rgba(231, 76, 60, 0.05)", 
-              padding: "12px 16px", borderRadius: 16, 
-              border: `1px solid ${isPrivateProfile ? 'rgba(46, 204, 113, 0.2)' : 'rgba(231, 76, 60, 0.2)'}`,
-              cursor: "pointer", transition: "0.3s"
-            }}
-          >
+          <button onClick={handleTogglePrivacy} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: isPrivateProfile ? "rgba(46, 204, 113, 0.05)" : "rgba(231, 76, 60, 0.05)", padding: "12px 16px", borderRadius: 16, border: `1px solid ${isPrivateProfile ? 'rgba(46, 204, 113, 0.2)' : 'rgba(231, 76, 60, 0.2)'}`, cursor: "pointer", transition: "0.3s" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 18 }}>{isPrivateProfile ? '🛡️' : '🌍'}</span>
-              <span style={{ fontSize: 11, color: isPrivateProfile ? C.green : C.red, fontWeight: 900, fontStyle: "italic" }}>
-                {isPrivateProfile ? 'Gizlilik Açık: Kilo/Boy Gizli' : 'Gizlilik Kapalı: Profil Herkese Açık'}
-              </span>
+              <span style={{ fontSize: 11, color: isPrivateProfile ? C.green : C.red, fontWeight: 900, fontStyle: "italic" }}>{isPrivateProfile ? 'Gizlilik Açık: Kilo/Boy Gizli' : 'Gizlilik Kapalı: Profil Herkese Açık'}</span>
             </div>
             <div style={{ width: 36, height: 20, background: isPrivateProfile ? C.green : "rgba(255,255,255,0.1)", borderRadius: 20, position: "relative", transition: "0.3s" }}>
                <div style={{ width: 16, height: 16, background: "#fff", borderRadius: "50%", position: "absolute", top: 2, left: isPrivateProfile ? 18 : 2, transition: "0.3s", boxShadow: "0 2px 5px rgba(0,0,0,0.5)" }} />
@@ -418,13 +363,13 @@ export default function TabSocial({ themeColors: C }) {
           </button>
         </div>
 
-        {/* TAB GEÇİŞLERİ */}
         <div style={{ display: "flex", gap: 8, marginBottom: 16, background: "rgba(0,0,0,0.4)", padding: 6, borderRadius: 20, border: "1px solid rgba(255,255,255,0.05)" }}>
-          <button onClick={() => setActiveTab('feed')} style={{ flex: 1, padding: "12px", borderRadius: 16, background: activeTab === 'feed' ? "rgba(255,255,255,0.1)" : "transparent", border: "none", color: activeTab === 'feed' ? "#fff" : "rgba(255,255,255,0.4)", fontWeight: 900, fontSize: 13, fontFamily: fonts.header, fontStyle: "italic", cursor: "pointer", transition: "0.2s" }}>🌐 Akış</button>
-          <button onClick={() => setActiveTab('leaderboard')} style={{ flex: 1, padding: "12px", borderRadius: 16, background: activeTab === 'leaderboard' ? "rgba(255,255,255,0.1)" : "transparent", border: "none", color: activeTab === 'leaderboard' ? "#fff" : "rgba(255,255,255,0.4)", fontWeight: 900, fontSize: 13, fontFamily: fonts.header, fontStyle: "italic", cursor: "pointer", transition: "0.2s" }}>🏆 Liderler</button>
+          <button onClick={() => setActiveTab('feed')} style={{ flex: 1, padding: "12px", borderRadius: 16, background: activeTab === 'feed' ? "rgba(255,255,255,0.1)" : "transparent", border: "none", color: activeTab === 'feed' ? "#fff" : "rgba(255,255,255,0.4)", fontWeight: 900, fontSize: 12, fontFamily: fonts.header, fontStyle: "italic", cursor: "pointer", transition: "0.2s" }}>🌐 Akış</button>
+          <button onClick={() => setActiveTab('leaderboard')} style={{ flex: 1, padding: "12px", borderRadius: 16, background: activeTab === 'leaderboard' ? "rgba(255,255,255,0.1)" : "transparent", border: "none", color: activeTab === 'leaderboard' ? "#fff" : "rgba(255,255,255,0.4)", fontWeight: 900, fontSize: 12, fontFamily: fonts.header, fontStyle: "italic", cursor: "pointer", transition: "0.2s" }}>🏆 Liderler</button>
+          <button onClick={() => setActiveTab('coop')} style={{ flex: 1, padding: "12px", borderRadius: 16, background: activeTab === 'coop' ? "rgba(255,255,255,0.1)" : "transparent", border: "none", color: activeTab === 'coop' ? "#fff" : "rgba(255,255,255,0.4)", fontWeight: 900, fontSize: 12, fontFamily: fonts.header, fontStyle: "italic", cursor: "pointer", transition: "0.2s" }}>🎮 Co-op</button>
         </div>
 
-        {isLoading && (
+        {isLoading && activeTab !== 'coop' && (
           <div style={{ textAlign: "center", padding: "40px 0", color: C.sub, fontWeight: 800, fontSize: 13, fontStyle: "italic" }}>
             <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} style={{ fontSize: 28, marginBottom: 10, display: "inline-block" }}>⏳</motion.div>
             <div>Yükleniyor...</div>
@@ -432,6 +377,50 @@ export default function TabSocial({ themeColors: C }) {
         )}
 
         <AnimatePresence mode="wait">
+          
+          {!isLoading && activeTab === 'coop' && (
+            <motion.div key="coop" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ ...sleekRowStyle, padding: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                <div style={{ fontSize: 32, filter: "drop-shadow(0 0 10px rgba(59, 130, 246, 0.5))" }}>📡</div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, fontFamily: fonts.header, color: "#fff" }}>Canlı Co-op İdman</h3>
+                  <p style={{ margin: "4px 0 0 0", fontSize: 12, color: "rgba(255,255,255,0.5)" }}>Arkadaşınla gerçek zamanlı bağlan, setleri ve hacimleri yarıştır.</p>
+                </div>
+              </div>
+
+              {coopId ? (
+                <div style={{ background: "rgba(0,0,0,0.3)", padding: 20, borderRadius: 20, textAlign: "center", border: `1px solid ${C.border}40` }}>
+                  <div style={{ fontSize: 11, color: C.green, fontWeight: 900, letterSpacing: 2, marginBottom: 8 }}>BAĞLANTI AKTİF</div>
+                  <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", fontFamily: fonts.mono, letterSpacing: 4, marginBottom: 16 }}>{coopId}</div>
+                  
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, background: "rgba(255,255,255,0.05)", padding: 12, borderRadius: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: C.mute }}>Kurucu</div>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: "#fff" }}>{coopData?.host?.name || "Bekleniyor"}</div>
+                    </div>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: C.blue }}>VS</div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 10, color: C.mute }}>Partner</div>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: "#fff" }}>{coopData?.guest?.name || "Katılmadı..."}</div>
+                    </div>
+                  </div>
+
+                  <button onClick={endSession} style={{ background: `rgba(231, 76, 60, 0.15)`, border: `1px solid rgba(231, 76, 60, 0.4)`, color: C.red, padding: "12px 24px", borderRadius: 16, fontWeight: 900, width: "100%", cursor: "pointer" }}>Odayı Kapat</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <button onClick={handleCreateRoom} disabled={coopLoading} style={{ background: `linear-gradient(135deg, ${C.blue}, #2563eb)`, color: "#fff", border: "none", padding: "16px", borderRadius: 16, fontWeight: 900, fontSize: 15, cursor: "pointer", fontFamily: fonts.header, boxShadow: `0 10px 20px ${C.blue}40` }}>
+                    {coopLoading ? "Kuruluyor..." : "Oda Kur (Host)"}
+                  </button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input type="text" placeholder="6 Haneli Kod" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} maxLength={6} style={{ flex: 1, background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}40`, color: "#fff", padding: "16px", borderRadius: 16, outline: "none", fontSize: 16, fontWeight: 900, textAlign: "center", fontFamily: fonts.mono, textTransform: "uppercase" }} />
+                    <button onClick={handleJoinRoom} disabled={coopLoading || joinCode.length < 5} style={{ background: "rgba(255,255,255,0.1)", border: `1px solid rgba(255,255,255,0.2)`, color: "#fff", padding: "0 24px", borderRadius: 16, fontWeight: 900, cursor: "pointer" }}>Katıl</button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {!isLoading && activeTab === 'feed' && (
             <motion.div key="feed" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} style={{ display: "flex", flexDirection: "column", gap: 16, paddingBottom: 40 }}>
               
@@ -519,8 +508,34 @@ export default function TabSocial({ themeColors: C }) {
 
           {!isLoading && activeTab === 'leaderboard' && (
             <motion.div key="leaderboard" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              
+              {/* 🔥 YENİ: RAKİP (RIVAL) BİLDİRİM KARTI */}
+              {rivalData && !rivalData.isFirst && (
+                <div style={{ ...sleekRowStyle, padding: "20px", background: `linear-gradient(135deg, ${C.blue}1A, rgba(0,0,0,0.4))`, border: `1px solid ${C.blue}40`, display: "flex", alignItems: "center", gap: 16 }}>
+                   <div style={{ fontSize: 36, filter: `drop-shadow(0 0 10px ${C.blue}80)` }}>🎯</div>
+                   <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, color: C.blue, fontWeight: 900, letterSpacing: 1, marginBottom: 4, fontFamily: fonts.header }}>HEDEF RAKİBİN: {rivalData.data.userName.toUpperCase()}</div>
+                      <div style={{ fontSize: 13, color: "#fff", fontWeight: 600, lineHeight: 1.4 }}>
+                        Onu geçmek ve bir üst sıraya yerleşmek için <strong style={{ color: C.yellow, fontFamily: fonts.mono, fontSize: 15 }}>{(rivalData.gap / 1000).toFixed(1)}t</strong> daha hacim yapman gerekiyor. Ağırlıkları artır!
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              {rivalData && rivalData.isFirst && (
+                <div style={{ ...sleekRowStyle, padding: "20px", background: `linear-gradient(135deg, ${C.yellow}1A, rgba(0,0,0,0.4))`, border: `1px solid ${C.yellow}40`, display: "flex", alignItems: "center", gap: 16 }}>
+                   <div style={{ fontSize: 36, filter: `drop-shadow(0 0 10px ${C.yellow}80)` }}>👑</div>
+                   <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, color: C.yellow, fontWeight: 900, letterSpacing: 1, marginBottom: 4, fontFamily: fonts.header }}>ZİRVEDESİN</div>
+                      <div style={{ fontSize: 13, color: "#fff", fontWeight: 600, lineHeight: 1.4 }}>
+                        Şu an liderlik tablosunun kralı sensin. Arkandakiler sana yetişmeye çalışıyor, sakın yavaşlama!
+                      </div>
+                   </div>
+                </div>
+              )}
+
               <div style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,0.05)", padding: "12px 16px", borderRadius: 20, border: "1px solid rgba(255,255,255,0.05)" }}>
-                 <span style={{ fontSize: 18 }}>🎯</span>
+                 <span style={{ fontSize: 18 }}>📊</span>
                  <select value={selectedEx} onChange={(e) => setSelectedEx(e.target.value)} style={{ flex: 1, background: "transparent", border: "none", color: "#fff", fontSize: 15, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", outline: "none", cursor: "pointer" }}>
                    <option value="Tonnage" style={{color:"#000"}}>Toplam Tonaj Ligi</option>
                  </select>

@@ -6,16 +6,7 @@ export const fonts = {
   mono: "monospace"
 };
 
-export const MEASUREMENT_TYPES = [
-  { id: "weight", label: "Kilo (kg)", reverseGoal: true }, 
-  { id: "waist", label: "Bel (cm)", reverseGoal: true },
-  { id: "chest", label: "Göğüs (cm)", reverseGoal: false },
-  { id: "shoulders", label: "Omuz (cm)", reverseGoal: false },
-  { id: "arm", label: "Kol (cm)", reverseGoal: false },
-  { id: "glutes", label: "Kalça/Basen (cm)", reverseGoal: false },
-  { id: "thigh", label: "Bacak (cm)", reverseGoal: false },
-  { id: "neck", label: "Boyun (cm)", reverseGoal: false }
-];
+
 
 export const MEASURE_TIPS = {
   weight: "Sabah aç karnına, tuvalete çıktıktan sonra tartılın.",
@@ -27,6 +18,14 @@ export const MEASURE_TIPS = {
   thigh: "Üst bacağın en kalın yerinden (kasıklara yakın noktadan) ölçün.",
   neck: "Boynun en dar yerinden, Adem elmasının hemen altından ölçün."
 };
+
+export const MEASUREMENT_TYPES = [
+  { id: 'weight', label: 'Vücut Ağırlığı (kg)', reverseGoal: true },
+  { id: 'bodyFat', label: 'Yağ Oranı (%)', reverseGoal: true },
+  { id: 'waist', label: 'Bel Çevresi (cm)', reverseGoal: true },
+  { id: 'neck', label: 'Boyun Çevresi (cm)', reverseGoal: true },
+  { id: 'hip', label: 'Kalça Çevresi (cm)', reverseGoal: true } // Kadınlar için
+];
 
 export const CORE_LIFTS = ["squat", "bench press", "deadlift", "overhead press", "pull-up", "row"];
 
@@ -40,6 +39,30 @@ export const guessTargetMuscle = (exName) => {
   if (name.includes('crunch') || name.includes('plank') || name.includes('core')) return 'Karın';
   return "Diğer";
 };
+
+
+
+// 🔥 US NAVY YAĞ ORANI HESAPLAYICI
+export const calculateUSNavyBodyFat = (gender = 'male', height, neck, waist, hip = 0) => {
+  if (!height || !neck || !waist) return null;
+  const h = parseFloat(height);
+  const n = parseFloat(neck);
+  const w = parseFloat(waist);
+  const hi = parseFloat(hip);
+
+  try {
+    let bf = 0;
+    if (gender === 'female' && hi > 0) {
+      bf = 163.205 * Math.log10(w + hi - n) - 97.684 * Math.log10(h) - 78.387;
+    } else {
+      bf = 86.010 * Math.log10(w - n) - 70.041 * Math.log10(h) + 36.76;
+    }
+    return Math.max(3, Math.min(60, bf)); // %3 ile %60 arasında sınırla
+  } catch (error) {
+    return null;
+  }
+};
+
 
 // 🌟 PREMIUM GLASSMORPHISM STYLES (Tüm Kartlar İçin Ortak)
 export const getGlassCardStyle = (C) => ({

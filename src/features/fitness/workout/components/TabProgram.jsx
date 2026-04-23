@@ -123,7 +123,6 @@ export default function TabProgram({
   const setUser = useAppStore(state => state.setUser);
   const customExercises = useAppStore(state => state.customExercises) || [];
   
-  // 🧠 KULLANICININ AĞIRLIK GEÇMİŞİNİ AL VE PLATOLARI TESPİT ET
   const weightLog = useAppStore(state => state.weightLog);
   const periodizationData = useMemo(() => {
       try {
@@ -133,7 +132,14 @@ export default function TabProgram({
       }
   }, [weightLog]);
 
-  const [showPresetsList, setShowPresetsList] = useState(!customWorkouts || customWorkouts.length === 0);
+  // 🔥 YENİ DÜZELTME: customWorkouts objesi TabToday'den { id, workouts: [...] } gibi gelebilir.
+  // safeWorkouts bunu çözerek saf gün dizisini dışarı çıkartır.
+  const rawWorkouts = Array.isArray(customWorkouts) ? customWorkouts : (customWorkouts?.workouts || []);
+  const safeWorkouts = (rawWorkouts.length > 0 && !rawWorkouts[0].exercises && rawWorkouts[0].workouts) 
+      ? rawWorkouts[0].workouts 
+      : rawWorkouts;
+
+  const [showPresetsList, setShowPresetsList] = useState(!safeWorkouts || safeWorkouts.length === 0);
   const [activeTab, setActiveTab] = useState("presets"); 
   const [selectedPreset, setSelectedPreset] = useState(null); 
   const [presetSetup, setPresetSetup] = useState(null);
@@ -142,13 +148,11 @@ export default function TabProgram({
   const [swapIndex, setSwapIndex] = useState(null);
   const [showAddExModal, setShowAddExModal] = useState(false);
 
-  const safeWorkouts = Array.isArray(customWorkouts) ? customWorkouts : [];
   const combinedDB = [...(Array.isArray(EXERCISE_DB) ? EXERCISE_DB : []), ...customExercises];
 
-  // 🛠️ YORGUNLUĞU FARK EDİP DELOAD UYGULAYICI FONKSİYON
   const applyDeloadWeek = () => {
-    if (customWorkouts?.length > 0) {
-      const deloadPlan = generateDeloadProgram(customWorkouts[0] || { workouts: customWorkouts });
+    if (safeWorkouts?.length > 0) {
+      const deloadPlan = generateDeloadProgram({ workouts: safeWorkouts });
       if (deloadPlan) {
         setCustomWorkouts(deloadPlan.workouts || [deloadPlan]);
         if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
@@ -277,35 +281,6 @@ export default function TabProgram({
     setSwapIndex(null);
   };
 
-  const getPresetFocus = (preset) => {
-    const muscleCounts = {};
-    let totalExs = 0;
-    (preset.workouts || []).forEach(w => {
-      (w.exercises || []).forEach(ex => {
-        const realTarget = ex.target || guessTargetMuscle(ex.name);
-        muscleCounts[realTarget] = (muscleCounts[realTarget] || 0) + 1;
-        totalExs += 1;
-      });
-    });
-    const sortedMuscles = Object.entries(muscleCounts).sort((a, b) => b[1] - a[1]).slice(0, 4); 
-    return { sortedMuscles, totalExs };
-  };
-
-  const builderVolume = useMemo(() => {
-    if (!editingWorkout?.exercises) return [];
-    const counts = {};
-    let totalSets = 0;
-    editingWorkout.exercises.forEach(ex => {
-      const sets = parseInt(ex.sets) || 0;
-      const realTarget = ex.target || guessTargetMuscle(ex.name);
-      counts[realTarget] = (counts[realTarget] || 0) + sets;
-      totalSets += sets;
-    });
-    return Object.entries(counts).map(([name, sets]) => ({
-      name, sets, pct: totalSets > 0 ? Math.round((sets / totalSets) * 100) : 0
-    })).sort((a, b) => b.sets - a.sets);
-  }, [editingWorkout?.exercises, combinedDB]);
-
   const glassCardStyle = getGlassCardStyle(C);
   const bgPrimary = selectedPreset ? selectedPreset.color : C.blue;
   const bgSecondary = selectedPreset ? selectedPreset.color : C.green;
@@ -330,32 +305,6 @@ export default function TabProgram({
             {t('prog_tab_custom')}
           </button>
         </div>
-
-        {/* 🧠 PERIODİZASYON KOÇU UYARI KARTI (PLATO TESPİTİ) */}
-        <AnimatePresence>
-          {periodizationData?.needsDeload && !customWorkouts?.[0]?.isDeload && (
-            <motion.div 
-              initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-              style={{ background: `linear-gradient(145deg, rgba(234, 179, 8, 0.15), rgba(202, 138, 4, 0.2))`, border: `1px solid rgba(234, 179, 8, 0.4)`, padding: 20, borderRadius: 24, marginBottom: 24, boxShadow: "0 10px 30px rgba(234, 179, 8, 0.15)" }}
-            >
-              <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-                <div style={{ fontSize: 32, filter: "drop-shadow(0 0 10px #eab308)" }}>⚠️</div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 900, color: "#eab308", fontFamily: fonts.header, letterSpacing: 1, marginBottom: 6 }}>PLATO TESPİT EDİLDİ</div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", lineHeight: 1.5, marginBottom: 12 }}>
-                    Son haftalardaki antrenman hacminde (tonaj) artış görünmüyor. Sinir sisteminin (CNS) resetlenmesi ve kasların yeni adaptasyonlara hazır olması için bu haftayı <strong>Deload (Aktif Dinlenme)</strong> haftası ilan etmeni öneriyorum.
-                  </div>
-                  <button 
-                    onClick={applyDeloadWeek}
-                    style={{ background: "#eab308", color: "#000", border: "none", padding: "10px 16px", borderRadius: 12, fontWeight: 900, fontSize: 13, cursor: "pointer", fontFamily: fonts.header }}
-                  >
-                    Deload Moduna Geç (%60 Ağırlık)
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         <AnimatePresence mode="wait">
           

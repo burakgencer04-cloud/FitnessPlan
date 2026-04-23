@@ -2,13 +2,12 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from 'react-i18next';
 import { getLocalIsoDate } from '@/shared/utils/dateUtils.js';
-import { EXERCISE_DB, WORKOUT_PRESETS } from '../data/workoutData.js'; 
+import { EXERCISE_DB, WORKOUT_PRESETS, PHASES } from '../data/workoutData.js'; 
 import { useAppStore } from '@/app/store.js';
 import { HapticEngine, SoundEngine } from '@/shared/lib/hapticSoundEngine.js';
 import { getDailyQuests } from '../data/questData.js';
 import { guessTargetMuscle } from '../utils/workoutAnalyzer.jsx'; 
-import { WORKOUT_TIPS } from '../utils/tabTodayUtils.js';
-import { globalFonts as fonts, getGlobalGlassStyle, getGlobalGlassInnerStyle as getGlassInnerStyle, getMainButtonStyle } from '@/shared/ui/globalStyles.js';
+import { globalFonts as fonts, sleekRowStyle, getMainButtonStyle } from '@/shared/ui/globalStyles.js';
 import SetRow from './SetRow.jsx';
 import HistoryBottomSheet from './HistoryBottomSheet.jsx';
 import { PlatesModal, SwapModal, VideoModal, SummaryModal } from './WorkoutModals.jsx';
@@ -16,6 +15,11 @@ import ShareCard from '@/features/social/components/ShareCard.jsx';
 import AICoach from './AICoach.jsx';
 import WorkoutArena from './WorkoutArena.jsx'; 
 import TabProgram from './TabProgram.jsx';
+import MorningCheckInModal from './MorningCheckInModal.jsx';
+import CoopBanner from '@/features/social/components/CoopBanner.jsx';
+import { useCoopSession } from '@/features/social/hooks/useCoopSession.js';
+import { applyDailyReadiness } from '@/features/user/onboarding/utils/generatorEngine.js'; 
+import QuickWorkoutModal from './QuickWorkoutModal.jsx';
 
 const WorkoutTimer = React.memo(({ sessActive }) => {
   const [elapsed, setElapsed] = useState(0);
@@ -47,15 +51,17 @@ const WorkoutTimer = React.memo(({ sessActive }) => {
   return <>{m}:{s}</>;
 });
 
-export default function TabToday({
-  sessActive, setSessActive, sessPhase, setSessPhase, sessDay, setSessDay,
-  activePhase, setActivePhase, activeDay, setActiveDay, timer, restT,
-  weightLog, setWL, completedW, finishSession, PHASES, themeColors: C,
-  playDing, sessionSets, setSessionSets, customWorkouts, setCustomWorkouts,
-  EXERCISE_DB, exNotesLog, showToast
-}) {
+export default function TabToday({ timer, restT, finishSession, themeColors: C, playDing }) {
   const { t } = useTranslation(); 
-  const user = useAppStore(state => state.user);
+  
+  const {
+    user, morningCheckIn, setMorningCheckIn, 
+    sessActive, setSessActive, sessPhase, setSessPhase, sessDay, setSessDay,
+    activePhase, setActivePhase, activeDay, setActiveDay,
+    weightLog, setWL, completedW, sessionSets, setSessionSets,
+    programs, setPrograms, exNotesLog, setActiveWorkoutSession,
+    quickTemplates, addQuickTemplate, activeAdHocWorkout, setActiveAdHocWorkout
+  } = useAppStore();
   
   const [activeExIndex, setActiveExIndex] = useState(0);
   const [modalState, setModalState] = useState({ video: false, summary: false, historyEx: null, swapOpen: false, platesOpen: false });
@@ -63,6 +69,13 @@ export default function TabToday({
   const [swappedExercises, setSwappedExercises] = useState({});
   const [showShareCard, setShowShareCard] = useState(false);
   const [finalStats, setFinalStats] = useState(null);
+  
+  const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [hasDismissedCheckIn, setHasDismissedCheckIn] = useState(false);
+  const [modalEnergy, setModalEnergy] = useState(5);
+  const [modalSleep, setModalSleep] = useState(7);
+  const [showQuickWorkoutModal, setShowQuickWorkoutModal] = useState(false);
+
   const visibleRestLeft = restT?.secs || 0;
   
   const todayStr = getLocalIsoDate();
@@ -71,35 +84,45 @@ export default function TabToday({
   const [isArenaOpen, setIsArenaOpen] = useState(false);
   const [showProgramEditor, setShowProgramEditor] = useState(false);
 
+  const { coopId, coopData, logSet } = useCoopSession();
+  const partner = useMemo(() => {
+    if (!coopData) return null;
+    return coopData.host?.uid === (user?.uid || 'guest') ? coopData.guest : coopData.host;
+  }, [coopData, user?.uid]);
+
+  useEffect(() => {
+    // 🔥 DÜZELTME 1: Bugün soru sorulup sorulmadığını cihaz hafızasından kontrol et
+    const lastPromptDate = localStorage.getItem('lastCheckInPromptDate');
+    
+    if (!showProgramEditor && !sessActive && !hasDismissedCheckIn && (!morningCheckIn || morningCheckIn.date !== todayStr)) {
+      // Eğer bugün henüz hiç soru sorulmadıysa modalı aç
+      if (lastPromptDate !== todayStr) {
+        setShowCheckInModal(true);
+      }
+    }
+  }, [morningCheckIn, todayStr, sessActive, hasDismissedCheckIn, showProgramEditor]);
+
+  // 🔥 ZOMBİ İDMAN DÖNGÜSÜ BURADA ÇÖZÜLDÜ (Bağımlılıklar [] yapıldı)
   useEffect(() => {
     const syncSession = () => {
       const savedStr = localStorage.getItem('activeWorkoutSession');
       if (savedStr) {
         try {
           const parsed = JSON.parse(savedStr);
-          const setSession = useAppStore.getState().setActiveWorkoutSession;
-          if (setSession) setSession({ startTime: parsed.startTime });
+          const currentSessActive = useAppStore.getState().sessActive; 
+          if (setActiveWorkoutSession) setActiveWorkoutSession({ startTime: parsed.startTime });
+          if (parsed.isActive && !currentSessActive) {
+            setSessActive(true); setSessPhase(parsed.phase); setSessDay(parsed.day);
+            setActiveExIndex(parsed.exIndex || 0); setDynamicSetCounts(parsed.setCounts || {});
+            setSwappedExercises(parsed.swaps || {});
+            if (parsed.sessionSets && setSessionSets) setSessionSets(parsed.sessionSets);
+          }
         } catch (error) {}
       }
     };
     syncSession();
     window.addEventListener('focus', syncSession);
     return () => window.removeEventListener('focus', syncSession);
-  }, []);
-
-  useEffect(() => {
-    const savedSessionStr = localStorage.getItem('activeWorkoutSession');
-    if (savedSessionStr) {
-      try {
-        const saved = JSON.parse(savedSessionStr);
-        if (saved.isActive) {
-          setSessActive(true); setSessPhase(saved.phase); setSessDay(saved.day);
-          setActiveExIndex(saved.exIndex || 0); setDynamicSetCounts(saved.setCounts || {});
-          setSwappedExercises(saved.swaps || {});
-          if (saved.sessionSets && setSessionSets) setSessionSets(saved.sessionSets);
-        }
-      } catch (e) { }
-    }
   }, []); 
 
   useEffect(() => {
@@ -114,15 +137,39 @@ export default function TabToday({
     }
   }, [sessActive, sessPhase, sessDay, activeExIndex, dynamicSetCounts, swappedExercises, sessionSets]);
 
-  const activePlanWorkouts = useMemo(() => {
-    if (user?.activePlanId) {
-      const foundPreset = WORKOUT_PRESETS.find(p => p.id === user.activePlanId);
-      if (foundPreset) return foundPreset.workouts;
+  const activeProgram = useMemo(() => {
+    if (programs && programs.length > 0 && (!programs[0].workouts && programs[0].exercises)) {
+      return { id: 'legacy_custom', name: 'Özel Program', workouts: programs };
     }
-    return PHASES[activePhase]?.workouts;
-  }, [user?.activePlanId, activePhase, PHASES]);
+    if (!user?.activePlanId) return programs?.[0] || null; 
+    const custom = programs?.find(p => p.id === user.activePlanId);
+    if (custom) return custom;
+    const preset = WORKOUT_PRESETS.find(p => p.id === user.activePlanId);
+    if (preset) return preset;
+    return programs?.[0] || null; 
+  }, [programs, user?.activePlanId]);
 
-  const currentWorkout = activePlanWorkouts?.[activeDay];
+  const handleSetProgramsFromTabProgram = useCallback((newData) => {
+    const data = typeof newData === 'function' ? newData(programs?.[0]?.workouts || []) : newData;
+    setPrograms([{
+      id: user?.activePlanId || `custom_${Date.now()}`,
+      name: user?.activePlanName || "Özel Program",
+      type: 'custom',
+      workouts: data
+    }]);
+  }, [programs, user, setPrograms]);
+
+  const activePlanWorkouts = useMemo(() => {
+    return activeProgram?.workouts || PHASES[activePhase]?.workouts || [];
+  }, [activeProgram, activePhase, PHASES]);
+
+  const currentWorkout = useMemo(() => {
+    if (activeAdHocWorkout) return activeAdHocWorkout;
+    const rawWorkout = activePlanWorkouts[activeDay];
+    const isToday = morningCheckIn?.date === todayStr;
+    return applyDailyReadiness(rawWorkout, isToday ? morningCheckIn : null);
+  }, [activePlanWorkouts, activeDay, morningCheckIn, todayStr, activeAdHocWorkout]);
+  
   const sessionExercises = currentWorkout?.exercises || [];
   
   const baseExercise = sessionExercises[activeExIndex];
@@ -145,23 +192,13 @@ export default function TabToday({
     return count;
   }, [sessionSets, activeExIndex, currentSetCount]);
 
-  const muscleVolumes = useMemo(() => {
-    const volumes = {}; let maxVol = 0;
+  const totalVolume = useMemo(() => {
+    let vol = 0;
     Object.entries(sessionSets).forEach(([key, set]) => {
-      if (set?.done && set?.t !== 'W') { 
-        const [exIdx] = key.split('-'); const exName = sessionExercises[exIdx]?.name;
-        if (exName) {
-          const realTarget = sessionExercises[exIdx]?.target || guessTargetMuscle(exName);
-          const enteredWeight = parseFloat(set.w) || 0; const vol = enteredWeight * (parseInt(set.r) || 0);
-          volumes[realTarget] = (volumes[realTarget] || 0) + vol;
-          if (volumes[realTarget] > maxVol) maxVol = volumes[realTarget];
-        }
-      }
+      if (set?.done && set?.t !== 'W') vol += (parseFloat(set.w) || 0) * (parseInt(set.r) || 0);
     });
-    return Object.keys(volumes).map(muscle => ({ name: muscle, volume: volumes[muscle], intensity: maxVol > 0 ? volumes[muscle] / maxVol : 0 }));
-  }, [sessionSets, sessionExercises]);
-
-  const totalVolume = useMemo(() => muscleVolumes.reduce((acc, m) => acc + m.volume, 0), [muscleVolumes]);
+    return vol;
+  }, [sessionSets]);
 
   const currentMaxWeight = useMemo(() => {
     let max = 0;
@@ -171,6 +208,15 @@ export default function TabToday({
     }
     return max;
   }, [sessionSets, activeExIndex, currentSetCount]);
+
+  const handleStartAdHoc = (workoutData) => {
+    setActiveAdHocWorkout(workoutData);
+    setShowQuickWorkoutModal(false);
+    setSessPhase('adhoc'); 
+    setSessDay(Date.now());
+    HapticEngine.medium(); SoundEngine.success(); 
+    setSessActive(true); timer.toggle();
+  };
 
   const handleWorkoutStart = useCallback(() => {
     if (!sessionExercises.length) return;
@@ -198,32 +244,49 @@ export default function TabToday({
     HapticEngine.success();
   }, []);
 
-  const completeAndCloseSession = useCallback((notesData) => {
+  const completeAndCloseSession = useCallback(async (notesData, templateNameToSave) => {
     const safeNotes = (notesData && notesData.nativeEvent) ? undefined : notesData;
     const savedStr = localStorage.getItem('activeWorkoutSession');
     const saved = savedStr ? JSON.parse(savedStr) : {};
     const finalSecs = saved.startTime ? Math.floor((Date.now() - saved.startTime) / 1000) : 0;
     const finalTimeFormatted = `${Math.floor(finalSecs / 60).toString().padStart(2, '0')}:${(finalSecs % 60).toString().padStart(2, '0')}`;
     
+    const durationMins = Math.max(1, Math.floor(finalSecs / 60));
+    const userWeight = user?.weight || 75;
+    const caloriesBurned = Math.round(6.0 * userWeight * (durationMins / 60));
+
+    if (templateNameToSave) {
+      addQuickTemplate({ id: `template_${Date.now()}`, name: templateNameToSave, exercises: currentWorkout.exercises });
+    }
+
     setFinalStats({ 
-      volume: totalVolume, duration: Math.floor(finalSecs / 60) || 1, 
+      volume: totalVolume, duration: durationMins, calories: caloriesBurned,
       exercises: workoutSummaryData.length, workoutName: currentWorkout?.label || "Antrenman", exercisesList: workoutSummaryData
     });
 
+    // 🔥 ZOMBİ İDMAN DÜZELTİLDİ: Hafıza ANINDA siliniyor ve her şey sıfırlanıyor
+    localStorage.removeItem('activeWorkoutSession');
+    setSessActive(false); 
+    setActiveExIndex(0);
+    setDynamicSetCounts({});
+    setSwappedExercises({});
+    if (setSessionSets) setSessionSets({});
     setModalState(p => ({ ...p, summary: false }));
+    timer.reset(); 
+    restT.stop();
     
-    // GÜNCELLENEN KISIM: App.jsx'e tüm veriyi gönder
-    finishSession({ 
-      duration: finalTimeFormatted, 
-      notes: safeNotes,
-      totalVolume,
-      workoutSummaryData,
-      currentWorkout,
-      sessionSets
-    });
-    
+    try {
+      await finishSession({ 
+        duration: finalTimeFormatted, notes: safeNotes, totalVolume, 
+        calories: caloriesBurned, workoutSummaryData, currentWorkout, sessionSets 
+      });
+    } catch (err) {
+      console.error(err);
+    }
+
+    if (setActiveAdHocWorkout) setActiveAdHocWorkout(null);
     setShowShareCard(true);
-  }, [finishSession, setSessionSets, totalVolume, workoutSummaryData, currentWorkout, sessionSets]);
+  }, [finishSession, setSessionSets, totalVolume, workoutSummaryData, currentWorkout, sessionSets, user, addQuickTemplate, setActiveAdHocWorkout, setSessActive, timer, restT]);
 
   const handleSetUpdate = useCallback((exIdx, setIdx, field, value) => {
     setSessionSets(prev => ({ ...prev, [`${exIdx}-${setIdx}`]: { ...(prev[`${exIdx}-${setIdx}`] || { w: "", r: "", rpe: "", t: "N", done: false }), [field]: value } }));
@@ -241,8 +304,15 @@ export default function TabToday({
       const rTime = isWarmup ? 45 : (parseInt(restTime) || 90);
       restT.start(rTime, exName);
       
-      const wNum = parseFloat(currentSet.w) || 0; const rNum = parseInt(currentSet.r) || 0;
+      const wNum = parseFloat(currentSet.w) || 0; 
+      const rNum = parseInt(currentSet.r) || 0;
+      
       if (wNum > 0 && rNum > 0 && !isWarmup) {
+        if (coopId) {
+           const updatedVol = totalVolume + (wNum * rNum);
+           logSet(exName, wNum, rNum, updatedVol);
+        }
+
         setWL(prev => {
           const history = Array.isArray(prev[exName]) ? prev[exName] : (prev[exName] ? [prev[exName]] : []);
           const todayStr = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
@@ -265,7 +335,7 @@ export default function TabToday({
     } else {
       HapticEngine.light(); 
     }
-  }, [sessionSets, handleSetUpdate, restT, setWL]);
+  }, [sessionSets, handleSetUpdate, restT, setWL, coopId, totalVolume, logSet]);
 
   const addSet = () => { setDynamicSetCounts(prev => ({ ...prev, [activeExIndex]: currentSetCount + 1 })); HapticEngine.light(); SoundEngine.tick(); };
   const removeSet = () => { if (currentSetCount > 1) { setDynamicSetCounts(prev => ({ ...prev, [activeExIndex]: currentSetCount - 1 })); HapticEngine.light(); SoundEngine.tick(); } };
@@ -275,16 +345,6 @@ export default function TabToday({
     const targetGroup = activeExerciseDetails?.target || guessTargetMuscle(activeExercise?.name);
     return EXERCISE_DB.filter(e => e.target === targetGroup && e.name !== activeExercise?.name);
   }, [activeExerciseDetails, activeExercise]);
-
-  const sleekRowStyle = {
-    background: "linear-gradient(145deg, rgba(15, 15, 20, 0.8) 0%, rgba(40, 40, 45, 0.2) 100%)",
-    backdropFilter: "blur(16px)",
-    WebkitBackdropFilter: "blur(16px)",
-    borderRadius: "24px",
-    border: "1px solid rgba(255,255,255,0.02)",
-    boxShadow: "inset 0 4px 15px rgba(0,0,0,0.4), 0 8px 20px rgba(0,0,0,0.5)",
-    transform: "translateZ(0)"
-  };
 
   const mainBtnStyle = getMainButtonStyle(C);
 
@@ -347,7 +407,9 @@ export default function TabToday({
             <TabProgram 
                phases={PHASES} activePhase={activePhase} setActivePhase={setActivePhase}
                activeDay={activeDay} setActiveDay={setActiveDay} completedW={completedW} themeColors={C}
-               customWorkouts={customWorkouts} setCustomWorkouts={setCustomWorkouts} EXERCISE_DB={EXERCISE_DB}
+               customWorkouts={activeProgramWorkouts} 
+               setCustomWorkouts={handleSetProgramsFromTabProgram} 
+               EXERCISE_DB={EXERCISE_DB}
             />
           </div>
         </div>
@@ -358,6 +420,28 @@ export default function TabToday({
   return (
     <div style={{ minHeight: '100%', paddingBottom: 80, color: C.text, position: "relative" }}>
       <style>{`.hide-arrows::-webkit-outer-spin-button, .hide-arrows::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; } .hide-arrows { -moz-appearance: textfield; } .workout-scroll::-webkit-scrollbar { display: none; }`}</style>
+
+      <MorningCheckInModal 
+        show={showCheckInModal} 
+        onClose={() => { 
+          setShowCheckInModal(false); 
+          setHasDismissedCheckIn(true); 
+          // 🔥 DÜZELTME 2A: "Şimdi değil" dese bile bugünün tarihini kaydet (bugün bir daha sorma)
+          localStorage.setItem('lastCheckInPromptDate', todayStr);
+        }} 
+        modalEnergy={modalEnergy} setModalEnergy={setModalEnergy} 
+        modalSleep={modalSleep} setModalSleep={setModalSleep} 
+        onSave={() => { 
+          if (typeof setMorningCheckIn === 'function') {
+            setMorningCheckIn({ date: todayStr, energy: parseFloat(modalEnergy), sleep: parseFloat(modalSleep) }); 
+          }
+          setShowCheckInModal(false); 
+          setHasDismissedCheckIn(true);
+          // 🔥 DÜZELTME 2B: Kaydettiğinde de bugünün tarihini kaydet
+          localStorage.setItem('lastCheckInPromptDate', todayStr);
+        }} 
+        C={C} 
+      />
 
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
         <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.2, 0.1], x: [0, 30, 0] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} style={{ position: 'absolute', top: '-10%', left: '-10%', width: '80vw', height: '80vw', background: `radial-gradient(circle, ${C.blue}40 0%, transparent 60%)`, filter: 'blur(100px)' }} />
@@ -425,16 +509,27 @@ export default function TabToday({
             )}
 
             <div style={{ padding: "0 4px" }}>
-              <motion.button 
-                onClick={() => setShowProgramEditor(true)} whileTap={{ scale: 0.98 }}
-                style={{ ...sleekRowStyle, padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: 20, textAlign: "left" }}
-              >
-                <div>
-                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 900, letterSpacing: 1.5, marginBottom: 6, fontStyle: "italic" }}>{t('today_sys_mgmt')}</div>
-                  <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: "#fff", fontFamily: fonts.header, fontStyle: "italic" }}>{t('today_edit_prog')}</h2>
-                </div>
-                <div style={{ background: "rgba(0,0,0,0.3)", width: 44, height: 44, borderRadius: 14, border: `1px solid rgba(255,255,255,0.03)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>⚙️</div>
-              </motion.button>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+                <motion.button 
+                  onClick={() => setShowProgramEditor(true)} whileTap={{ scale: 0.98 }}
+                  style={{ ...sleekRowStyle, padding: "16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, cursor: "pointer", marginBottom: 0 }}
+                >
+                  <span style={{ fontSize: 20 }}>⚙️</span>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: "#fff", fontFamily: fonts.header, fontStyle: "italic" }}>Yönet</div>
+                  </div>
+                </motion.button>
+                
+                <motion.button 
+                  onClick={() => setShowQuickWorkoutModal(true)} whileTap={{ scale: 0.98 }}
+                  style={{ background: `linear-gradient(135deg, ${C.blue}20, transparent)`, border: `1px solid ${C.blue}40`, padding: "16px", borderRadius: 24, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, cursor: "pointer" }}
+                >
+                  <span style={{ fontSize: 20 }}>⚡</span>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: C.blue, fontFamily: fonts.header, fontStyle: "italic" }}>Hızlı İdman</div>
+                  </div>
+                </motion.button>
+              </div>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "0 4px" }}>
@@ -487,6 +582,12 @@ export default function TabToday({
                  <div style={{ fontSize: 22, fontWeight: 900, color: C.yellow, fontFamily: fonts.mono, fontStyle: "italic" }}>{totalVolume.toLocaleString()} <span style={{fontSize: 12, color: "rgba(255,255,255,0.4)"}}>kg</span></div>
                </div>
             </div>
+
+            <AnimatePresence>
+              {coopId && partner && (
+                <CoopBanner coopId={coopId} partner={partner} C={C} />
+              )}
+            </AnimatePresence>
 
             <div style={{ position: 'relative', width: '100%', marginBottom: 20 }}>
               <motion.button 
@@ -549,7 +650,7 @@ export default function TabToday({
                     const lastLog = Array.isArray(exHistory) ? exHistory[exHistory.length - 1] : exHistory;
                     return (
                       <SetRow 
-                        key={si} setIndex={si} setData={sessionSets[`${activeExIndex}-${si}`]} lastLog={lastLog} 
+                        key={si} setIndex={si} setData={sessionSets[`${activeExIndex}-${si}`]} lastLog={lastLog} exName={exName}
                         themeColors={C} targetRepsStr={activeExercise.reps}
                         onToggle={() => handleSetToggle(activeExIndex, si, activeExercise.rest, exName)}
                         onUpdate={(field, value) => handleSetUpdate(activeExIndex, si, field, value)}
@@ -608,6 +709,15 @@ export default function TabToday({
         )}
 
       </div>
+      
+      <QuickWorkoutModal 
+        show={showQuickWorkoutModal} 
+        onClose={() => setShowQuickWorkoutModal(false)} 
+        quickTemplates={quickTemplates} 
+        onStartAdHoc={handleStartAdHoc} 
+        EXERCISE_DB={EXERCISE_DB} 
+        C={C} 
+      />
     </div>
   );
 }

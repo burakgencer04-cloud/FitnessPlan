@@ -52,3 +52,25 @@ export const getMainButtonStyle = (C) => ({
   alignItems: "center", 
   gap: 12
 });
+
+// ====== EKSİK OLAN EXPORT'LAR (BURADAN KOPYALA) ======
+
+// TabToday ve TabSocial'ın kullandığı modern satır stili
+export const sleekRowStyle = {
+  background: "linear-gradient(145deg, rgba(15, 15, 20, 0.8) 0%, rgba(40, 40, 45, 0.2) 100%)",
+  backdropFilter: "blur(16px)",
+  WebkitBackdropFilter: "blur(16px)",
+  borderRadius: "20px",
+  border: "1px solid rgba(255,255,255,0.02)",
+  boxShadow: "inset 0 4px 15px rgba(0,0,0,0.4), 0 8px 20px rgba(0,0,0,0.5)",
+  transform: "translateZ(0)"
+};
+
+// Eğer dosyanın üst kısımlarında getGlobalGlassInnerStyle varsa, bu onun kısayoludur.
+// Eğer yoksa diye garanti olsun diyerek standart versiyonunu buraya ekliyoruz:
+export const getGlassInnerStyle = (C) => ({
+  background: "rgba(0,0,0,0.2)",
+  borderRadius: "16px",
+  border: `1px solid ${C?.border || 'rgba(255,255,255,0.2)'}40`,
+  boxShadow: "inset 0 2px 10px rgba(0,0,0,0.2)"
+});
