@@ -3,9 +3,11 @@ import React, { useMemo } from 'react';
 import { motion } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { globalFonts as fonts, getGlobalGlassStyle, getGlobalGlassInnerStyle, getMainButtonStyle } from '@/shared/ui/globalStyles.js';
-import { calculateE1RM } from '../utils/workoutAnalyzer.jsx';
+import { calculateE1RM } from '../utils/workoutAnalyzer.js';
+
 
 export default function HistoryBottomSheet({ exName, history = [], onClose, C }) {
+  // history prop'u zaten LocalDB'den veya store'dan üst bileşen tarafından çekilip paslanıyor.
   const chartData = useMemo(() => {
     const arr = Array.isArray(history) ? history : (history ? [history] : []);
     

@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { fonts, getGlassCardStyle, getGlassInnerStyle } from './progressUtils';
+import { getGlassCardStyle, getGlassInnerStyle } from './progressUtils';
 import { InfoTooltip } from './ProgressModals';
+import { fonts } from '@/shared/utils/uiStyles.js';
 
 export default function WorkoutConsistency({ recentWorkoutsGrid, totalDone, progressPhotos, setPhotoModalIndex, C }) {
   return (

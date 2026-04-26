@@ -1,4 +1,4 @@
- import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
@@ -11,80 +11,42 @@ import VolumeChart from './VolumeChart';
 import PRSection from './PRSection';
 import { CNSFatigue, StatBoxes, BadgesSection } from './ProgressStats';
 import { MeasureModal, PhotoSwipeModal, StoryModal, Confetti } from './ProgressModals';
-import MuscleMap from './MuscleMap'; // 🔥 YENİ: HASAR RAPORU
+import MuscleMap from './MuscleMap'; 
+import { LocalDB } from '@/shared/lib/localDB.js'; // 🔥 HAYAT KURTARAN IMPORT
 
 export default function ProgressMain({ 
   totalDone, overallPct, badges = [], BADGES = [], BADGE_ICONS = {}, 
-  weightLog = {}, themeColors: C, selectedProgram, hasActiveProgram, onSelectProgram
+  themeColors: C, selectedProgram, hasActiveProgram, onSelectProgram
+  // 🔴 DİKKAT: weightLog prop'u buradan SİLİNDİ!
 }) {
   const user = useAppStore(state => state.user);
   const bodyMeasurements = useAppStore(state => state.bodyMeasurements) || [];
   const streak = useAppStore(state => state.streak);
   const addMeasurement = useAppStore(state => state.addMeasurement);
   
+  // 🔥 YENİ: Artık weightLog bir state. (Uygulamanın hafızasını tıkamaz)
+  const [weightLog, setWeightLog] = useState({});
+
   const [showMeasureModal, setShowMeasureModal] = useState(false);
   const [measureForm, setMeasureForm] = useState({ date: new Date().toISOString().split('T')[0], type: "weight", value: "" });
-  const [selectedChartType, setSelectedChartType] = useState("weight");
-  const [volumeFilter, setVolumeFilter] = useState("Tümü");
   
-  const [progressPhotos, setProgressPhotos] = useState([]);
-  const [photoModalIndex, setPhotoModalIndex] = useState(null);
-  const [storyModal, setStoryModal] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [photoModalIndex, setPhotoModalIndex] = useState(0);
+  
+  const [showStoryModal, setShowStoryModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const fileInputRef = useRef(null);
+  
+  const [volumeFilter, setVolumeFilter] = useState('all');
 
-  const isOlder = user?.age >= 50;
-  const currentWeight = bodyMeasurements.filter(m => m.type === 'weight').sort((a,b) => new Date(b.date) - new Date(a.date))[0]?.value || user?.weight || 80;
-
-  const glassCardStyle = getGlassCardStyle(C);
-
+  // 🔥 YENİ: Sayfa açılınca arka planda devasa geçmiş verisini çeker
   useEffect(() => {
-    const savedPhotos = JSON.parse(localStorage.getItem('progressPhotos') || '[]');
-    setProgressPhotos(savedPhotos);
+    LocalDB.getWeightLog().then(data => {
+      if (data) setWeightLog(data);
+    });
   }, []);
 
-  const triggerConfetti = () => {
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 4000);
-  };
 
-  const handlePhotoUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const todayDate = new Date().toLocaleDateString('tr-TR');
-      const todayLogVolumes = volumeTrendData.find(v => v.rawDate === todayDate)?.Hacim || 0;
-      const newPhoto = { id: Date.now(), date: todayDate, src: reader.result, volume: todayLogVolumes, note: "Güncel Form" };
-      const updatedPhotos = [newPhoto, ...progressPhotos].slice(0, 20); 
-      setProgressPhotos(updatedPhotos);
-      localStorage.setItem('progressPhotos', JSON.stringify(updatedPhotos));
-      triggerConfetti();
-    };
-    reader.readAsDataURL(file);
-  };
 
-  const handleDeletePhoto = (id) => {
-    if (window.confirm("Bu görseli silmek istediğine emin misin?")) {
-      const updated = progressPhotos.filter(p => p.id !== id);
-      setProgressPhotos(updated);
-      localStorage.setItem('progressPhotos', JSON.stringify(updated));
-      setPhotoModalIndex(null);
-    }
-  };
-
-  const handleAddMeasure = () => {
-    if (!measureForm.value) return;
-    addMeasurement({
-      date: new Date(measureForm.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }),
-      type: measureForm.type,
-      value: parseFloat(measureForm.value)
-    });
-    setMeasureForm({ ...measureForm, value: "" });
-    setShowMeasureModal(false);
-    if (navigator.vibrate) navigator.vibrate(20);
-    triggerConfetti();
-  };
 
   const handleDownloadCSV = () => {
     let csvContent = "Veri Tipi,Tarih,Detay,Deger\n";

@@ -1,4 +1,4 @@
-import { db, auth } from "./firebase";
+import { db, auth, app } from "@/shared/lib/firebase.js"; 
 import {
   collection,
   addDoc,
@@ -17,23 +17,28 @@ import {
   where
 } from "firebase/firestore";
 
-import { getMessaging, getToken } from "firebase/messaging";
+import { getMessaging, getToken, onMessage } from "firebase/messaging"; 
+import { getFunctions, httpsCallable } from "firebase/functions"; 
 
 const CACHE_DURATION = 5 * 60 * 1000; 
 let feedCache = { data: [], lastFetch: 0 };
 let leaderboardCache = { data: [], lastFetch: 0 };
 
-export const addWorkoutToFeed = async (userProfile, stats) => {
-  if (!auth.currentUser) throw new Error("Bu işlem için giriş yapmalısınız.");
-  if (auth.currentUser.isAnonymous) {
-    throw new Error("Sosyal özellikleri kullanmak için bir hesap oluşturmalısınız.");
+export const addWorkoutToFeed = async (workoutData, stats) => {
+  try {
+    const functionsInstance = getFunctions(app); 
+    const secureAddVolume = httpsCallable(functionsInstance, 'secureAddWorkoutVolume');
+    
+    await secureAddVolume({ volume: stats.volume || 0 });
+  } catch (error) {
+    console.error("Hacim eklenirken sunucu reddetti veya hata oluştu:", error);
   }
 
   try {
     await addDoc(collection(db, "feed"), {
       userId: auth.currentUser.uid,
-      userName: userProfile?.name || userProfile?.firstName || "İsimsiz Savaşçı",
-      userAvatar: userProfile?.avatar || "🥷",
+      userName: workoutData?.userName || "İsimsiz Savaşçı",
+      userAvatar: workoutData?.userAvatar || "🥷",
       workoutName: stats.workoutName || "Antrenman",
       volume: stats.volume || 0,
       duration: stats.duration || 0,
@@ -52,7 +57,7 @@ export const addWorkoutToFeed = async (userProfile, stats) => {
     } else {
       await setDoc(userRef, {
         userId: auth.currentUser.uid,
-        userName: userProfile?.name || userProfile?.firstName || "İsimsiz Savaşçı",
+        userName: workoutData?.userName || "İsimsiz Savaşçı",
         totalVolume: stats.volume || 0,
         streak: 1,
         lastActive: serverTimestamp(),
@@ -133,7 +138,6 @@ export const toggleFollow = async (currentUserId, targetUserId) => {
   }
 };
 
-// 🔥 YENİ: İstemci tarafında kullanıcının kendi istatistiklerini anlık çekebilmesi için
 export const getUserWeeklyStats = async (userId) => {
   if (!userId || userId === "guest") return null;
 
@@ -163,12 +167,11 @@ export const getUserWeeklyStats = async (userId) => {
   }
 };
 
-// 🔥 FIX: VAPID Key güvenli olarak .env'den çekiliyor
 export const requestNotificationPermission = async (userId) => {
   if (!userId || userId === "guest") return;
 
   try {
-    const messaging = getMessaging();
+    const messaging = getMessaging(app);
     const permission = await Notification.requestPermission();
     
     if (permission === 'granted') {
@@ -183,7 +186,7 @@ export const requestNotificationPermission = async (userId) => {
 
       if (currentToken) {
         const userRef = doc(db, 'users', userId);
-        await updateDoc(userRef, { fcmToken: currentToken });
+        await setDoc(userRef, { fcmTokens: arrayUnion(currentToken) }, { merge: true });
         console.log("🔔 Bildirim izni alındı ve Token Firebase'e başarıyla kaydedildi.");
       }
     } else {
@@ -194,10 +197,21 @@ export const requestNotificationPermission = async (userId) => {
   }
 };
 
-// 🔥 YENİ: RAKİP BULMA MOTORU
+export const listenForegroundMessages = (callback) => {
+  try {
+    const messaging = getMessaging(app);
+    return onMessage(messaging, (payload) => {
+      console.log("Uygulama açıkken mesaj geldi:", payload);
+      if (callback) callback(payload);
+    });
+  } catch (error) {
+    console.warn("Foreground mesaj dinleyicisi başlatılamadı:", error);
+    return null;
+  }
+};
+
 export const getRivalData = async (currentVolume) => {
   try {
-    // Toplam hacmi bizimkinden BÜYÜK olanları küçükten büyüğe sırala ve sadece 1 kişiyi al
     const q = query(
       collection(db, "leaderboard"),
       where("totalVolume", ">", currentVolume),
@@ -209,9 +223,55 @@ export const getRivalData = async (currentVolume) => {
       const doc = querySnapshot.docs[0];
       return { id: doc.id, ...doc.data() };
     }
-    return null; // Önünde kimse yok
+    return null; 
   } catch (error) {
     console.error("Rakip bulma hatası:", error);
     return null;
+  }
+};
+
+// ==========================================
+// 🔥 6. BÖLÜM: MARKETPLACE (PAZAR YERİ) API SERVİSLERİ
+// ==========================================
+
+export const shareProgramToMarketplace = async (program, currentUser) => {
+  try {
+    await addDoc(collection(db, "marketplace"), {
+      originalId: program.id,
+      name: program.name,
+      workouts: program.workouts,
+      authorId: auth.currentUser?.uid || "guest",
+      authorName: currentUser?.name || currentUser?.displayName || "İsimsiz Savaşçı",
+      downloads: 0, 
+      createdAt: serverTimestamp(),
+    });
+    return true;
+  } catch (error) {
+    console.error("Program paylaşılamadı:", error);
+    return false;
+  }
+};
+
+export const getMarketplacePrograms = async () => {
+  try {
+    const q = query(collection(db, "marketplace"), orderBy("createdAt", "desc"), limit(20));
+    const snap = await getDocs(q);
+    const programs = [];
+    snap.forEach(document => {
+      programs.push({ id: document.id, ...document.data() });
+    });
+    return programs;
+  } catch (error) {
+    console.error("Pazar yeri verileri çekilemedi:", error);
+    return [];
+  }
+};
+
+export const incrementProgramDownload = async (docId) => {
+  try {
+    const progRef = doc(db, "marketplace", docId);
+    await updateDoc(progRef, { downloads: increment(1) });
+  } catch (e) {
+    console.warn("İndirme sayısı güncellenemedi:", e);
   }
 };

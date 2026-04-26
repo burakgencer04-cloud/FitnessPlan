@@ -1,6 +1,5 @@
 import { getLocalIsoDate } from "@/shared/utils/dateUtils.js";
 
-// Tarih verisini ("12 Eki" vb.) parse etme
 const parseLogDateStr = (dateStr) => {
   if (!dateStr) return new Date();
   const parts = dateStr.split(' ');
@@ -11,15 +10,17 @@ const parseLogDateStr = (dateStr) => {
   return logDate;
 };
 
-// 🧠 AKILLI PLATO TESPİTİ (Son 4 Hafta)
 export const analyzeVolumeTrend = (weightLog) => {
-  const weeklyVolumes = [0, 0, 0, 0]; // [Bu Hafta, Geçen Hafta, 2 Hafta Önce, 3 Hafta Önce]
+  if (!weightLog || Object.keys(weightLog).length === 0 || Array.isArray(weightLog)) {
+    return 'insufficient_data';
+  }
+  const weeklyVolumes = [0, 0, 0, 0]; 
   const now = new Date();
 
   Object.values(weightLog || {}).forEach(logs => {
     logs.forEach(log => {
       const diffDays = Math.floor((now - parseLogDateStr(log.date)) / (1000 * 60 * 60 * 24));
-      if (diffDays < 28) { // Sadece son 4 hafta
+      if (diffDays < 28) { 
         let vol = 0;
         (log.sets || []).forEach(s => {
            vol += (Number(s.kg) || 0) * (Number(s.reps) || 0);
@@ -29,7 +30,6 @@ export const analyzeVolumeTrend = (weightLog) => {
     });
   });
 
-  // Plato Formülü: Geçen 2 hafta hacim yüksek ama bu hafta düştü veya artmıyorsa Deload çak.
   const needsDeload = weeklyVolumes[1] > 0 && weeklyVolumes[2] > 0 && 
                       weeklyVolumes[1] <= weeklyVolumes[2] && 
                       weeklyVolumes[0] <= weeklyVolumes[1];
@@ -37,11 +37,10 @@ export const analyzeVolumeTrend = (weightLog) => {
   return {
     trend: weeklyVolumes.reverse(),
     needsDeload,
-    intensityModifier: needsDeload ? 0.6 : 1.0 // Deload ise %60 ağırlık
+    intensityModifier: needsDeload ? 0.6 : 1.0 
   };
 };
 
-// 🛠️ MEVCUT PROGRAMI DİNAMİK DELOAD'A ÇEVİR
 export const generateDeloadProgram = (currentProgram) => {
   if (!currentProgram || !currentProgram.workouts) return null;
 
@@ -55,9 +54,34 @@ export const generateDeloadProgram = (currentProgram) => {
       label: `🏖️ ${workout.label} - Aktif Dinlenme`,
       exercises: workout.exercises.map(ex => ({
         ...ex,
-        sets: Math.max(1, Math.ceil(parseInt(ex.sets) / 2)).toString(), // Setleri yarıya indir
-        name: `${ex.name} (%60 Ağırlık)` // İsme uyarı ekle
+        sets: Math.max(1, Math.ceil(parseInt(ex.sets) / 2)).toString(),
+        name: `${ex.name} (%60 Ağırlık)` 
       }))
     }))
   };
+};
+
+// 🔥 CRASH ZIRHI EKLENDİ
+export const adjustDailyWorkout = (plannedWorkout, healthMetrics) => {
+  try {
+    if (!plannedWorkout || !plannedWorkout.exercises) return plannedWorkout;
+    let adjustedWorkout = { ...plannedWorkout };
+
+    if (healthMetrics?.steps > 15000) {
+      if (process.env.NODE_ENV !== 'production') console.log("🔥 Yüksek adım sayısı tespit edildi.");
+      // reduceLegVolume tanımlı olmadığı için kaldırıldı (ReferenceError engellendi)
+    }
+
+    if (healthMetrics?.restingHeartRate > 85) {
+      if (process.env.NODE_ENV !== 'production') console.log("⚠️ Yüksek dinlenik nabız. İntensite düşürüldü.");
+      adjustedWorkout.intensity = "light"; 
+    }
+
+    return adjustedWorkout;
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error("Oto-Regülasyon Hatası:", error);
+    }
+    return plannedWorkout; // Çökmek yerine idmanı olduğu gibi ver
+  }
 };

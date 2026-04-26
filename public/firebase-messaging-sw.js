@@ -14,16 +14,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Uygulama kapalıyken (arka planda) bildirim geldiğinde çalışır
-messaging.onBackgroundMessage(function(payload) {
-  console.log('[firebase-messaging-sw.js] Arka plan bildirimi alındı: ', payload);
+// Uygulama KAPALIYKEN veya ARKA PLANDAYKEN gelen mesajları dinler
+messaging.onBackgroundMessage((payload) => {
+  console.log('[firebase-messaging-sw.js] Arka plan mesajı alındı: ', payload);
   
-  const notificationTitle = payload.notification.title;
+  const notificationTitle = payload.notification.title || 'Protokol Çağırıyor!';
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/pwa-192x192.png', // Bildirimde görünecek uygulama logon
-    badge: '/pwa-192x192.png',
-    data: payload.data
+    icon: '/pwa-192x192.png', // Varsa uygulamanın logosu
+    badge: '/badge.png', // Bildirim çubuğunda görünecek küçük ikon
+    data: payload.data,
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);

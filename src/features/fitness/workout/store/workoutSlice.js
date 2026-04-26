@@ -1,4 +1,4 @@
-import { calculateE1RM } from "@/features/fitness/workout/utils/workoutAnalyzer.jsx";
+import { calculateE1RM } from "@/features/fitness/workout/utils/workoutAnalyzer.js";
 
 export const createWorkoutSlice = (set, get) => ({
   programs: [],
@@ -16,17 +16,17 @@ export const createWorkoutSlice = (set, get) => ({
   activeDay: 0,
   setActiveDay: (val) => set({ activeDay: val }),
 
+  // 🔴 SADECE AKTİF İDMAN BURADA KALIR (Geçmiş loglar LocalDB'ye taşındı)
   completedW: {},
   activeWorkoutSession: null,
   setActiveWorkoutSession: (sessionData) => set({ activeWorkoutSession: sessionData }),
   setCW: (updater) => set((state) => ({ completedW: typeof updater === "function" ? updater(state.completedW) : updater })),
-  weightLog: {},
-  setWL: (updater) => set((state) => ({ weightLog: typeof updater === "function" ? updater(state.weightLog) : updater })),
-  exNotesLog: {},
-  setExNotesLog: (updater) => set((state) => ({ exNotesLog: typeof updater === "function" ? updater(state.exNotesLog) : updater })),
+  
   sessionSets: {},
   setSessionSets: (updater) => set((state) => ({ sessionSets: typeof updater === "function" ? updater(state.sessionSets) : updater })),
   
+  // weightLog ve exNotesLog TAMAMEN SİLİNDİ!
+
   personalRecords: {},
   checkAndUpdatePR: (exName, kg, reps, dateStr) => {
     if (!exName) return false;
@@ -43,11 +43,5 @@ export const createWorkoutSlice = (set, get) => ({
   quickTemplates: [],
   addQuickTemplate: (template) => set(state => ({ quickTemplates: [...state.quickTemplates, template] })),
   activeAdHocWorkout: null,
-  setActiveAdHocWorkout: (workout) => set({ activeAdHocWorkout: workout }),
-
-  resetAllWorkoutData: () => set({
-    completedW: {}, weightLog: {}, sessionSets: {}, exNotesLog: {},
-    programs: [], personalRecords: {}, quickTemplates: [], activeAdHocWorkout: null,
-    sessActive: false // Resetlendiğinde idmanı da bitirir
-  }),
+  setActiveAdHocWorkout: (workout) => set({ activeAdHocWorkout: workout })
 });

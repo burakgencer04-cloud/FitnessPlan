@@ -4,9 +4,9 @@ android {
     namespace = "com.benimadim.fitness"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.benimadim.fitness"
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
+        applicationId "com.fitness.protocol" // Kendi paket adın
+        minSdkVersion 26  // Burayı 24'ten 26'ya çıkardık
+        targetSdkVersion 34 // Genelde en güncel sürüm olur
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -19,7 +19,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }

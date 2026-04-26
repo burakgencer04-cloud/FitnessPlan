@@ -1,6 +1,8 @@
 import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from 'framer-motion';
 import { set as idbSet, get as idbGet } from 'idb-keyval';
+import { ErrorBoundary } from 'react-error-boundary';
+import { TabErrorFallback } from '@/shared/components/ErrorFallbacks.jsx';
 
 import { PHASES, BADGES, BADGE_ICONS, EXERCISE_DB, WORKOUT_PRESETS } from '@/features/fitness/workout/data/workoutData.js';
 import { FOODS, MEAL_TEMPLATES, MEAL_TYPE_LABELS, DAY_NAMES, MEAL_RATIOS_BY_COUNT } from '@/features/fitness/nutrition/data/nutritionData.js';
@@ -9,16 +11,20 @@ import { useAppStore } from '@/app/store.js';
 import { THEMES } from '@/shared/ui/theme.js';
 import { HapticEngine, SoundEngine } from '@/shared/lib/hapticSoundEngine.js';
 import { useTranslation } from '@/shared/hooks/useTranslation.js';
-import { auth, db } from '@/shared/lib/firebase.js';
+import { auth } from '@/shared/lib/firebase.js'; 
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { getMessaging, getToken } from "firebase/messaging";
-import { doc, updateDoc } from "firebase/firestore";
+import { fonts } from '@/shared/utils/uiStyles.js';
+
+import { requestNotificationPermission, listenForegroundMessages } from '@/shared/lib/firebaseService.js';
 
 import AuthScreen from '@/features/user/auth/components/AuthScreen.jsx';
 import OnboardingWizard from '@/features/user/onboarding/components/OnboardingWizard.jsx';
 import { generatePersonalizedPlan } from "@/features/user/onboarding/utils/generatorEngine.js";
 import { generateMealPlan } from "@/features/fitness/nutrition/utils/nutritionUtils.js";
 import { buildShoppingList } from "@/shared/lib/buildShoppingList.js"; 
+
+// 🔥 EKLENDİ: Tüm uygulamayı kapsayacak Global Modal
+import GlobalModal from '@/shared/ui/GlobalModal.jsx'; 
 
 const TabNutrition = lazy(() => import('@/features/fitness/nutrition/components/TabNutrition.jsx'));
 const TabProgram = lazy(() => import('@/features/fitness/workout/components/TabProgram.jsx'));
@@ -27,7 +33,7 @@ const TabProgress = lazy(() => import("@/features/fitness/progress/components/Ta
 const TabProfile = lazy(() => import('@/features/user/profile/components/TabProfile.jsx'));
 const TabSocial = lazy(() => import('@/features/social/components/TabSocial.jsx'));
 
-const fonts = { header: "'Comucan', system-ui, sans-serif", body: "'Comucan', system-ui, sans-serif", mono: "monospace" };
+
 
 const TABS = [
   { id: 0, label: "Antrenman", icon: "🏋️‍♂️" }, { id: 1, label: "Beslenme", icon: "🥗" },
@@ -40,21 +46,6 @@ const LoadingFallback = ({ C }) => (
   </div>
 );
 
-export const setupNotifications = async (userId) => {
-  if (!userId || userId === "guest") return;
-  try {
-    const messaging = getMessaging();
-    const permission = await Notification.requestPermission();
-    if (permission === "granted") {
-      const vapidKey = "VAPID_KEY_BURAYA_GELECEK"; 
-      if (!vapidKey.includes("BURAYA")) {
-        const token = await getToken(messaging, { vapidKey });
-        if (token) await updateDoc(doc(db, "users", userId), { fcmToken: token });
-      }
-    }
-  } catch (error) {}
-};
-
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -65,16 +56,15 @@ export default function App() {
   const {
     screen, setScreen, user, setUser, macros, setMacros, activeThemeId, setActiveThemeId,
     completedW, setCW, weightLog, setWL, streak, setStreak, lastDate, setLastDate,
-    badges, setBadges, programs, setPrograms, exNotesLog, setExNotesLog, // 🔥 YENİ DOMAIN MODEL
+    badges, setBadges, programs, setPrograms, exNotesLog, setExNotesLog, 
     mealPlan, setMealPlan, setCustomTargetMacros, sessionSets, setSessionSets, incrementStreak,
-    morningCheckIn, setMorningCheckIn, resetAllWorkoutData, setActiveWorkoutSession // 🔥 getState temizlendi
+    morningCheckIn, setMorningCheckIn, resetAllWorkoutData, setActiveWorkoutSession,
+    activeDay, setActiveDay, activePhase, setActivePhase
   } = useAppStore();
 
   const { t } = useTranslation();
 
   const [tab, setTab] = useState(0);
-  const [activePhase, setActivePhase] = useState(0);
-  const [activeDay, setActiveDay] = useState(0);
   const [nutDay, setNutDay] = useState(0);
   const [sessActive, setSessActive] = useState(false);
   const [sessPhase, setSessPhase] = useState(0);
@@ -83,31 +73,54 @@ export default function App() {
   
   const C = THEMES[activeThemeId] || THEMES.midnight;
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (authUser) => { 
-      setCurrentUser(authUser); 
-      setIsAuthLoading(false); 
-      if (authUser && authUser.uid) setupNotifications(authUser.uid);
-    });
-    return () => unsubscribe();
+  const showToast = useCallback((icon, text) => { 
+    setToast({ icon, text }); 
+    setTimeout(() => setToast(null), 3000); 
   }, []);
 
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => { 
+      setCurrentUser(authUser); 
+      setIsAuthLoading(false); 
+      if (authUser && authUser.uid) {
+        requestNotificationPermission(authUser.uid);
+      }
+    });
+
+    const unsubscribeMessages = listenForegroundMessages((payload) => {
+       const title = payload?.notification?.title || "Yeni Bildirim";
+       const body = payload?.notification?.body || "";
+       showToast("🔔", `${title}: ${body}`);
+    });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeMessages) unsubscribeMessages();
+    };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (user?.activePlanId && typeof setActiveDay === 'function') {
+      setActiveDay(0);
+      setSessActive(false); 
+    }
+  }, [user?.activePlanId, setActiveDay]);
+
   const handleLogout = async () => { try { await signOut(auth); HapticEngine.medium(); } catch (err) {} };
-  const showToast = (icon, text) => { setToast({ icon, text }); setTimeout(() => setToast(null), 3000); };
 
   const handleWizardComplete = (formData, skipWorkoutGen = false) => {
     try {
-      if (resetAllWorkoutData) resetAllWorkoutData(); 
+      if (typeof resetAllWorkoutData === 'function') resetAllWorkoutData(); 
 
       const generatedData = generatePersonalizedPlan(formData);
-      if (setCustomTargetMacros) setCustomTargetMacros(generatedData.macros);
-      setMacros(generatedData.macros);
+      
+      if (typeof setCustomTargetMacros === 'function') setCustomTargetMacros(generatedData.macros);
+      if (typeof setMacros === 'function') setMacros(generatedData.macros);
 
       if (skipWorkoutGen) {
         setPrograms([]);
         setUser({ ...user, ...formData, hasCompletedOnboarding: true, activePlanName: "Özel Rutinim", activePlanId: null });
       } else {
-        // 🎯 YENİ DOMAIN MODEL UYGULAMASI (Kusursuz Format)
         const newProgram = {
           id: `custom_${Date.now()}`,
           name: generatedData.planName || "Kişisel Protokol",
@@ -117,6 +130,10 @@ export default function App() {
         setPrograms([newProgram]); 
         setUser({ ...user, ...formData, hasCompletedOnboarding: true, activePlanName: newProgram.name, activePlanId: newProgram.id });
       }
+      
+      if (typeof setActiveDay === 'function') setActiveDay(0);
+      showToast("✅", "Protokol Hazır!");
+      
     } catch (err) { console.error("Wizard Error:", err); }
   };
 
@@ -127,15 +144,23 @@ export default function App() {
   };
 
   const checkBadges = useCallback((cw, str) => {
-    BADGES.forEach(b => {
-      if (!badges.includes(b.id) && b.check(cw, str)) {
-        setBadges(p => [...p, b.id]); 
-        showToast(BADGE_ICONS[b.icon] || "🏅", `Rozet: ${b.label}`);
-      }
-    });
-  }, [badges, setBadges]);
+    setBadges(prevBadges => {
+      const newBadgesList = [...prevBadges];
+      let hasNewBadge = false;
 
-  const finishSession = async (payload = {}) => {
+      BADGES.forEach(b => {
+        if (!prevBadges.includes(b.id) && b.check(cw, str)) {
+          newBadgesList.push(b.id);
+          hasNewBadge = true;
+          showToast(BADGE_ICONS[b.icon] || "🏅", `Rozet: ${b.label}`);
+        }
+      });
+
+      return hasNewBadge ? newBadgesList : prevBadges;
+    });
+  }, [setBadges, showToast]);
+
+  const finishSession = useCallback(async (payload = {}) => {
     const key = `${sessPhase}-${sessDay}`;
     const today = new Date();
     
@@ -168,17 +193,21 @@ export default function App() {
       console.error("Session kaydetme hatası:", err);
     }
 
-    setSessActive(false); timer.reset(); restT.stop();
+    setSessActive(false); 
+    timer.reset(); 
+    restT.stop();
+    
     if (setActiveWorkoutSession) setActiveWorkoutSession(null);
     localStorage.removeItem('activeWorkoutSession'); 
 
     if (setSessionSets) setSessionSets({});
 
-    SoundEngine.success(); HapticEngine.success();
+    SoundEngine.success(); 
+    HapticEngine.success();
     showToast("🎉", "Antrenman Tarihe Not Düşüldü!");
-  };
+  }, [sessPhase, sessDay, incrementStreak, setExNotesLog, setCW, checkBadges, streak, timer, restT, setActiveWorkoutSession, setSessionSets, showToast]);
 
-  const total = programs?.[0]?.workouts?.length || 0; // 🔥 Domain update
+  const total = programs?.[0]?.workouts?.length || 0; 
   const totalDone = Object.values(completedW || {}).filter(Boolean).length;
   const overallPct = total > 0 ? Math.round((totalDone / total) * 100) : 0;
 
@@ -213,13 +242,47 @@ export default function App() {
         <div className="scrollable-content" style={{ padding: "24px 20px", paddingBottom: 110 }}>
           <AnimatePresence mode="wait">
             <motion.div key={tab} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}>
-              <Suspense fallback={<LoadingFallback C={C} />}>
-                {tab === 0 && <TabToday timer={timer} restT={restT} finishSession={finishSession} themeColors={C} playDing={playDing} />}
-                {tab === 1 && <TabNutrition user={user} macros={macros} regeneratePlan={regeneratePlan} dayPlan={dayPlan} nutDay={nutDay} setNutDay={setNutDay} themeColors={C} shoppingList={shopping} />}
-                {tab === 2 && <TabProgress totalDone={totalDone} overallPct={overallPct} badges={badges} BADGES={BADGES} BADGE_ICONS={BADGE_ICONS} weightLog={weightLog} themeColors={C} hasActiveProgram={programs?.length > 0} selectedProgram={programs?.find(p => p.id === user?.activePlanId) || programs?.[0]} onSelectProgram={() => setTab(0)} />}
-                {tab === 3 && <TabSocial themeColors={C} />}
-                {tab === 4 && <TabProfile themeColors={C} />} 
-              </Suspense>
+              <ErrorBoundary 
+                FallbackComponent={(props) => <TabErrorFallback {...props} C={C} />}
+                onReset={() => { if (tab !== 0) setTab(0); }}
+              >
+                <Suspense fallback={<LoadingFallback C={C} />}>
+                  {tab === 0 && (
+                    <TabToday 
+                      timer={timer} 
+                      restT={restT} 
+                      finishSession={finishSession} 
+                      themeColors={C} 
+                      playDing={playDing} 
+                    />
+                  )}
+                  {tab === 1 && <TabNutrition user={user} macros={macros} regeneratePlan={regeneratePlan} dayPlan={dayPlan} nutDay={nutDay} setNutDay={setNutDay} themeColors={C} shoppingList={shopping} />}
+                  
+                  {tab === 2 && (
+                    <TabProgress 
+                      totalDone={totalDone} 
+                      overallPct={overallPct} 
+                      badges={badges} 
+                      BADGES={BADGES} 
+                      BADGE_ICONS={BADGE_ICONS} 
+                      weightLog={weightLog} 
+                      themeColors={C} 
+                      hasActiveProgram={programs?.length > 0} 
+                      selectedProgram={programs?.find(p => p.id === user?.activePlanId) || programs?.[0]} 
+                      onSelectProgram={(planId) => { 
+                        if (typeof setUser === 'function' && planId) {
+                          setUser({ ...user, activePlanId: planId, activePlanName: programs?.find(p => p.id === planId)?.name });
+                        }
+                        if (typeof setActiveDay === 'function') setActiveDay(0);
+                        setTab(0); 
+                      }} 
+                    />
+                  )}
+                  
+                  {tab === 3 && <TabSocial themeColors={C} />}
+                  {tab === 4 && <TabProfile themeColors={C} />} 
+                </Suspense>
+              </ErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </div>
@@ -239,5 +302,12 @@ export default function App() {
     );
   };
 
-  return <div className="mobile-app-wrapper" style={{ background: C.bg, color: C.text, fontFamily: fonts.body }}>{renderContent()}</div>;
+  return (
+    <div className="mobile-app-wrapper" style={{ background: C.bg, color: C.text, fontFamily: fonts.body }}>
+      {renderContent()}
+      
+      {/* 🔥 EKLENDİ: Tüm uygulamayı kapsayan asenkron Modal */}
+      {GlobalModal && <GlobalModal C={C} />}
+    </div>
+  );
 }

@@ -1,8 +1,4 @@
-export const fonts = {
-  header: "'Comucan', system-ui, sans-serif",
-  body: "'Comucan', system-ui, sans-serif",
-  mono: "monospace"
-};
+import { fonts } from '@/shared/utils/uiStyles.js';
 
 export const getMealCategories = (count) => {
   if (count === 2) return [{ id: 0, label: "İlk Öğün" }, { id: 1, label: "Son Öğün" }];
@@ -26,6 +22,9 @@ export const THEMES = {
 };
 
 export const guessAisle = (itemName) => {
+  // 🔥 ZIRH EKLENDİ
+  if (!itemName || typeof itemName !== 'string') return "Diğer (Market)";
+  
   const name = itemName.toLowerCase();
   if (name.includes('tavuk') || name.includes('et') || name.includes('kıyma') || name.includes('balık') || name.includes('somon') || name.includes('ton')) return "Kasap & Şarküteri";
   if (name.includes('yumurta') || name.includes('peynir') || name.includes('lor') || name.includes('süt') || name.includes('yoğurt')) return "Süt & Kahvaltılık";
@@ -36,7 +35,9 @@ export const guessAisle = (itemName) => {
 };
 
 export const normalizeItemName = (name) => {
-  if (!name) return "";
+  // 🔥 ZIRH EKLENDİ
+  if (!name || typeof name !== 'string') return "Bilinmeyen Ürün";
+  
   let lower = name.toLowerCase();
   if (lower.includes('yumurta')) return 'Yumurta';
   if (lower.includes('lor')) return 'Lor Peyniri';
@@ -53,7 +54,8 @@ export const normalizeItemName = (name) => {
 
 export const formatGroceryAmount = (itemName, rawAmount) => {
   if (!rawAmount) return rawAmount;
-  const name = itemName.toLowerCase();
+  // 🔥 ZIRH EKLENDİ
+  const name = typeof itemName === 'string' ? itemName.toLowerCase() : "";
   const match = String(rawAmount).match(/([\d.,]+)\s*([a-zA-ZçğıöşüÇĞİÖŞÜ]+)?/);
   if (!match) return rawAmount;
 
@@ -293,28 +295,25 @@ export const calculateMacros = (user) => {
   };
 };
 
-// 🔥 YENİ: OTOMATİK MAKRO DÖNGÜSÜ (CARB CYCLING) HESAPLAYICISI
 export const cycleMacros = (baseMacros, isRestDay, dietType) => {
   if (!baseMacros) return { calories: 2000, protein: 150, carbs: 200, fat: 70 };
   const isKeto = dietType === 'keto';
 
   if (isRestDay) {
-    // Dinlenme günü: Karbonhidrat düşer, Protein biraz artar, Yağ artar, Toplam kalori açığı oluşur.
     return {
       ...baseMacros,
-      calories: Math.max(1200, baseMacros.calories - 300), // 300 kcal daha az
-      carbs: isKeto ? baseMacros.carbs : Math.max(30, Math.round(baseMacros.carbs * 0.6)), // Karb %40 azalır
-      protein: Math.round(baseMacros.protein * 1.1), // Kas onarımı için protein %10 artar
-      fat: Math.round(baseMacros.fat * 1.15) // Enerji açığını kapatmak için sağlıklı yağ artar
+      calories: Math.max(1200, baseMacros.calories - 300), 
+      carbs: isKeto ? baseMacros.carbs : Math.max(30, Math.round(baseMacros.carbs * 0.6)), 
+      protein: Math.round(baseMacros.protein * 1.1), 
+      fat: Math.round(baseMacros.fat * 1.15) 
     };
   } else {
-    // Antrenman günü: Karbonhidrat yüklemesi (Glikojen için)
     return {
       ...baseMacros,
-      calories: baseMacros.calories + 200, // 200 kcal ek enerji
-      carbs: isKeto ? baseMacros.carbs : Math.round(baseMacros.carbs * 1.2), // Karb %20 artar
+      calories: baseMacros.calories + 200, 
+      carbs: isKeto ? baseMacros.carbs : Math.round(baseMacros.carbs * 1.2), 
       protein: baseMacros.protein,
-      fat: Math.round(baseMacros.fat * 0.9) // Sindirimi hızlandırmak için yağ biraz kısılır
+      fat: Math.round(baseMacros.fat * 0.9) 
     };
   }
 };

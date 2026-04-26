@@ -4,11 +4,7 @@ import { useTranslation } from 'react-i18next'; // 🌍 ÇEVİRİ KANCASI
 import { WORKOUT_PRESETS } from '@/features/fitness/workout/data/workoutData.js';
 
 
-const fonts = {
-  header: "'Comucan', system-ui, sans-serif",
-  body: "'Comucan', system-ui, sans-serif",
-  mono: "monospace"
-};
+import { fonts } from '@/shared/utils/uiStyles.js';
 
 export const defaultForm = { 
   age: 25, gender: "erkek", height: 180, weight: 80, 

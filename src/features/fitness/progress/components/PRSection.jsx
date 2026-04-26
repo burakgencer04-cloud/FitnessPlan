@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fonts, getGlassCardStyle, getGlassInnerStyle } from './progressUtils.jsx';
+import { getGlassCardStyle, getGlassInnerStyle } from './progressUtils.jsx';
 import { InfoTooltip } from './ProgressModals.jsx';
 import { useAppStore } from '@/app/store.js';
+import { fonts } from '@/shared/utils/uiStyles.js';
 
 export default function PRSection({ currentWeight, isOlder, C }) {
   // 🔥 Veriyi doğrudan merkezi state'ten çek

@@ -1,9 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-
-// DÜZELTİLMİŞ YOLLAR (Çökme sebebi burasıydı)
-import { useAppStore } from '@/app/store.js';
 
 const fonts = {
   header: "'Comucan', system-ui, sans-serif",
@@ -18,85 +14,78 @@ const TYPE_CONFIG = {
   info:     { color: null, icon: "🤖", gradient: "135deg, rgba(255,255,255,0.04), rgba(0,0,0,0.06)" },
 };
 
-const getTypeColor = (type, C) => {
-  switch (type) {
-    case 'warning':  return C.yellow;
-    case 'success':  return C.green;
-    case 'overload': return C.blue;
-    default:         return C.blue;
+// 🔥 3. YENİLİK: Hareket İsmine Göre Dinamik ve Biyomekanik Tavsiyeler Veren Algoritma
+const getDynamicTip = (exName) => {
+  const n = (exName || "").toLowerCase();
+  
+  if (n.includes('bench') || n.includes('göğüs') || n.includes('press')) {
+    return { type: 'info', msg: "Göğüs kafesini yukarıda tut ve kürek kemiklerini sehpaya kilitle. İndirme (negatif) fazını yavaş yap." };
   }
+  if (n.includes('squat') || n.includes('bacak')) {
+    return { type: 'warning', msg: "Omurganı nötr tut ve topuklarından güç alarak yüksel. Dizlerinin içe çökmesine (valgus) asla izin verme!" };
+  }
+  if (n.includes('deadlift')) {
+    return { type: 'warning', msg: "Barı kaval kemiğine yakın tut. Bu bir bel hareketi değil, kalça (hip hinge) hareketidir." };
+  }
+  if (n.includes('curl') || n.includes('bicep')) {
+    return { type: 'info', msg: "Momentum kullanarak sallanma. Dirseklerini sabit tut ve sadece pazu kasını sıkarak ağırlığı kaldır." };
+  }
+  if (n.includes('row') || n.includes('sırt')) {
+    return { type: 'info', msg: "Ağırlığı ellerinle değil, dirseklerinle arkaya çekiyormuş gibi düşün. Tepede sırtını tam sık." };
+  }
+  if (n.includes('raise') || n.includes('omuz')) {
+    return { type: 'info', msg: "Ağırlığı yukarı savurma. Dirseklerini hafif kırık tutarak kontrollü bir şekilde kaldır." };
+  }
+  
+  // Eğer özel bir hareket tespit edilemezse genel "Overload" (Gelişim) tavsiyesi verir
+  return { type: 'overload', msg: "Kas gelişimi için progresif aşırı yükleme şarttır. Geçen haftadan en az 1 tekrar veya 1 kg fazla yapmayı hedefle." };
 };
 
-export default function AICoach({ C, nutDay }) {
-  const user = useAppStore(state => state.user);
-  const streak = useAppStore(state => state.streak);
-  const weightLog = useAppStore(state => state.weightLog) || {};
-  
-  const [msgIndex, setMsgIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
+export default function AICoach({ C, activeExercise }) {
+  const [currentTip, setCurrentTip] = useState(getDynamicTip(activeExercise?.name));
 
-  const allMessages = useMemo(() => {
-    const msgs = [];
-    if (streak > 3) {
-      msgs.push({ type: 'success', msg: `Harika gidiyorsun! ${streak} günlük serin var. Momentumunu kaybetme.` });
-    } else {
-      msgs.push({ type: 'info', msg: "Bugün yeni bir rekor kırmak için harika bir gün. Odaklan ve başla." });
-    }
-    msgs.push({ type: 'overload', msg: "Son antrenmanındaki ağırlıkları geçmeye çalış. Sadece 1 tekrar veya 1 kg fazla bile gelişmektir." });
-    return msgs;
-  }, [streak]);
-
+  // Hareket değiştikçe tavsiye de değişir
   useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress(p => {
-        if (p >= 100) {
-          setMsgIndex(prev => (prev + 1) % allMessages.length);
-          return 0;
-        }
-        return p + 1.5;
-      });
-    }, 100);
-    return () => clearInterval(interval);
-  }, [allMessages.length]);
+    setCurrentTip(getDynamicTip(activeExercise?.name));
+  }, [activeExercise]);
 
-  const currentData = allMessages[msgIndex] || allMessages[0];
-  const conf = TYPE_CONFIG[currentData.type] || TYPE_CONFIG.info;
-  const accentColor = getTypeColor(currentData.type, C);
+  const conf = TYPE_CONFIG[currentTip.type] || TYPE_CONFIG.info;
+  const accentColor = C[currentTip.type === 'warning' ? 'yellow' : currentTip.type === 'success' ? 'green' : currentTip.type === 'overload' ? 'blue' : 'sub'] || C.blue;
 
   return (
-    <div style={{
-      background: `linear-gradient(${conf.gradient})`,
-      border: `1px solid ${accentColor}40`,
-      borderRadius: 24,
-      padding: "20px 24px",
-      marginBottom: 28,
-      position: "relative",
-      overflow: "hidden",
-      backdropFilter: "blur(20px)",
-      WebkitBackdropFilter: "blur(20px)",
-      boxShadow: `0 10px 30px rgba(0,0,0,0.2)`
-    }}>
+    <motion.div 
+      initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+      style={{ 
+        background: `linear-gradient(${conf.gradient})`,
+        border: `1px solid ${accentColor}40`,
+        borderRadius: 24,
+        padding: "20px 24px",
+        marginBottom: 20,
+        position: "relative",
+        overflow: "hidden",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        boxShadow: `0 10px 30px rgba(0,0,0,0.2)`
+      }}
+    >
       <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
         <div style={{ fontSize: 32, filter: `drop-shadow(0 0 10px ${accentColor}80)` }}>{conf.icon}</div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: accentColor, fontWeight: 900, letterSpacing: 1.5, marginBottom: 6, fontFamily: fonts.header }}>AI KOÇ</div>
+          <div style={{ fontSize: 11, color: accentColor, fontWeight: 900, letterSpacing: 1.5, marginBottom: 6, fontFamily: fonts.header }}>
+            BİYOMEKANİK KOÇ
+          </div>
           <AnimatePresence mode="wait">
             <motion.div
-              key={msgIndex}
+              key={currentTip.msg}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
               style={{ fontSize: 14, color: "#fff", lineHeight: 1.5, fontWeight: 600, fontFamily: fonts.body }}
             >
-              {currentData.msg}
+              {currentTip.msg}
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
-      
-      {/* İlerleme Çubuğu */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: "rgba(0,0,0,0.3)" }}>
-        <motion.div style={{ height: "100%", background: accentColor, width: `${progress}%` }} />
-      </div>
-    </div>
+    </motion.div>
   );
 }

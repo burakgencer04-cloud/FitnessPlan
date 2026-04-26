@@ -1,11 +1,7 @@
 import { EXERCISE_DB } from "./exerciseDatabase.js";
 
-// Egzersiz veritabanını dışarı aktar
 export { EXERCISE_DB };
 
-// ==========================================
-// 1. ROZETLER VE İLERLEME (BADGES)
-// ==========================================
 export const TOTAL_W = 48; 
 export const BADGE_ICONS = { fire: "🔥", star: "⭐", muscle: "💪", crown: "👑" };
 export const BADGES = [
@@ -14,25 +10,22 @@ export const BADGES = [
   { id: "b3", icon: "star", label: "1. Faz Bitti", check: (cw) => Object.keys(cw).filter(k => k.startsWith("0-")).length >= 16 }
 ];
 
-// ==========================================
-// 2. ANTRENMAN PROGRAMLARI (WORKOUT_PRESETS)
-// ==========================================
 export const WORKOUT_PRESETS = [
   {
     id: "deload_3",
     name: "🏖️ Deload / Aktif Dinlenme (3 Günlük)",
-    desc: "Kasların toparlanması ve sinir sisteminin resetlenmesi için düşük set ve %60 ağırlıkla yapılan aktif dinlenme haftası. Platoları kırmak için şarttır.",
+    desc: "Kasların toparlanması ve sinir sisteminin resetlenmesi için düşük set ve %60 ağırlıkla yapılan aktif dinlenme haftası.",
     level: "Orta",
     daysPerWeek: 3,
     color: "#10b981", 
     icon: "🏖️",
-    isDeload: true, // Yapay zeka bu bayrağı okuyacak
+    isDeload: true,
     workouts: [
       {
         label: "Gün 1 - Hafif Tüm Vücut",
         exercises: [
           { name: "Goblet Squat", target: "Bacak", sets: "2", reps: "10", rest: "60sn" },
-          { name: "Push-ups", target: "Göğüs", sets: "2", reps: "10", rest: "60sn" },
+          { name: "Push Up", target: "Göğüs", sets: "2", reps: "10", rest: "60sn" },
           { name: "Lat Pulldown", target: "Sırt", sets: "2", reps: "10", rest: "60sn" }
         ]
       },
@@ -41,7 +34,7 @@ export const WORKOUT_PRESETS = [
         exercises: [
           { name: "Romanian Deadlift", target: "Bacak", sets: "2", reps: "10", rest: "60sn" },
           { name: "Dumbbell Shoulder Press", target: "Omuz", sets: "2", reps: "10", rest: "60sn" },
-          { name: "Seated Row", target: "Sırt", sets: "2", reps: "10", rest: "60sn" }
+          { name: "Seated Cable Row", target: "Sırt", sets: "2", reps: "10", rest: "60sn" }
         ]
       },
       {
@@ -79,7 +72,7 @@ export const WORKOUT_PRESETS = [
         label: "Gün 2 - Pull Dominant (Çekiş Ağırlıklı)",
         exercises: [
           { name: "Deadlift", target: "Sırt", sets: "3", reps: "6-10", rest: "120sn" },
-          { name: "Bent Over Row", target: "Sırt", sets: "4", reps: "8-10", rest: "90sn" },
+          { name: "Barbell Row", target: "Sırt", sets: "4", reps: "8-10", rest: "90sn" },
           { name: "Incline Dumbbell Press", target: "Göğüs", sets: "3", reps: "10", rest: "90sn" },
           { name: "Walking Lunges", target: "Bacak", sets: "3", reps: "10", rest: "90sn" },
           { name: "Face Pull", target: "Omuz", sets: "3", reps: "12", rest: "60sn" },
@@ -91,7 +84,7 @@ export const WORKOUT_PRESETS = [
   {
     id: "fb_3",
     name: "Full Body Klasik (3 Günlük)",
-    desc: "Başlangıç seviyesi için en güvenli ve en hızlı güç kazandıran (IFBB onaylı) klasik 3 günlük tüm vücut rutini.",
+    desc: "Başlangıç seviyesi için en güvenli ve en hızlı güç kazandıran klasik 3 günlük tüm vücut rutini.",
     level: "Başlangıç / Orta",
     daysPerWeek: 3,
     color: "#22c55e",
@@ -100,9 +93,9 @@ export const WORKOUT_PRESETS = [
       {
         label: "Gün 1 - A Günü (Temel Güç)",
         exercises: [
-          { name: "Back Squat", target: "Bacak", sets: "4", reps: "8-10", rest: "90sn" },
+          { name: "Squat", target: "Bacak", sets: "4", reps: "8-10", rest: "90sn" },
           { name: "Bench Press", target: "Göğüs", sets: "4", reps: "8-10", rest: "90sn" },
-          { name: "Bent Over Row", target: "Sırt", sets: "4", reps: "8-10", rest: "90sn" },
+          { name: "Barbell Row", target: "Sırt", sets: "4", reps: "8-10", rest: "90sn" },
           { name: "Overhead Press", target: "Omuz", sets: "3", reps: "10", rest: "90sn" },
           { name: "Romanian Deadlift", target: "Bacak", sets: "3", reps: "10", rest: "90sn" },
           { name: "Plank", target: "Karın", sets: "3", reps: "60sn", rest: "60sn" }
@@ -125,7 +118,7 @@ export const WORKOUT_PRESETS = [
         exercises: [
           { name: "Goblet Squat", target: "Bacak", sets: "3", reps: "10-12", rest: "90sn" },
           { name: "Dumbbell Bench Press", target: "Göğüs", sets: "3", reps: "10-12", rest: "90sn" },
-          { name: "Seated Row", target: "Sırt", sets: "3", reps: "10-12", rest: "90sn" },
+          { name: "Seated Cable Row", target: "Sırt", sets: "3", reps: "10-12", rest: "90sn" },
           { name: "Arnold Press", target: "Omuz", sets: "3", reps: "10", rest: "90sn" },
           { name: "Leg Curl", target: "Bacak", sets: "3", reps: "12", rest: "60sn" },
           { name: "Hanging Leg Raise", target: "Karın", sets: "3", reps: "12", rest: "60sn" }
@@ -146,7 +139,7 @@ export const WORKOUT_PRESETS = [
         label: "Gün 1 - Upper A (Güç Odaklı)",
         exercises: [
           { name: "Bench Press", target: "Göğüs", sets: "4", reps: "6-8", rest: "120sn" },
-          { name: "Bent Over Row", target: "Sırt", sets: "4", reps: "6-8", rest: "120sn" },
+          { name: "Barbell Row", target: "Sırt", sets: "4", reps: "6-8", rest: "120sn" },
           { name: "Overhead Press", target: "Omuz", sets: "3", reps: "8-10", rest: "90sn" },
           { name: "Lat Pulldown", target: "Sırt", sets: "3", reps: "8-12", rest: "90sn" },
           { name: "Lateral Raise", target: "Omuz", sets: "3", reps: "12", rest: "60sn" },
@@ -157,12 +150,12 @@ export const WORKOUT_PRESETS = [
       {
         label: "Gün 2 - Lower A (Güç Odaklı)",
         exercises: [
-          { name: "Back Squat", target: "Bacak", sets: "4", reps: "6-10", rest: "120sn" },
+          { name: "Squat", target: "Bacak", sets: "4", reps: "6-10", rest: "120sn" },
           { name: "Romanian Deadlift", target: "Bacak", sets: "4", reps: "8-12", rest: "90sn" },
           { name: "Leg Press", target: "Bacak", sets: "3", reps: "10-12", rest: "90sn" },
           { name: "Leg Extension", target: "Bacak", sets: "3", reps: "12-15", rest: "60sn" },
           { name: "Leg Curl", target: "Bacak", sets: "3", reps: "12-15", rest: "60sn" },
-          { name: "Calf Raise", target: "Bacak", sets: "4", reps: "15-20", rest: "60sn" }
+          { name: "Standing Calf Raise", target: "Bacak", sets: "4", reps: "15-20", rest: "60sn" }
         ]
       },
       {
@@ -171,7 +164,7 @@ export const WORKOUT_PRESETS = [
           { name: "Incline Dumbbell Press", target: "Göğüs", sets: "4", reps: "8-12", rest: "90sn" },
           { name: "Seated Cable Row", target: "Sırt", sets: "4", reps: "8-12", rest: "90sn" },
           { name: "Dumbbell Shoulder Press", target: "Omuz", sets: "3", reps: "10-12", rest: "90sn" },
-          { name: "Pull-Up", target: "Sırt", sets: "3", reps: "8-12", rest: "90sn" },
+          { name: "Pull Up", target: "Sırt", sets: "3", reps: "8-12", rest: "90sn" },
           { name: "Face Pull", target: "Omuz", sets: "3", reps: "12-15", rest: "60sn" },
           { name: "Hammer Curl", target: "Kol", sets: "3", reps: "12-15", rest: "60sn" },
           { name: "Overhead Triceps Extension", target: "Kol", sets: "3", reps: "12-15", rest: "60sn" }
@@ -192,7 +185,7 @@ export const WORKOUT_PRESETS = [
   {
     id: "ppl_3",
     name: "Push / Pull / Legs (3 Günlük)",
-    desc: "En popüler hipertrofi (kas gelişimi) split'i. Her gün bir hareket anatomisine odaklanarak (İtiş, Çekiş, Bacak) çalışır.",
+    desc: "En popüler hipertrofi split'i. Her gün bir hareket anatomisine odaklanarak (İtiş, Çekiş, Bacak) çalışır.",
     level: "Başlangıç / Orta",
     daysPerWeek: 3,
     color: "#ef4444",
@@ -201,7 +194,7 @@ export const WORKOUT_PRESETS = [
       {
         label: "Gün 1 - Push (İtiş)",
         exercises: [
-          { name: "Flat Bench Press", target: "Göğüs", sets: "4", reps: "8-10", rest: "90sn" },
+          { name: "Bench Press", target: "Göğüs", sets: "4", reps: "8-10", rest: "90sn" },
           { name: "Overhead Press", target: "Omuz", sets: "4", reps: "8-10", rest: "90sn" },
           { name: "Incline Dumbbell Press", target: "Göğüs", sets: "3", reps: "10-12", rest: "90sn" },
           { name: "Lateral Raise", target: "Omuz", sets: "3", reps: "12-15", rest: "60sn" },
@@ -214,8 +207,8 @@ export const WORKOUT_PRESETS = [
         exercises: [
           { name: "Deadlift", target: "Sırt", sets: "3", reps: "6-8", rest: "120sn" },
           { name: "Lat Pulldown", target: "Sırt", sets: "4", reps: "8-12", rest: "90sn" },
-          { name: "Bent Over Row", target: "Sırt", sets: "3", reps: "8-10", rest: "90sn" },
-          { name: "Seated Row", target: "Sırt", sets: "3", reps: "10-12", rest: "90sn" },
+          { name: "Barbell Row", target: "Sırt", sets: "3", reps: "8-10", rest: "90sn" },
+          { name: "Seated Cable Row", target: "Sırt", sets: "3", reps: "10-12", rest: "90sn" },
           { name: "Face Pull", target: "Omuz", sets: "3", reps: "12-15", rest: "60sn" },
           { name: "Bicep Curl", target: "Kol", sets: "4", reps: "10-12", rest: "60sn" }
         ]
@@ -236,7 +229,7 @@ export const WORKOUT_PRESETS = [
   {
     id: "pplul_5",
     name: "PPL + UL Hibrit (5 Günlük)",
-    desc: "Haftada 5 gün çalışanlar için Push/Pull/Legs ile Upper/Lower sisteminin mükemmel birleşimi. Hacim ve güç bir arada.",
+    desc: "Push/Pull/Legs ile Upper/Lower sisteminin mükemmel birleşimi. Hacim ve güç bir arada.",
     level: "Orta / İleri Seviye",
     daysPerWeek: 5,
     color: "#0ea5e9",
@@ -268,18 +261,18 @@ export const WORKOUT_PRESETS = [
           { name: "Squat", target: "Bacak", sets: "4", reps: "6-8", rest: "120sn" },
           { name: "Leg Press", target: "Bacak", sets: "3", reps: "10-12", rest: "90sn" },
           { name: "Leg Curl", target: "Bacak", sets: "3", reps: "12-15", rest: "60sn" },
-          { name: "Calf Raise", target: "Bacak", sets: "4", reps: "15", rest: "60sn" }
+          { name: "Standing Calf Raise", target: "Bacak", sets: "4", reps: "15", rest: "60sn" }
         ]
       },
       {
         label: "Gün 4 - Upper (Üst Vücut)",
         exercises: [
           { name: "Incline Barbell Press", target: "Göğüs", sets: "3", reps: "8-10", rest: "90sn" },
-          { name: "Pull-Up", target: "Sırt", sets: "3", reps: "8-10", rest: "90sn" },
+          { name: "Pull Up", target: "Sırt", sets: "3", reps: "8-10", rest: "90sn" },
           { name: "Seated Cable Row", target: "Sırt", sets: "3", reps: "10-12", rest: "90sn" },
           { name: "Lateral Raise", target: "Omuz", sets: "3", reps: "12-15", rest: "60sn" },
           { name: "Bicep Curl", target: "Kol", sets: "3", reps: "12", rest: "60sn" },
-          { name: "Triceps Extension", target: "Kol", sets: "3", reps: "12", rest: "60sn" }
+          { name: "Overhead Triceps Extension", target: "Kol", sets: "3", reps: "12", rest: "60sn" }
         ]
       },
       {
@@ -297,7 +290,7 @@ export const WORKOUT_PRESETS = [
   {
     id: "ppl_6",
     name: "PPL Yüksek Hacim (6 Günlük)",
-    desc: "Her kas grubunu haftada 2 kez vurarak limiti zorlayan, sadece yüksek kalori alan ileri seviye sporcular için PPLx2 sistemi.",
+    desc: "Her kas grubunu haftada 2 kez vurarak limiti zorlayan ileri seviye PPLx2 sistemi.",
     level: "İleri Seviye",
     daysPerWeek: 6,
     color: "#8b5cf6",
@@ -340,7 +333,7 @@ export const WORKOUT_PRESETS = [
         label: "Gün 4 - Push B (Omuz Ağırlıklı)",
         exercises: [
           { name: "Dumbbell Shoulder Press", target: "Omuz", sets: "4", reps: "8-10", rest: "90sn" },
-          { name: "Flat Dumbbell Press", target: "Göğüs", sets: "3", reps: "10", rest: "90sn" },
+          { name: "Dumbbell Bench Press", target: "Göğüs", sets: "3", reps: "10", rest: "90sn" },
           { name: "Dips", target: "Göğüs", sets: "3", reps: "10", rest: "90sn" },
           { name: "Cable Fly", target: "Göğüs", sets: "3", reps: "12", rest: "60sn" },
           { name: "Lateral Raise", target: "Omuz", sets: "4", reps: "15", rest: "60sn" },

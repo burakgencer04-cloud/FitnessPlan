@@ -1,22 +1,25 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTranslation } from 'react-i18next'; // 🌍 ÇEVİRİ EKLENDİ
+import { useTranslation } from 'react-i18next'; 
+import useModalStore from '@/shared/store/useModalStore'; // 🔥 MODAL EKLENDİ
 
 import NutritionView from './NutritionView';
 import StockView from './StockView';
 import { normalizeItemName } from "../utils/nutritionUtils.js";
 
+const BarcodeScannerModal = lazy(() => import('./BarcodeScannerModal.jsx')); 
+
 export default function TabNutrition(props) {
   const { t } = useTranslation(); 
   const [activeView, setActiveView] = useState("nutrition"); 
+  const [showScanner, setShowScanner] = useState(false); 
   const C = props.themeColors;
+  const { openModal } = useModalStore(); // 🔥 MODAL KULLANIMI
 
   const effectiveShoppingList = useMemo(() => {
     if (props.shoppingList && props.shoppingList.length > 0) return props.shoppingList;
     if (!props.dayPlan || !props.dayPlan.meals) return [];
     
-    // Not: Veritabanı ve mantık bozulmasın diye buradaki kategoriler sabit Türkçe bırakıldı. 
-    // Görüntüleme kısmında (StockView vb.) çevrilecek.
     const catMap = {
       "Protein Kaynakları": [],
       "Karbonhidrat": [],
@@ -49,9 +52,18 @@ export default function TabNutrition(props) {
     return Object.keys(catMap).map(cat => ({ cat, items: catMap[cat] })).filter(c => c.items.length > 0);
   }, [props.shoppingList, props.dayPlan]);
 
+  const handleProductFound = (product) => {
+    setShowScanner(false);
+    // 🔥 ALERT DEĞİŞTİRİLDİ
+    openModal({ 
+      type: 'alert', 
+      title: 'Başarılı!', 
+      message: `✅ Ürün Bulundu: ${product.name}\n🔥 Kalori (100g): ${product.macros.calories} kcal\n🥩 Protein: ${product.macros.protein}g` 
+    });
+  };
+
   return (
     <div style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
-      {/* 🌌 AMBIENT GLOWING BACKGROUND (ORTAM IŞIKLARI) */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
         <motion.div 
           animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3], x: [0, 20, 0] }}
@@ -65,7 +77,6 @@ export default function TabNutrition(props) {
         />
       </div>
 
-      {/* İÇERİK (Z-INDEX 1) */}
       <div style={{ position: 'relative', zIndex: 1 }}>
         <AnimatePresence mode="wait">
           {activeView === "nutrition" ? (
@@ -79,6 +90,29 @@ export default function TabNutrition(props) {
           )}
         </AnimatePresence>
       </div>
+
+      {activeView === "nutrition" && (
+         <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowScanner(true)}
+            style={{ position: 'fixed', bottom: 120, right: 20, background: C?.green || '#22c55e', border: 'none', borderRadius: '50%', width: 64, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, boxShadow: '0 4px 15px rgba(0,0,0,0.4)', cursor: 'pointer', zIndex: 50 }}
+         >
+            📷
+         </motion.button>
+      )}
+
+      {/* 🔥 SUSPENSE İLE GÜVENLİ YÜKLEME */}
+      <AnimatePresence>
+        {showScanner && (
+           <Suspense fallback={<div style={{position:'fixed', inset:0, zIndex:9999, background:'#000', color: C?.green || '#22c55e', display:'flex', alignItems:'center', justifyContent:'center', fontWeight: 'bold'}}>Kamera Modülü Yükleniyor...</div>}>
+              <BarcodeScannerModal 
+                 C={C} 
+                 onClose={() => setShowScanner(false)} 
+                 onProductFound={handleProductFound} 
+              />
+           </Suspense>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

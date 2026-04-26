@@ -1,7 +1,8 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { fonts, THEMES, formatGroceryAmount, normalizeItemName } from "../utils/nutritionUtils.js";
+import { THEMES, formatGroceryAmount, normalizeItemName } from "../utils/nutritionUtils.js";
+import { fonts } from '@/shared/utils/uiStyles.js';
 
 // Beyin katmanı entegrasyonu (Tüm hesaplama buraya taşındı)
 import { useStockManager } from "../hooks/useStockManager.js";
@@ -17,7 +18,6 @@ const StatItem = ({ label, value, sub, color }) => (
 export default function StockView({ shoppingList = [], themeColors: C = {}, onCloseStock }) {
   const { t } = useTranslation();
 
-  // useStockManager içindeki tüm fonksiyonların çalıştığından emin olduk
   const {
     groupingMode, setGroupingMode,
     expandedCats, toggleCategory,

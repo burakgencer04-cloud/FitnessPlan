@@ -1,12 +1,6 @@
 import React from 'react';
 
-export const fonts = {
-  header: "'Comucan', system-ui, sans-serif",
-  body: "'Comucan', system-ui, sans-serif",
-  mono: "monospace"
-};
-
-
+import { fonts } from '@/shared/utils/uiStyles.js';
 
 export const MEASURE_TIPS = {
   weight: "Sabah aç karnına, tuvalete çıktıktan sonra tartılın.",
@@ -40,9 +34,7 @@ export const guessTargetMuscle = (exName) => {
   return "Diğer";
 };
 
-
-
-// 🔥 US NAVY YAĞ ORANI HESAPLAYICI
+// 🔥 US NAVY YAĞ ORANI HESAPLAYICI (Zırhlandı)
 export const calculateUSNavyBodyFat = (gender = 'male', height, neck, waist, hip = 0) => {
   if (!height || !neck || !waist) return null;
   const h = parseFloat(height);
@@ -53,16 +45,20 @@ export const calculateUSNavyBodyFat = (gender = 'male', height, neck, waist, hip
   try {
     let bf = 0;
     if (gender === 'female' && hi > 0) {
-      bf = 163.205 * Math.log10(w + hi - n) - 97.684 * Math.log10(h) - 78.387;
+      const val = w + hi - n;
+      if (val <= 0) return null; // Logaritma çökmesini engeller
+      bf = 163.205 * Math.log10(val) - 97.684 * Math.log10(h) - 78.387;
     } else {
-      bf = 86.010 * Math.log10(w - n) - 70.041 * Math.log10(h) + 36.76;
+      const val = w - n;
+      if (val <= 0) return null; // Logaritma çökmesini engeller
+      bf = 86.010 * Math.log10(val) - 70.041 * Math.log10(h) + 36.76;
     }
-    return Math.max(3, Math.min(60, bf)); // %3 ile %60 arasında sınırla
+    // Sonucu makul bir aralıkta sınırla (%3 - %60)
+    return Math.max(3, Math.min(60, bf)); 
   } catch (error) {
     return null;
   }
 };
-
 
 // 🌟 PREMIUM GLASSMORPHISM STYLES (Tüm Kartlar İçin Ortak)
 export const getGlassCardStyle = (C) => ({

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const fonts = { header: "'Comucan', system-ui, sans-serif", body: "'Comucan', system-ui, sans-serif", mono: "monospace" };
+import { fonts } from '@/shared/utils/uiStyles.js';
 
 // 🌟 SIKIK KUTULAR KALDIRILDI: Tamamen süzülen, asla taşmayan, ferah tasarım
 const PremiumArenaInput = ({ label, value, onIncrease, onDecrease, C }) => (

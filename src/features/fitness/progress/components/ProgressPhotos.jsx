@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { fonts, getGlassCardStyle } from './progressUtils';
+import { getGlassCardStyle } from './progressUtils';
 import { get } from 'idb-keyval';
-
+import { fonts } from '@/shared/utils/uiStyles.js';
 // IndexedDB'den resmi asenkron çeken alt bileşen
 const PhotoItem = ({ photo, onClick, C }) => {
   const [imgSrc, setImgSrc] = useState(photo.src || null);

@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { globalFonts as fonts, getGlobalGlassInnerStyle as getGlassInnerStyle } from '@/shared/ui/globalStyles.js';
-import { predictNextGoal } from '../utils/workoutAnalyzer.jsx'; 
+import { predictNextGoal } from '../utils/workoutAnalyzer.js'; 
 import { useAppStore } from '@/app/store.js';
 
 const InputGroup = ({ label, value, field, onAdjust, onDirectInput, step = 1, min = 0, max = 999, C, disabled }) => (
@@ -18,6 +18,20 @@ const InputGroup = ({ label, value, field, onAdjust, onDirectInput, step = 1, mi
 // 🔥 DİKKAT: exName prop'u eklendi
 const SetRow = React.memo(({ setIndex, setData, lastLog, onToggle, onUpdate, themeColors: C, targetRepsStr, exName }) => {
   const { w = "", r = "", rpe = "", t = "N", done = false } = setData || {};
+
+  // 🔥 ZIRH: Tema objesi geç gelirse UI'ın çökmesini engeller
+  const safeC = {
+    text: C?.text || '#ffffff',
+    sub: C?.sub || '#a1a1aa',
+    mute: C?.mute || '#3f3f46',
+    border: C?.border || '#27272a',
+    green: C?.green || '#22c55e',
+    blue: C?.blue || '#3b82f6',
+    red: C?.red || '#ef4444',
+    yellow: C?.yellow || '#eab308',
+    bg: C?.bg || '#000000',
+    card: C?.card || '#09090b'
+  };
   
   const checkAndUpdatePR = useAppStore(state => state.checkAndUpdatePR);
   const [showPR, setShowPR] = useState(false);
@@ -35,7 +49,12 @@ const SetRow = React.memo(({ setIndex, setData, lastLog, onToggle, onUpdate, the
   }, [setData, onUpdate]);
 
   const TYPES = ['N', 'W', 'D', 'F'];
-  const TYPE_CONFIG = { N: { label: setIndex + 1, color: done ? C.green : C.sub }, W: { label: "W", color: C.yellow }, D: { label: "D", color: C.blue }, F: { label: "F", color: C.red } };
+  const TYPE_CONFIG = { 
+    N: { label: setIndex + 1, color: done ? safeC.green : safeC.sub }, 
+    W: { label: "W", color: safeC.yellow }, 
+    D: { label: "D", color: safeC.blue }, 
+    F: { label: "F", color: safeC.red } 
+  };
 
   const handleTypeCycle = () => {
     if (done) return; 
@@ -46,9 +65,10 @@ const SetRow = React.memo(({ setIndex, setData, lastLog, onToggle, onUpdate, the
   const currentType = TYPE_CONFIG[t] || TYPE_CONFIG.N;
 
   useEffect(() => {
+    // lastLog koruması
     if (!w && !r && lastLog && !done && t !== 'W') {
-       onUpdate('w', lastLog.weight.toString());
-       onUpdate('r', lastLog.reps.toString());
+       if (lastLog.weight !== undefined) onUpdate('w', lastLog.weight.toString());
+       if (lastLog.reps !== undefined) onUpdate('r', lastLog.reps.toString());
     }
   }, []);
 
@@ -78,7 +98,7 @@ const SetRow = React.memo(({ setIndex, setData, lastLog, onToggle, onUpdate, the
     return parseInt(r) >= maxTarget;
   }, [done, r, targetRepsStr, t]);
 
-  const glassInner = getGlassInnerStyle(C);
+  const glassInner = getGlassInnerStyle(safeC);
 
   return (
     <div style={{ width: "100%", marginBottom: 10, position: "relative" }}>
@@ -88,7 +108,7 @@ const SetRow = React.memo(({ setIndex, setData, lastLog, onToggle, onUpdate, the
         {showPR && (
           <motion.div 
             initial={{ scale: 0, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0, opacity: 0 }}
-            style={{ position: 'absolute', top: -14, right: 10, background: `linear-gradient(135deg, ${C.yellow}, #f59e0b)`, color: '#000', padding: '4px 10px', borderRadius: 8, fontSize: 10, fontWeight: 900, zIndex: 10, boxShadow: `0 4px 10px ${C.yellow}80`, border: `1px solid rgba(255,255,255,0.5)` }}
+            style={{ position: 'absolute', top: -14, right: 10, background: `linear-gradient(135deg, ${safeC.yellow}, #f59e0b)`, color: '#000', padding: '4px 10px', borderRadius: 8, fontSize: 10, fontWeight: 900, zIndex: 10, boxShadow: `0 4px 10px ${safeC.yellow}80`, border: `1px solid rgba(255,255,255,0.5)` }}
           >
             🏆 YENİ REKOR (PR)!
           </motion.div>
@@ -98,15 +118,15 @@ const SetRow = React.memo(({ setIndex, setData, lastLog, onToggle, onUpdate, the
       <AnimatePresence>
         {aiGoal && !done && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} style={{ overflow: "hidden", marginBottom: 8 }}>
-            <div style={{ background: `linear-gradient(90deg, rgba(59, 130, 246, 0.1), transparent)`, borderLeft: `3px solid ${C.blue}`, padding: "8px 12px", borderRadius: "0 8px 8px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ background: `linear-gradient(90deg, rgba(59, 130, 246, 0.1), transparent)`, borderLeft: `3px solid ${safeC.blue}`, padding: "8px 12px", borderRadius: "0 8px 8px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 14 }}>{aiGoal.type === "weight" ? "🔥" : "⚡"}</span>
                 <div>
-                  <div style={{ fontSize: 10, color: C.blue, fontWeight: 900, fontFamily: fonts.header, letterSpacing: 0.5 }}>OVERLOAD HEDEFİ</div>
+                  <div style={{ fontSize: 10, color: safeC.blue, fontWeight: 900, fontFamily: fonts.header, letterSpacing: 0.5 }}>OVERLOAD HEDEFİ</div>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontStyle: "italic" }}>{aiGoal.message}</div>
                 </div>
               </div>
-              <div style={{ fontSize: 14, fontWeight: 900, fontFamily: fonts.mono, color: C.blue }}>
+              <div style={{ fontSize: 14, fontWeight: 900, fontFamily: fonts.mono, color: safeC.blue }}>
                 {aiGoal.nextWeight}kg × {aiGoal.nextReps}
               </div>
             </div>
@@ -114,31 +134,31 @@ const SetRow = React.memo(({ setIndex, setData, lastLog, onToggle, onUpdate, the
         )}
       </AnimatePresence>
 
-      <motion.div layout style={{ ...glassInner, padding: "12px 10px", background: done ? `linear-gradient(145deg, ${C.green}1A, rgba(0,0,0,0.2))` : glassInner.background, border: `1px solid ${done ? C.green : C.border}40`, transition: "0.3s ease", width: "100%" }}>
+      <motion.div layout style={{ ...glassInner, padding: "12px 10px", background: done ? `linear-gradient(145deg, ${safeC.green}1A, rgba(0,0,0,0.2))` : glassInner.background, border: `1px solid ${done ? safeC.green : safeC.border}40`, transition: "0.3s ease", width: "100%" }}>
         <div style={{ display: "flex", gap: 6, alignItems: "center", width: "100%" }}>
-          <div onClick={handleTypeCycle} style={{ width: 22, textAlign: "center", color: currentType.color, fontWeight: 900, fontSize: 14, fontFamily: fonts.mono, cursor: "pointer", textShadow: done ? `0 0 10px ${C.green}80` : "none", flexShrink: 0 }}>
+          <div onClick={handleTypeCycle} style={{ width: 22, textAlign: "center", color: currentType.color, fontWeight: 900, fontSize: 14, fontFamily: fonts.mono, cursor: "pointer", textShadow: done ? `0 0 10px ${safeC.green}80` : "none", flexShrink: 0 }}>
             {currentType.label}
           </div>
-          <InputGroup label="KG" value={w} field="w" onAdjust={handleAdjust} onDirectInput={handleDirectInput} C={C} disabled={done} />
-          <InputGroup label="REP" value={r} field="r" onAdjust={handleAdjust} onDirectInput={handleDirectInput} C={C} disabled={done} />
-          <InputGroup label="RPE" value={rpe} field="rpe" onAdjust={handleAdjust} onDirectInput={handleDirectInput} step={0.5} min={1} max={10} C={C} disabled={done} />
-          <motion.button whileTap={{ scale: 0.9 }} onClick={onToggle} style={{ width: 38, height: 38, flexShrink: 0, borderRadius: "10px", border: `1px solid ${done ? C.green : C.border}40`, background: done ? C.green : "rgba(0,0,0,0.3)", color: done ? "#000" : C.mute, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: done ? `0 0 15px ${C.green}80` : "none", marginLeft: 4 }}>
+          <InputGroup label="KG" value={w} field="w" onAdjust={handleAdjust} onDirectInput={handleDirectInput} C={safeC} disabled={done} />
+          <InputGroup label="REP" value={r} field="r" onAdjust={handleAdjust} onDirectInput={handleDirectInput} C={safeC} disabled={done} />
+          <InputGroup label="RPE" value={rpe} field="rpe" onAdjust={handleAdjust} onDirectInput={handleDirectInput} step={0.5} min={1} max={10} C={safeC} disabled={done} />
+          <motion.button whileTap={{ scale: 0.9 }} onClick={onToggle} style={{ width: 38, height: 38, flexShrink: 0, borderRadius: "10px", border: `1px solid ${done ? safeC.green : safeC.border}40`, background: done ? safeC.green : "rgba(0,0,0,0.3)", color: done ? "#000" : safeC.mute, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: done ? `0 0 15px ${safeC.green}80` : "none", marginLeft: 4 }}>
             {done ? "✓" : ""}
           </motion.button>
         </div>
         
         <AnimatePresence>
           {isOverloadReady && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} style={{ marginTop: 12, padding: "8px 12px", background: `linear-gradient(135deg, ${C.blue}20, transparent)`, borderRadius: 10, border: `1px solid ${C.blue}30`, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 14, filter: `drop-shadow(0 0 5px ${C.blue})` }}>🚀</span>
-              <span style={{ fontSize: 11, color: C.blue, fontWeight: 800, lineHeight: 1.3 }}>Hedef tekrara ulaştın! Bir sonraki set veya idmanda ağırlığı <strong style={{color: C.text}}>%5</strong> artırmayı dene.</span>
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} style={{ marginTop: 12, padding: "8px 12px", background: `linear-gradient(135deg, ${safeC.blue}20, transparent)`, borderRadius: 10, border: `1px solid ${safeC.blue}30`, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 14, filter: `drop-shadow(0 0 5px ${safeC.blue})` }}>🚀</span>
+              <span style={{ fontSize: 11, color: safeC.blue, fontWeight: 800, lineHeight: 1.3 }}>Hedef tekrara ulaştın! Bir sonraki set veya idmanda ağırlığı <strong style={{color: safeC.text}}>%5</strong> artırmayı dene.</span>
             </motion.div>
           )}
         </AnimatePresence>
 
         {lastLog && !done && t !== 'W' && (
-          <div style={{ marginTop: 8, fontSize: 10, color: C.mute, textAlign: "right", fontFamily: fonts.mono }}>
-             Önceki: {lastLog.weight}kg × {lastLog.reps}
+          <div style={{ marginTop: 8, fontSize: 10, color: safeC.mute, textAlign: "right", fontFamily: fonts.mono }}>
+             Önceki: {lastLog.weight || 0}kg × {lastLog.reps || 0}
           </div>
         )}
       </motion.div>

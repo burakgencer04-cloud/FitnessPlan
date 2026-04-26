@@ -2,29 +2,40 @@ import { create } from 'zustand';
 
 const useModalStore = create((set) => ({
   isOpen: false,
-  title: "",
-  message: "",
-  type: "alert", // "alert" (sadece tamam butonu) veya "confirm" (onay/iptal butonları)
-  confirmText: "Tamam",
-  cancelText: "İptal",
-  confirmColor: "#3b82f6", // Varsayılan buton rengi (Mavi)
+  type: 'alert', // 'alert' veya 'confirm'
+  title: '',
+  message: '',
+  confirmText: 'Tamam',
+  cancelText: 'İptal',
   onConfirm: null,
-  
-  // Basit Bilgilendirme Uyarıları İçin (Eski 'alert' yerine)
-  showAlert: (title, message) => set({ 
-    isOpen: true, title, message, type: "alert", 
-    confirmText: "Anladım", confirmColor: "#3b82f6", onConfirm: null 
+  onCancel: null,
+
+  // 🔥 YENİ VE STANDART API (Tüm uygulamanın kullanacağı ana fonksiyon)
+  openModal: (config) => set({
+    isOpen: true,
+    type: config.type || 'alert',
+    title: config.title || 'Bilgi',
+    message: config.message || '',
+    confirmText: config.confirmText || 'Tamam',
+    cancelText: config.cancelText || 'İptal',
+    onConfirm: config.onConfirm || null,
+    onCancel: config.onCancel || null,
+  }),
+
+  closeModal: () => set({ 
+    isOpen: false, 
+    onConfirm: null, 
+    onCancel: null 
+  }),
+
+  // 🛡️ GERİYE DÖNÜK UYUMLULUK ZIRHI (Eski kodlar patlamasın diye)
+  showAlert: (title, message) => set({
+    isOpen: true, type: 'alert', title, message, confirmText: 'Tamam', onConfirm: null
   }),
   
-  // Onay İsteyen Durumlar İçin (Eski 'window.confirm' yerine)
-  showConfirm: (title, message, onConfirm, options = {}) => set({ 
-    isOpen: true, title, message, type: "confirm", onConfirm,
-    confirmText: options.confirmText || "Onayla",
-    cancelText: options.cancelText || "İptal",
-    confirmColor: options.confirmColor || "#ef4444" // Silme gibi işlemler için varsayılan Kırmızı
-  }),
-  
-  closeModal: () => set({ isOpen: false })
+  showConfirm: (title, message, onConfirm) => set({
+    isOpen: true, type: 'confirm', title, message, confirmText: 'Evet', cancelText: 'Hayır', onConfirm
+  })
 }));
 
 export default useModalStore;

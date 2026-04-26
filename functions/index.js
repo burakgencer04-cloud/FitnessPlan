@@ -1,154 +1,87 @@
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
 
-admin.initializeApp();
-const db = admin.firestore();
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
-// ============================================================================
-// 1. TAVERNA BİLDİRİMLERİ (Alev ve Yorum)
-// ============================================================================
-exports.onPostUpdated = functions.firestore
-  .document("feed/{postId}")
-  .onUpdate(async (change, context) => {
-    
-    const beforeData = change.before.data();
-    const afterData = change.after.data();
-    const postOwnerId = afterData.userId;
-    let notificationTitle = "";
-    let notificationBody = "";
+// 1. ÖNCEKİ GÜVENLİK FONKSİYONUMUZ (Korundu)
+exports.secureAddWorkoutVolume = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Giriş yapmalısınız.');
+  const { volume } = data;
+  if (typeof volume !== 'number' || volume <= 0 || volume > 50000) {
+    throw new functions.https.HttpsError('invalid-argument', 'Geçersiz hacim verisi.');
+  }
+  const db = admin.firestore();
+  const userRef = db.collection('leaderboard').doc(context.auth.uid);
+  try {
+    await userRef.set({
+      totalVolume: admin.firestore.FieldValue.increment(volume),
+      lastWorkoutDate: admin.firestore.FieldValue.serverTimestamp(),
+      userId: context.auth.uid
+    }, { merge: true });
+    return { success: true, addedVolume: volume };
+  } catch (error) {
+    throw new functions.https.HttpsError('internal', 'Veritabanı güncellenemedi.');
+  }
+});
 
-    // 1. BEĞENİ (Alev) KONTROLÜ
-    if (afterData.likes > beforeData.likes) {
-      const newLikerId = afterData.likedBy[afterData.likedBy.length - 1];
-      if (newLikerId === postOwnerId) return null;
-      notificationTitle = "🔥 Gönderine Alev Atıldı!";
-      notificationBody = `Taverna'daki son rekorun ateşlendi!`;
-    } 
-    // 2. YORUM KONTROLÜ
-    else if (afterData.comments.length > beforeData.comments.length) {
-      const newComment = afterData.comments[afterData.comments.length - 1];
-      if (newComment.user === afterData.userName) return null;
-      notificationTitle = `💬 ${newComment.user} yorum yaptı`;
-      notificationBody = `"${newComment.text}"`;
-    } 
-    else {
-      return null;
+// 2. 🔥 YENİ: GEMINI AI PROXY FONKSİYONU
+exports.analyzeFoodWithGemini = functions.https.onCall(async (data, context) => {
+  // A. Yetki Kontrolü: API'yi sadece giriş yapmış senin kullanıcıların tetikleyebilir (Spam koruması)
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'AI analizi için giriş yapmanız gerekiyor.');
+  }
+
+  const { imageBase64 } = data;
+  if (!imageBase64) {
+    throw new functions.https.HttpsError('invalid-argument', 'Görsel verisi eksik.');
+  }
+
+  // B. Sunucu ortam değişkeninden API Key'i al (Asla client'a gitmez)
+  const API_KEY = process.env.GEMINI_API_KEY;
+  if (!API_KEY) {
+    console.error("Sunucuda GEMINI_API_KEY tanımlı değil!");
+    throw new functions.https.HttpsError('internal', 'Yapay zeka servisi şu an kullanılamıyor.');
+  }
+
+  // C. Gizli Prompt'un (Senin Fikri Mülkiyetin, client'ta görünmez)
+  const systemPrompt = `Sen profesyonel bir diyetisyensin. Sana gönderilen yemek fotoğrafını analiz et.
+  İçindeki malzemeleri tahmin et ve 100 gramı üzerinden makro değerlerini çıkar.
+  SADECE şu JSON formatında yanıt ver, başka hiçbir kelime veya markdown kullanma:
+  {"name": "Yemek Adı", "cal": 300, "p": 20, "c": 30, "f": 10}`;
+
+  // D. Google API'sine İstek (Node 18+ Native Fetch)
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: systemPrompt },
+            { inline_data: { mime_type: "image/jpeg", data: imageBase64 } }
+          ]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API Hatası: ${response.status} - ${response.statusText}`);
     }
 
-    try {
-      const userDoc = await db.collection("users").doc(postOwnerId).get();
-      if (!userDoc.exists) return null;
+    const result = await response.json();
+    const aiText = result.candidates[0].content.parts[0].text;
 
-      const fcmToken = userDoc.data().fcmToken;
-      if (!fcmToken) return null;
+    // Markdown tagleri gelirse temizle (```json ... ```)
+    const cleanJson = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsedData = JSON.parse(cleanJson);
 
-      const payload = {
-        notification: { title: notificationTitle, body: notificationBody },
-        token: fcmToken
-      };
-      
-      await admin.messaging().send(payload);
-      return null;
-    } catch (error) {
-      console.error("Bildirim gönderme hatası:", error);
-      return null;
-    }
-  });
+    // Sonucu Frontend'e dön
+    return { success: true, data: parsedData };
 
-// ============================================================================
-// 2. YENİ: KİŞİSELLEŞTİRİLMİŞ HAFTALIK ÖZET BİLDİRİMİ (CRON JOB)
-// Her Pazar akşamı 20:00'de çalışır
-// ============================================================================
-exports.scheduledWeeklySummary = functions.pubsub
-  .schedule("0 20 * * 0")
-  .timeZone("Europe/Istanbul")
-  .onRun(async (context) => {
-    const now = new Date();
-    // Zaman aralıklarını ayarla (Son 7 gün ve Önceki 7 gün)
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-
-    try {
-      // Sadece bildirim izni veren (FCM Token'ı olan) kullanıcıları çek
-      const usersSnapshot = await db.collection("users").where("fcmToken", "!=", null).get();
-      const promises = [];
-
-      usersSnapshot.forEach((userDoc) => {
-        const userData = userDoc.data();
-        const uid = userDoc.id;
-        const fcmToken = userData.fcmToken;
-
-        const processUser = async () => {
-          // Kullanıcının son 14 günlük idmanlarını Feed üzerinden analiz et
-          const workoutsSnapshot = await db.collection("feed")
-            .where("userId", "==", uid)
-            .where("createdAt", ">=", twoWeeksAgo)
-            .get();
-
-          let thisWeekVolume = 0;
-          let thisWeekCount = 0;
-          let lastWeekVolume = 0;
-
-          workoutsSnapshot.forEach(doc => {
-            const data = doc.data();
-            const createdAt = data.createdAt.toDate();
-            
-            if (createdAt >= oneWeekAgo) {
-              thisWeekVolume += (data.volume || 0);
-              thisWeekCount++;
-            } else {
-              lastWeekVolume += (data.volume || 0);
-            }
-          });
-
-          // Senaryo A: Kullanıcı hiç idman yapmadıysa
-          if (thisWeekCount === 0) {
-             return admin.messaging().send({
-                notification: {
-                  title: "Seni Özledik! 🏋️‍♂️",
-                  body: "Bu hafta idman kaydı girmedin. Yeni haftaya güçlü bir başlangıç yapmaya ne dersin?"
-                },
-                data: { click_action: "FLUTTER_NOTIFICATION_CLICK", tab: "program" },
-                token: fcmToken
-             });
-          }
-
-          // Senaryo B: Kullanıcı idman yaptıysa
-          const volumeInTons = (thisWeekVolume / 1000).toFixed(1);
-          let bodyText = `Bu hafta ${thisWeekCount} idman yaptın ve toplam ${volumeInTons} ton kaldırdın! 🦍`;
-          
-          if (lastWeekVolume > 0) {
-            const diff = ((thisWeekVolume - lastWeekVolume) / lastWeekVolume) * 100;
-            if (diff > 0) {
-              bodyText += ` Geçen haftadan %${diff.toFixed(1)} daha fazla! 🔥`;
-            } else if (diff < 0) {
-              bodyText += ` Haftaya rekor kırıp bu rakamı geçiyoruz! ⚡`;
-            }
-          }
-
-          const payload = {
-            notification: {
-              title: "Haftalık Savaş Raporun Geldi 📜",
-              body: bodyText,
-            },
-            data: {
-              click_action: "FLUTTER_NOTIFICATION_CLICK", 
-              tab: "progress" // Bildirime tıklanınca Progress sekmesini aç
-            },
-            token: fcmToken
-          };
-
-          return admin.messaging().send(payload);
-        };
-
-        promises.push(processUser());
-      });
-
-      await Promise.all(promises);
-      console.log(`Haftalık özet başarıyla ${promises.length} kullanıcıya gönderildi.`);
-    } catch (error) {
-      console.error("Haftalık özet Cloud Function hatası:", error);
-    }
-    
-    return null;
-  });
+  } catch (error) {
+    console.error("Yapay Zeka Analiz Çökmesi:", error);
+    throw new functions.https.HttpsError('internal', 'Görsel analiz edilemedi, tekrar deneyin.');
+  }
+});

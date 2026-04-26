@@ -1,8 +1,12 @@
+
+// Uygulamanın tüm temel tipografi ve tasarım jetonları (Design Tokens) burada yaşar.
 export const fonts = {
   header: "'Comucan', system-ui, sans-serif",
   body: "'Comucan', system-ui, sans-serif",
   mono: "monospace"
 };
+
+// İleride renkleri (C objesini) de buraya taşıyabilirsin.
 
 // 🚀 GPU DOSTU GLASSMORPHISM
 export const getGlassCardStyle = (C) => ({
@@ -28,3 +32,4 @@ export const getGlassInnerStyle = (C) => ({
   borderRadius: 20,
   transform: "translateZ(0)"
 });
+

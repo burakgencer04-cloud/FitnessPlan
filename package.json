@@ -11,28 +11,33 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@awesome-cordova-plugins/core": "^9.1.4",
     "@awesome-cordova-plugins/health": "^9.1.4",
+    "@awesome-cordova-plugins/local-notifications": "^9.1.4",
     "@capacitor/android": "^8.3.1",
     "@capacitor/core": "^8.3.1",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.3.1",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
+    "archiver": "^7.0.1",
     "cordova-plugin-health": "^3.2.4",
+    "cordova-plugin-local-notification": "^1.2.3",
     "firebase": "^12.12.0",
     "framer-motion": "^12.38.0",
     "html-to-image": "^1.11.13",
-    "html2canvas": "^1.4.1",
     "i18next": "^26.0.6",
     "i18next-browser-languagedetector": "^8.2.1",
     "idb-keyval": "^6.2.2",
     "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-error-boundary": "^6.1.1",
     "react-i18next": "^17.0.4",
     "react-is": "^19.2.5",
     "react-qr-barcode-scanner": "^2.1.25",
     "recharts": "^3.8.1",
+    "rxjs": "^7.8.2",
     "three": "^0.184.0",
     "vite-plugin-pwa": "^1.2.0",
     "zustand": "^5.0.12"
@@ -40,6 +45,8 @@
   "devDependencies": {
     "@capacitor/cli": "^8.3.1",
     "@eslint/js": "^9.39.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
@@ -47,7 +54,9 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "jsdom": "^29.0.2",
     "typescript": "^6.0.3",
-    "vite": "^8.0.4"
+    "vite": "^8.0.4",
+    "vitest": "^4.1.5"
   }
 }

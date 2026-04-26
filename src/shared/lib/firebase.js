@@ -1,8 +1,13 @@
-// src/core/firebase.js VEYA src/shared/lib/firebase.js
+// src/shared/lib/firebase.js (veya src/core/firebase.js)
 
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+
+// Hangi değişken eksik kontrol edelim (Geliştirici dostu hata)
+if (!import.meta.env.VITE_FIREBASE_API_KEY) {
+    console.error("🔴 KRİTİK HATA: VITE_FIREBASE_API_KEY .env dosyasında bulunamadı! Lütfen sunucuyu durdurup 'npm run dev' ile yeniden başlatın.");
+}
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,9 +19,9 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-console.log("✅ Firebase initialized with Project ID:", import.meta.env.VITE_FIREBASE_PROJECT_ID);
+console.log("✅ Firebase başlatıldı. Proje ID:", import.meta.env.VITE_FIREBASE_PROJECT_ID);

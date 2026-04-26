@@ -26,13 +26,14 @@ export const PART_TO_TARGET = {
   "Bacak (Quad)": "Bacak", "Arka Bacak": "Bacak", "Kalça": "Bacak", "Baldır": "Bacak"
 };
 
-// 🔥 YENİ: EPLEY FORMÜLÜ İLE E1RM HESAPLAYICI
-export const calculateE1RM = (kg, reps) => {
-  const w = Number(kg) || 0;
-  const r = Number(reps) || 0;
-  if (w === 0 || r === 0) return 0;
-  if (r === 1) return w; // 1 tekrar zaten 1RM'dir
-  return Math.round(w * (1 + r / 30));
+// 🔥 ZIRHLI EPLEY FORMÜLÜ İLE E1RM HESAPLAYICI (Tek ve doğru versiyon)
+export const calculateE1RM = (weight, reps) => {
+  const w = parseFloat(weight);
+  const r = parseInt(reps);
+  
+  if (isNaN(w) || isNaN(r) || w <= 0 || r <= 0) return 0;
+  
+  return Math.round(w * (1 + 0.0333 * r));
 };
 
 export const predictNextGoal = (lastLog, targetRepsStr = "10") => {
@@ -42,6 +43,7 @@ export const predictNextGoal = (lastLog, targetRepsStr = "10") => {
   let max1RM = 0;
 
   lastLog.sets.forEach(set => {
+    // 🔥 YANLIŞLIKLA YAPIŞTIRILAN EXPORT SİLİNDİ, DOĞRU ÇAĞRI EKLENDİ
     const e1rm = calculateE1RM(set.kg, set.reps);
     if (e1rm > max1RM) {
       max1RM = e1rm;

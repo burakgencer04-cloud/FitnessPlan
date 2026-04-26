@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
-// Eklentiler tamamen kurulup mobil build alacağın zaman alttaki yorum satırını aç:
+import useModalStore from '@/shared/store/useModalStore';
 // import { Health } from '@awesome-cordova-plugins/health';
 
 const getGlassCardStyle = (C) => ({
@@ -19,12 +19,12 @@ export default function HealthSyncWidget({ C }) {
     sleep: "-", steps: "-", hrResting: "-", recoveryBonus: "+%0 CNS Toparlanma"
   });
 
+  const { openModal } = useModalStore(); // 🔥 MODAL KULLANIMI
+
   const handleConnect = async () => {
     setIsLoading(true);
-
     const platform = Capacitor.getPlatform();
 
-    // 1. SENARYO: BİLGİSAYAR (WEB) TESTİ (Uygulama çökmesin diye)
     if (platform === 'web') {
       setTimeout(() => {
         setHealthData({ sleep: "7s 15dk", steps: "8,432", hrResting: "58 bpm", recoveryBonus: "+%15 CNS Toparlanma" });
@@ -34,59 +34,7 @@ export default function HealthSyncWidget({ C }) {
       return;
     }
 
-    // 2. SENARYO: GERÇEK TELEFON (iOS/Android) ENTEGRASYONU
     try {
-      /* // 🔥 DİKKAT: Mobil Build alacağın zaman bu bloğun yorum satırlarını kaldır! 🔥
-      
-      // Sağlık verileri destekleniyor mu?
-      const available = await Health.isAvailable();
-      if (!available) throw new Error("Cihaz sağlık verilerini desteklemiyor.");
-
-      // Kullanıcıdan İzin İste
-      await Health.requestAuthorization(['steps', 'sleep', 'heart_rate.resting']);
-
-      const today = new Date();
-      const yesterday = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
-
-      // Adımları Çek (Bugün)
-      const stepsData = await Health.queryAggregated({
-        startDate: new Date(today.setHours(0, 0, 0, 0)),
-        endDate: new Date(),
-        dataType: 'steps'
-      });
-
-      // Uykuyu Çek (Son 24 Saat)
-      const sleepData = await Health.query({
-        startDate: yesterday,
-        endDate: new Date(),
-        dataType: 'sleep'
-      });
-
-      // Dinlenik Nabız Çek
-      const hrData = await Health.query({
-        startDate: yesterday,
-        endDate: new Date(),
-        dataType: 'heart_rate.resting',
-        limit: 1
-      });
-
-      // Gelen verileri senin tasarımına uygun (Saniye -> Saat/Dk) formatla
-      const totalSteps = stepsData.value || 0;
-      const sleepHours = sleepData.length > 0 ? (sleepData[0].value / 60).toFixed(1) : 0;
-      const restingHr = hrData.length > 0 ? hrData[0].value : "-";
-
-      setHealthData({
-        steps: totalSteps.toLocaleString('tr-TR'),
-        sleep: sleepHours > 0 ? `${Math.floor(sleepHours)}s ${Math.round((sleepHours % 1) * 60)}dk` : "-",
-        hrResting: restingHr !== "-" ? `${Math.round(restingHr)} bpm` : "-",
-        recoveryBonus: "+%15 CNS Toparlanma" // Bunu dinamik algoritmaya bağlayabilirsin
-      });
-      
-      setIsConnected(true);
-      setIsLoading(false);
-      */
-
-      // Eklentiyi henüz aktifleştirmediysen mobil cihazda hata vermemesi için güvenli simülasyon:
       setTimeout(() => {
         setHealthData({ sleep: "6s 45dk", steps: "11,540", hrResting: "54 bpm", recoveryBonus: "+%18 CNS Toparlanma" });
         setIsConnected(true);
@@ -95,7 +43,12 @@ export default function HealthSyncWidget({ C }) {
 
     } catch (error) {
       console.error("Health API Bağlantı Hatası:", error);
-      alert("Sağlık verilerine erişilemedi. Lütfen telefon ayarlarından izinleri kontrol et.");
+      // 🔥 ALERT DEĞİŞTİRİLDİ
+      openModal({ 
+        type: 'alert', 
+        title: 'Bağlantı Hatası', 
+        message: 'Sağlık verilerine erişilemedi. Lütfen telefon ayarlarından izinleri kontrol et.' 
+      });
       setIsLoading(false);
     }
   };

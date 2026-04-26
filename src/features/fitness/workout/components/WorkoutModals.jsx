@@ -1,8 +1,7 @@
 // WorkoutModals.jsx
-import React, { useState } from 'react'; // 🔥 useState eklendi
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
-
-// ... (Geri kalan SummaryModal ve diğer modallar aynı kalsın)
+import { fonts } from '@/shared/utils/uiStyles.js'; // 🔥 EKSİK OLAN IMPORT EKLENDİ
 
 export const ModalOverlay = ({ children, onClose }) => (
   <motion.div 
@@ -118,7 +117,6 @@ export const SummaryModal = ({ C, stats, summaryData, onClose, onComplete }) => 
   const [templateName, setTemplateName] = useState("");
 
   const handleFinish = () => {
-    // Şablon adını onComplete'e paslıyoruz
     onComplete(null, saveAsTemplate ? (templateName || "Favori Şablonum") : null);
   };
 
@@ -148,7 +146,6 @@ export const SummaryModal = ({ C, stats, summaryData, onClose, onComplete }) => 
            </div>
         </div>
 
-        {/* 🔥 ŞABLON OLARAK KAYDET */}
         <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 20, padding: 20, marginBottom: 32, border: `1px solid ${C.border}40` }}>
           <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: saveAsTemplate ? 16 : 0 }}>
              <input type="checkbox" checked={saveAsTemplate} onChange={e => setSaveAsTemplate(e.target.checked)} style={{ width: 20, height: 20, accentColor: C.green }} />

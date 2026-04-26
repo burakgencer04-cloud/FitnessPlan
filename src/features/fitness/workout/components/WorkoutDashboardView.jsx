@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from "framer-motion";
 import { HapticEngine } from '@/shared/lib/hapticSoundEngine.js';
 import { globalFonts as fonts, sleekRowStyle, getMainButtonStyle } from '@/shared/ui/globalStyles.js';
-import { guessTargetMuscle } from '../utils/workoutAnalyzer.jsx';
+import { guessTargetMuscle } from '../utils/workoutAnalyzer.js';
 
 export default function WorkoutDashboardView({
   activePlanWorkouts,
@@ -18,7 +18,7 @@ export default function WorkoutDashboardView({
 }) {
   const mainBtnStyle = getMainButtonStyle(C);
 
-  // 🔥 Eski TabToday'in içindeki kalabalık Render listesini buraya aldık
+  // Egzersiz Listesi Render Alanı
   const RenderExerciseList = useMemo(() => {
     if (sessionExercises.length === 0) {
       return (
@@ -61,34 +61,9 @@ export default function WorkoutDashboardView({
 
   return (
     <div style={{ width: "100%" }}>
-      {/* GÜN SEÇİCİ */}
-      {activePlanWorkouts && activePlanWorkouts.length > 0 && (
-        <div style={{ marginBottom: 20, position: "relative", padding: "0 4px" }}>
-          <div className="workout-scroll" style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 12 }}>
-            {activePlanWorkouts.map((w, i) => {
-              const isActive = activeDay === i;
-              const shortName = w.label ? w.label.split(' - ').pop() : `${t('today_program')} ${i + 1}`;
-              return (
-                <motion.button 
-                  key={i} onClick={() => { setActiveDay && setActiveDay(i); HapticEngine.light(); }} whileTap={{ scale: 0.96 }}
-                  style={{ 
-                    flexShrink: 0, width: 120, padding: "16px 12px", borderRadius: 20, 
-                    border: `1px solid ${isActive ? C.green + '40' : 'rgba(255,255,255,0.02)'}`, 
-                    background: isActive ? `linear-gradient(145deg, rgba(34, 197, 94, 0.15), rgba(0,0,0,0.6))` : "linear-gradient(145deg, rgba(15, 15, 20, 0.8), rgba(40, 40, 45, 0.2))", 
-                    color: C.text, cursor: "pointer", display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10,
-                    fontStyle: "italic", backdropFilter: "blur(16px)", boxShadow: isActive ? `0 10px 20px rgba(34, 197, 94, 0.1)` : "inset 0 4px 15px rgba(0,0,0,0.4)"
-                  }}
-                >
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: isActive ? C.green : "rgba(0,0,0,0.4)", color: isActive ? "#000" : "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, border: "1px solid rgba(255,255,255,0.03)" }}>{i + 1}</div>
-                  <div style={{ textAlign: "left", width: "100%" }}>
-                    <div style={{ fontSize: 13, fontWeight: 900, color: isActive ? "#fff" : "rgba(255,255,255,0.6)", fontFamily: fonts.header, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{shortName}</div>
-                  </div>
-                </motion.button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      {/* GÜN SEÇİCİ BURADAN SİLİNDİ 
+        Artık sadece TabToday.jsx üzerinden render edilen yepyeni DaySelector kullanılıyor.
+      */}
 
       <div style={{ padding: "0 4px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>

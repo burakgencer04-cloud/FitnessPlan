@@ -1,9 +1,9 @@
-// 🔥 BUG 2 FIX: Türkçe UI tarihlerini ("12 Nis") matematiksel Date objelerine çeviren parser
+// Türkçe UI tarihlerini ("12 Nis") matematiksel Date objelerine çeviren parser
 const parseTurkishDate = (dateStr) => {
   if (!dateStr) return new Date();
 
   const timestamp = Date.parse(dateStr);
-  if (!isNaN(timestamp)) return new Date(timestamp); // Zaten geçerliyse dön
+  if (!isNaN(timestamp)) return new Date(timestamp); // Zaten geçerli bir ISO tarihiyse dön
 
   const months = {
     "oca": 0, "şub": 1, "mar": 2, "nis": 3, "may": 4, "haz": 5,
@@ -20,7 +20,7 @@ const parseTurkishDate = (dateStr) => {
       const now = new Date();
       let year = now.getFullYear();
       
-      // Kayıt mesela "25 Ara" ama şu an "Ocak" ise, o Aralık geçen senedir.
+      // Kayıt "25 Ara" ama şu an "Ocak" ise, o Aralık geçen seneye aittir.
       if (monthIndex > now.getMonth() + 2) year--;
       return new Date(year, monthIndex, day);
     }
@@ -28,132 +28,84 @@ const parseTurkishDate = (dateStr) => {
   return new Date(); 
 };
 
-export const calculateTrend = (measurements, targetWeight) => {
-  if (!measurements || measurements.length < 2) return null;
+export const calculateTrend = (dataArray = [], targetWeight = null) => {
+  // 🔥 ZIRH: Eğer veri yoksa veya dizi değilse çökmesini engelle
+  const safeData = Array.isArray(dataArray) ? dataArray : [];
 
-  // 🔥 TERTEMİZ: ISO formatı olduğu için Native Date parser kusursuz çalışır
-  const sorted = [...measurements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const startMs = new Date(sorted[0].date).getTime();
-  
+  if (safeData.length === 0) {
+    return { 
+      weightTrendData: [], 
+      targetMessage: "Henüz yeterli ölçüm verisi yok. İlerlemeyi görmek için tartıl!" 
+    };
+  }
+
+  // Tarihe göre eskiden yeniye sırala
+  const sortedData = [...safeData].sort((a, b) => parseTurkishDate(a.date) - parseTurkishDate(b.date));
+
+  // Grafik verisine (X, Y düzlemine) çevir
+  const chartData = sortedData.map(item => ({
+    date: item.date,
+    weight: parseFloat(item.weight) || 0,
+  }));
+
+  // Lineer Regresyon (Eğilim Çizgisi) Hesaplaması
   let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-  const n = sorted.length;
+  const n = chartData.length;
 
-  const points = sorted.map(m => {
-    const x = (parseTurkishDate(m.date).getTime() - startMs) / (1000 * 60 * 60 * 24);
-    const y = parseFloat(m.weight || m.value); 
-    
-    if (!isNaN(x) && !isNaN(y)) {
-       sumX += x; sumY += y; sumXY += x * y; sumXX += x * x;
-    }
-    return { x, y, date: m.date, weight: y };
+  chartData.forEach((point, i) => {
+    sumX += i;
+    sumY += point.weight;
+    sumXY += i * point.weight;
+    sumXX += i * i;
   });
 
-  const slope = (n * sumXX - sumX * sumX) === 0 ? 0 : (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-  const intercept = (sumY - slope * sumX) / n;
+  const denominator = (n * sumXX - sumX * sumX);
+  const slope = denominator === 0 ? 0 : (n * sumXY - sumX * sumY) / denominator;
+  const intercept = n === 0 ? 0 : (sumY - slope * sumX) / n;
 
-  const lastPoint = points[points.length - 1];
-  const projectionData = [];
+  // Gerçek verilere "Projected Value" (Trend/Tahmin Değeri) ekle
+  const weightTrendData = chartData.map((point, i) => ({
+    ...point,
+    projectedValue: parseFloat((slope * i + intercept).toFixed(1))
+  }));
 
-  for (let i = 7; i <= 28; i += 7) {
-    const projX = lastPoint.x + i;
-    const projY = slope * projX + intercept;
-    if (projY > 0 && projY < 300) {
-        projectionData.push({
+  // Gelecek 3 günün tahminini (projeksiyonunu) grafiğin sonuna ekle
+  if (n > 1 && slope !== 0) {
+    for (let i = 1; i <= 3; i++) {
+      const projX = n - 1 + i;
+      const projY = slope * projX + intercept;
+
+      if (projY > 20 && projY < 300) { // Uçuk / Mantıksız değerleri filtrele
+        weightTrendData.push({
           date: `+${i} Gün`,
-          projectedWeight: parseFloat(projY.toFixed(1)),
-          projectedValue: parseFloat(projY.toFixed(1)) 
+          projectedValue: parseFloat(projY.toFixed(1))
         });
+      }
     }
   }
 
-  let targetMessage = "Veriler analiz ediliyor, bir sonraki ölçümü girmelisin.";
+  let targetMessage = "Veriler analiz ediliyor, trendi net görmek için bir ölçüm daha girmelisin.";
 
-  if (targetWeight && slope !== 0) {
-    const targetX = (targetWeight - intercept) / slope;
-    const daysToTarget = Math.round(targetX - lastPoint.x);
+  // Hedefe Kalan Süre Hesaplaması ve Motivasyon Mesajı
+  if (targetWeight && slope !== 0 && n > 1) {
+    const lastPointY = chartData[n - 1].weight;
+    const targetW = parseFloat(targetWeight);
 
-    if (daysToTarget > 0 && daysToTarget < 730) { 
-       const weeks = Math.max(1, Math.round(daysToTarget / 7));
-       targetMessage = `📉 Harika gidiyorsun! Bu hızla devam edersen hedefine yaklaşık ${weeks} hafta içinde ulaşacaksın.`;
-    } else if (daysToTarget <= 0 && ((slope < 0 && lastPoint.y <= targetWeight) || (slope > 0 && lastPoint.y >= targetWeight))) {
-       targetMessage = "🎉 Hedefine zaten ulaştın! Şimdi koruma (maintain) zamanı.";
+    // Kilo verme trendinde hedefin altına inmişse VEYA kilo alma trendinde hedefin üstüne çıkmışsa
+    if ((slope < 0 && lastPointY <= targetW) || (slope > 0 && lastPointY >= targetW)) {
+      targetMessage = "🎉 Hedefine ulaştın! Şimdi bu formu koruma zamanı.";
     } else {
-       targetMessage = "⚠️ Kilo gidişatın hedefinle ters yönde veya plato yapıyor. Kalori dengeni gözden geçirmelisin.";
+      const targetX = (targetW - intercept) / slope;
+      const daysToTarget = Math.round(targetX - (n - 1));
+
+      if (daysToTarget > 0 && daysToTarget < 730) {
+        const weeks = Math.max(1, Math.round(daysToTarget / 7));
+        targetMessage = `📉 Harika gidiyorsun! Bu istikrarla yaklaşık ${weeks} hafta içinde hedefine ulaşacaksın.`;
+      } else if (daysToTarget >= 730) {
+        targetMessage = "Hedefine ulaşmak için diyet ve idman istikrarını biraz daha artırmalısın.";
+      }
     }
-  } else if (slope < 0) {
-    targetMessage = "📉 Düzenli bir düşüş trendindesin, iyi iş!";
-  } else if (slope > 0) {
-    targetMessage = "📈 Kilon yukarı yönlü bir trendde.";
   }
 
-  return { slope, projectionData, targetMessage };
+  return { weightTrendData, targetMessage };
 };
-
-
- 
-
-  // 🔥 BUG FIX: Tarihleri Türkçe ayrıştırıcıdan geçirerek sıralıyoruz
-  const sorted = [...measurements].sort((a, b) => parseTurkishDate(a.date).getTime() - parseTurkishDate(b.date).getTime());
-  const startMs = parseTurkishDate(sorted[0].date).getTime();
-  
-  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-  const n = sorted.length;
-
-  const points = sorted.map(m => {
-    // 🔥 BUG FIX: Gün farklarını hesaplarken Türkçe ayrıştırıcı kullan
-    const x = (parseTurkishDate(m.date).getTime() - startMs) / (1000 * 60 * 60 * 24);
-    const y = parseFloat(m.weight || m.value); // Hem eski m.weight hem de yeni m.value'yu destekler
-    
-    // Güvenlik kontrolü (NaN sızmasın diye)
-    if (!isNaN(x) && !isNaN(y)) {
-       sumX += x; sumY += y; sumXY += x * y; sumXX += x * x;
-    }
-    
-    return { x, y, date: m.date, weight: y };
-  });
-
-  // Lineer Regresyon Formülü (y = mx + b)
-  const slope = (n * sumXX - sumX * sumX) === 0 ? 0 : (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-  const intercept = (sumY - slope * sumX) / n;
-
-  const lastPoint = points[points.length - 1];
-  const projectionData = [];
-
-  // 4 Haftalık Gelecek Projeksiyonu (7'şer günlük adımlar)
-  for (let i = 7; i <= 28; i += 7) {
-    const projX = lastPoint.x + i;
-    const projY = slope * projX + intercept;
-    
-    // Gerçekçi sınırlar (Kilo negatif veya uçuk olamaz)
-    if (projY > 0 && projY < 300) {
-        projectionData.push({
-          date: `+${i} Gün`,
-          projectedWeight: parseFloat(projY.toFixed(1)),
-          projectedValue: parseFloat(projY.toFixed(1)) // İki grafikle de uyumlu çalışması için
-        });
-    }
-  }
-
-  let targetMessage = "Veriler analiz ediliyor, bir sonraki ölçümü girmelisin.";
-
-  // Hedef Kilo Hesaplaması ve Mesaj Üretimi
-  if (targetWeight && slope !== 0) {
-    const targetX = (targetWeight - intercept) / slope;
-    const daysToTarget = Math.round(targetX - lastPoint.x);
-
-    if (daysToTarget > 0 && daysToTarget < 730) { // 2 yıldan kısa süreyse
-       const weeks = Math.max(1, Math.round(daysToTarget / 7));
-       targetMessage = `📉 Harika gidiyorsun! Bu hızla devam edersen hedefine yaklaşık ${weeks} hafta içinde ulaşacaksın.`;
-    } else if (daysToTarget <= 0 && ((slope < 0 && lastPoint.y <= targetWeight) || (slope > 0 && lastPoint.y >= targetWeight))) {
-       targetMessage = "🎉 Hedefine zaten ulaştın! Şimdi koruma (maintain) zamanı.";
-    } else {
-       targetMessage = "⚠️ Kilo gidişatın hedefinle ters yönde veya plato yapıyor. Kalori dengeni gözden geçirmelisin.";
-    }
-  } else if (slope < 0) {
-    targetMessage = "📉 Düzenli bir düşüş trendindesin, iyi iş!";
-  } else if (slope > 0) {
-    targetMessage = "📈 Kilon yukarı yönlü bir trendde.";
-  }
-
- 
-;
