@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 export const MEASURE_TIPS = {
   weight: "Sabah aç karnına, tuvalete çıktıktan sonra tartılın.",
@@ -87,7 +87,7 @@ export const getGlassInnerStyle = (C) => ({
 });
 
 export const CustomTooltip = ({ active, payload, label, C }) => {
-  if (active && payload && payload.length) {
+  if (active && payload && payload?.length) {
     return (
       <div style={{ ...getGlassInnerStyle(C), padding: "16px", boxShadow: `0 15px 30px rgba(0,0,0,0.4)` }}>
         <p style={{ margin: "0 0 8px 0", fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.6)", fontFamily: fonts.header, letterSpacing: 1 }}>{label}</p>

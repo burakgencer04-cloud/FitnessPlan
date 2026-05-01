@@ -1,5 +1,5 @@
 import React from 'react';
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 import { Confetti } from './ProgressModals.jsx';
 
 export default function ProgressHeader(props) {

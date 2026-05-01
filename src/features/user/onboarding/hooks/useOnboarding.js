@@ -1,5 +1,5 @@
     import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/hooks/useTranslation.js';
 import { WORKOUT_PRESETS } from '@/features/fitness/workout/data/workoutData.js';
 import useModalStore from '@/shared/store/useModalStore';
 
@@ -72,7 +72,7 @@ export function useOnboarding(onComplete) {
     ];
     let index = 0;
     const interval = setInterval(() => { 
-      if (index < loadingTexts.length - 1) { 
+      if (index < loadingTexts?.length - 1) { 
         index++; setCalcText(loadingTexts[index]); 
       } 
     }, 1500);
@@ -103,8 +103,8 @@ export function useOnboarding(onComplete) {
     else if (targetDays >= 6) targetId = "ppl_6";
 
     let matchedPlan = WORKOUT_PRESETS.find(p => p.id === targetId);
-    if (!matchedPlan) matchedPlan = WORKOUT_PRESETS.find(p => p.workouts && p.workouts.length === targetDays);
-    if (!matchedPlan) matchedPlan = WORKOUT_PRESETS[WORKOUT_PRESETS.length - 1] || WORKOUT_PRESETS[0];
+    if (!matchedPlan) matchedPlan = WORKOUT_PRESETS.find(p => p.workouts && p.workouts?.length === targetDays);
+    if (!matchedPlan) matchedPlan = WORKOUT_PRESETS[WORKOUT_PRESETS?.length - 1] || WORKOUT_PRESETS[0];
 
     const finalWorkouts = matchedPlan?.workouts || (matchedPlan?.phases && matchedPlan.phases[0]?.workouts) || [];
 

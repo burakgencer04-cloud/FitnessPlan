@@ -1,23 +1,51 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// 🔥 Senin projendeki yola göre import
+// Projendeki yola göre import
 import useModalStore from '@/shared/store/useModalStore'; 
+import { GLASS_STYLES, LAYOUT } from '@/shared/ui/globalStyles';
 
 export default function GlobalModal({ C }) {
-  // Bütün değerleri direkt store'dan çekiyoruz
-  const { isOpen, type, title, message, confirmText, cancelText, onConfirm, onCancel, closeModal } = useModalStore();
+  const { 
+    isOpen, type, title, message, 
+    inputPlaceholder, initialInputValue, 
+    confirmText, cancelText, onConfirm, onCancel, closeModal 
+  } = useModalStore();
+
+  // 🔥 YENİ: Input modu için yerel state
+  const [inputValue, setInputValue] = useState('');
+
+  // Modal her açıldığında input'u varsayılan değerle sıfırla
+  useEffect(() => {
+    if (isOpen) {
+      setInputValue(initialInputValue || '');
+    }
+  }, [isOpen, initialInputValue]);
 
   if (!isOpen) return null;
 
   const handleConfirm = () => {
-    if (onConfirm) onConfirm();
+    if (onConfirm) {
+      // Eğer input moduysa, yazılan metni geri döndür
+      if (type === 'input') {
+        onConfirm(inputValue);
+      } else {
+        onConfirm();
+      }
+    }
     closeModal();
   };
 
   const handleCancel = () => {
     if (onCancel) onCancel();
     closeModal();
+  };
+
+  // Enter tuşuna basıldığında onaylama kolaylığı
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && type === 'input') {
+      handleConfirm();
+    }
   };
 
   return (
@@ -44,10 +72,10 @@ export default function GlobalModal({ C }) {
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9, y: 20 }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }} // Animasyon biraz daha yaylandırıldı
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
           style={{
-            background: '#0f1422', // Senin teman (midnight card)
-            border: '1px solid #1e293b',
+            background: '#0f1422', // Temaya uygun (midnight card)
+            border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 24,
             padding: 24,
             maxWidth: 400,
@@ -55,36 +83,62 @@ export default function GlobalModal({ C }) {
             color: '#f8fafc',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
           }}
-          onClick={(e) => e.stopPropagation()} // Tıklamanın arkaya geçmesini engeller
+          onClick={(e) => e.stopPropagation()}
         >
           {/* MODAL BAŞLIĞI */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <span style={{ fontSize: 24 }}>
-              {/* data.icon ve modalType yerine direkt type değişkeni kullanıldı */}
-              {type === 'confirm' ? '⚠️' : '🔔'}
+              {type === 'confirm' ? '⚠️' : type === 'input' ? '✏️' : '🔔'}
             </span>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
-              {/* data.title yerine direkt title */}
               {title || 'Bilgi'}
             </h2>
           </div>
           
           {/* MODAL MESAJI */}
-          <p style={{ margin: '0 0 24px 0', fontSize: 15, color: '#94a3b8', lineHeight: 1.5 }}>
-            {/* data.message yerine direkt message */}
-            {message || 'Bu bir sistem bildirimidir.'}
-          </p>
+          {message && (
+            <p style={{ margin: '0 0 20px 0', fontSize: 15, color: '#94a3b8', lineHeight: 1.5 }}>
+              {message}
+            </p>
+          )}
 
-          {/* DİNAMİK BUTON ALANI (Alert vs Confirm) */}
+          {/* 🔥 YENİ: INPUT ALANI (Sadece type === 'input' ise görünür) */}
+          {type === 'input' && (
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={inputPlaceholder}
+              autoFocus
+              style={{
+                width: '100%',
+                background: 'rgba(0,0,0,0.3)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: '#fff',
+                padding: '16px',
+                borderRadius: 16,
+                fontSize: 15,
+                outline: 'none',
+                marginBottom: 24,
+                boxSizing: 'border-box',
+                transition: 'border 0.2s',
+              }}
+              onFocus={(e) => e.target.style.border = '1px solid #3b82f6'}
+              onBlur={(e) => e.target.style.border = '1px solid rgba(255,255,255,0.1)'}
+            />
+          )}
+
+          {/* DİNAMİK BUTON ALANI */}
           <div style={{ display: 'flex', gap: 12 }}>
             
-            {/* Eğer type 'confirm' ise (Fotoğraf silme, program silme vb.) İPTAL butonu çıkar */}
-            {type === 'confirm' && (
+            {/* İPTAL BUTONU (Hem confirm hem de input modunda çıkar) */}
+            {(type === 'confirm' || type === 'input') && (
               <button
-                onClick={handleCancel} // İptale basınca dışarı tıklanmış gibi handleCancel çalışsın
+                onClick={handleCancel}
                 style={{
                   flex: 1,
-                  background: '#1e293b', // Temaya uygun koyu gri buton
+                  background: '#1e293b',
                   color: '#fff',
                   border: 'none',
                   padding: '14px',
@@ -95,7 +149,6 @@ export default function GlobalModal({ C }) {
                   transition: '0.2s'
                 }}
               >
-                {/* data.cancelText yerine cancelText */}
                 {cancelText || 'İptal'}
               </button>
             )}
@@ -105,7 +158,7 @@ export default function GlobalModal({ C }) {
               onClick={handleConfirm}
               style={{
                 flex: 1,
-                background: type === 'confirm' ? '#ef4444' : '#3b82f6', // Silme işlemlerinde Kırmızı, bilgi mesajlarında Mavi
+                background: type === 'confirm' ? '#ef4444' : '#3b82f6',
                 color: '#fff',
                 border: 'none',
                 padding: '14px',
@@ -117,7 +170,6 @@ export default function GlobalModal({ C }) {
                 boxShadow: type === 'confirm' ? '0 10px 20px rgba(239, 68, 68, 0.2)' : '0 10px 20px rgba(59, 130, 246, 0.2)'
               }}
             >
-              {/* data.confirmText yerine confirmText */}
               {confirmText || 'Anladım'}
             </button>
           </div>

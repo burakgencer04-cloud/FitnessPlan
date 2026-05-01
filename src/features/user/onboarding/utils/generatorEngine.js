@@ -70,7 +70,7 @@ export const generatePersonalizedPlan = (formData) => {
   let selectedPreset = null;
   let workouts = [];
 
-  if (WORKOUT_PRESETS && WORKOUT_PRESETS.length > 0) {
+  if (WORKOUT_PRESETS && WORKOUT_PRESETS?.length > 0) {
     const targetDays = Number(days) || 3;
     if (formData.isDeload) {
       selectedPreset = WORKOUT_PRESETS.find(p => p.isDeload) || WORKOUT_PRESETS[0];

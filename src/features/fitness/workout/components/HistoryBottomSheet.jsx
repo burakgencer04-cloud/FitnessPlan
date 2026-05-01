@@ -17,7 +17,7 @@ export default function HistoryBottomSheet({ exName, history = [], onClose, C })
        return { ...log, e1rm };
     });
 
-    if (formattedData.length === 1) {
+    if (formattedData?.length === 1) {
       return [
         { date: "Başlangıç", e1rm: Math.max(0, formattedData[0].e1rm * 0.9).toFixed(1), weight: formattedData[0].weight, reps: formattedData[0].reps },
         formattedData[0]
@@ -36,7 +36,7 @@ export default function HistoryBottomSheet({ exName, history = [], onClose, C })
            <button onClick={onClose} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid ${C.border}60`, color: C.text, width: 32, height: 32, borderRadius: 10, fontWeight: 900, cursor: 'pointer' }}>✕</button>
         </div>
         
-        {chartData.length > 0 ? (
+        {chartData?.length > 0 ? (
           <>
             <div style={{ background: `linear-gradient(145deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1))`, borderRadius: 20, padding: "20px 10px 10px 0", marginBottom: 24, border: `1px solid ${C.border}40` }}>
               <ResponsiveContainer width="100%" height={150}>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatePresence } from "framer-motion";
-import HistoryBottomSheet from './HistoryBottomSheet.jsx';
+// ✅ DOĞRU IMPORT KULLANIMI:
+import HistoryBottomSheet from '@/features/fitness/workout/components/HistoryBottomSheet.jsx';
 import { PlatesModal, SwapModal, VideoModal, SummaryModal } from './WorkoutModals.jsx';
 
 export default function WorkoutModalsManager({ 

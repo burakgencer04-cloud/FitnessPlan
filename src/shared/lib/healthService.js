@@ -1,4 +1,5 @@
 import { Health } from '@awesome-cordova-plugins/health';
+import { logger } from '@/shared/lib/logger.js';
 
 // Hangi verileri okumak istediğimizi tanımlıyoruz
 const DATA_TYPES = ['steps', 'active_calories', 'heart_rate'];
@@ -18,7 +19,7 @@ export const healthService = {
       }]);
       return true;
     } catch (error) {
-      console.error("Sağlık izni alınamadı:", error);
+      logger.error("Sağlık izni alınamadı:", error);
       return false;
     }
   },
@@ -45,7 +46,7 @@ export const healthService = {
       let restingHR = 0;
       try {
         const hrData = await Health.query({ startDate, endDate, dataType: 'heart_rate', limit: 1 });
-        if (hrData && hrData.length > 0) restingHR = hrData[0].value;
+        if (hrData && hrData?.length > 0) restingHR = hrData[0].value;
       } catch (e) { /* Sessizce yut, hr hayati değil */ }
 
       return {
@@ -55,7 +56,7 @@ export const healthService = {
       };
 
     } catch (error) {
-      console.error("Sağlık verileri okunamadı:", error);
+      logger.error("Sağlık verileri okunamadı:", error);
       return null;
     }
   }

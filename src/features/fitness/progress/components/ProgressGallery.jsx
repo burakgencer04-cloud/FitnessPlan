@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { getGlassCardStyle, getGlassInnerStyle } from "../utils/progressUtils.jsx";
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 export default function ProgressGallery(props) {
   const C = props?.C ?? {};
@@ -20,7 +20,7 @@ export default function ProgressGallery(props) {
         <input type="file" ref={props?.fileInputRef} accept="image/*" onChange={props?.handlePhotoUpload} style={{ display: "none" }} />
       </div>
       
-      {progressPhotos.length > 0 ? (
+      {progressPhotos?.length > 0 ? (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none" }}>
           {progressPhotos.map((photo, idx) => (
             <div key={photo.id} onClick={() => props?.setPhotoModalIndex?.(idx)} style={{ position: "relative", width: 100, height: 140, borderRadius: 12, overflow: "hidden", flexShrink: 0, border: `1px solid ${C?.border}80`, cursor: "pointer", boxShadow: "0 4px 15px rgba(0,0,0,0.3)" }}>

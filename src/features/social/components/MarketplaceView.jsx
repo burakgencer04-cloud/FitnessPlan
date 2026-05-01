@@ -1,15 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { getMarketplacePrograms, incrementProgramDownload } from '@/shared/lib/firebaseService.js';
+import { shareProgramToMarketplace, getMarketplacePrograms, incrementProgramDownload } from '@/entities/workout/api/marketplaceRepo.js';
 import { useAppStore } from '@/app/store.js';
-import useModalStore from '@/shared/store/useModalStore'; // 🔥 MODAL IMPORT
+import { useShallow } from 'zustand/react/shallow'; // 🔥 EKLENDİ
+import useModalStore from '@/shared/store/useModalStore';
+
 
 export default function MarketplaceView({ C }) {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  const { user, setUser, setPrograms, setActiveDay, setActivePhase } = useAppStore();
-  const { openModal } = useModalStore(); // 🔥 MODAL KULLANIMI
+  // 🔥 PERFORMANS FIX
+  const { user, setUser, setPrograms, setActiveDay, setActivePhase } = useAppStore(
+    useShallow(state => ({
+      user: state.user,
+      setUser: state.setUser,
+      setPrograms: state.setPrograms,
+      setActiveDay: state.setActiveDay,
+      setActivePhase: state.setActivePhase
+    }))
+  );
+  
+  const { openModal } = useModalStore(); 
 
   useEffect(() => { loadPlans(); }, []);
 
@@ -21,7 +33,6 @@ export default function MarketplaceView({ C }) {
   };
 
   const handleDownloadPlan = async (plan) => {
-    // 🔥 ALERT DEĞİŞTİRİLDİ
     openModal({
       type: 'confirm',
       title: 'Programı İndir',
@@ -51,7 +62,7 @@ export default function MarketplaceView({ C }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {plans.length === 0 ? (
+      {plans?.length === 0 ? (
         <div style={{ textAlign: "center", color: C.sub }}>Henüz kimse program paylaşmamış. İlk sen ol!</div>
       ) : (
         plans.map((plan) => (

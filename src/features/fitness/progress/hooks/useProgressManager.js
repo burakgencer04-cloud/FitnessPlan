@@ -1,10 +1,20 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from '@/app/store.js';
+import { useShallow } from 'zustand/react/shallow'; // 🔥 EKLENDİ
 import { get as idbGet } from 'idb-keyval';
 import { calculateTrend } from '../utils/trendAnalysis.js'; 
 
 export function useProgressManager(weightLog) {
-  const { user, bodyMeasurements = [], streak, lastDate, addMeasurement } = useAppStore();
+  // 🔥 PERFORMANS FIX: Tüm store yerine sadece ilgili parçalar (Shallow)
+  const { user, bodyMeasurements, streak, lastDate, addMeasurement } = useAppStore(
+    useShallow(state => ({
+      user: state.user,
+      bodyMeasurements: state.bodyMeasurements ?? [], // undefined crash koruması
+      streak: state.streak,
+      lastDate: state.lastDate,
+      addMeasurement: state.addMeasurement
+    }))
+  );
   
   // 1. Yerel State'ler (UI ve Modal Kontrolleri)
   const [showMeasureModal, setShowMeasureModal] = useState(false);
@@ -37,7 +47,7 @@ export function useProgressManager(weightLog) {
     
     arr.sort((a, b) => {
       const pa = a.dateStr.split(' '); const pb = b.dateStr.split(' ');
-      if (pa.length < 2 || pb.length < 2) return 0;
+      if (pa?.length < 2 || pb?.length < 2) return 0;
       const da = new Date(new Date().getFullYear(), trMonths[pa[1]], parseInt(pa[0]));
       const db = new Date(new Date().getFullYear(), trMonths[pb[1]], parseInt(pb[0]));
       return da - db;
@@ -78,7 +88,7 @@ export function useProgressManager(weightLog) {
     setMeasureForm({ date: new Date().toISOString().split('T')[0], type: "weight", value: "" });
   };
 
-  const currentWeight = bodyMeasurements.length > 0 ? Number(bodyMeasurements[bodyMeasurements.length - 1].weight) : (user?.weight || 75);
+  const currentWeight = bodyMeasurements?.length > 0 ? Number(bodyMeasurements[bodyMeasurements?.length - 1].weight) : (user?.weight || 75);
   const isOlder = (user?.age || 25) > 40;
 
   return {

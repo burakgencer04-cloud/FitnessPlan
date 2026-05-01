@@ -44,7 +44,7 @@ export const RetentionEngine = {
         foreground: true
       });
 
-      console.log("✅ Retention (Elde Tutma) bildirimleri başarıyla programlandı.");
+      logger.log("✅ Retention (Elde Tutma) bildirimleri başarıyla programlandı.");
     } catch (error) {
       console.warn("Yerel bildirimler kurulamadı (Muhtemelen Web/Tarayıcı ortamı):", error);
     }

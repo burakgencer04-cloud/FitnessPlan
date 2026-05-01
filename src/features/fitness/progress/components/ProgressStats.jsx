@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { getGlassCardStyle, getGlassInnerStyle } from './progressUtils';
 import { InfoTooltip } from './ProgressModals';
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 export const CNSFatigue = ({ cnsFatiguePct, C }) => (
   <div style={{ ...getGlassCardStyle(C), padding: 20 }}>

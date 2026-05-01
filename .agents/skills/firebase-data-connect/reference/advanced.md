@@ -218,7 +218,7 @@ export const onUserMutation = onMutationExecuted(
 export const onAnyMutation = onMutationExecuted(
   { service: "myService", operation: "{operationName}" },
   (event) => {
-    console.log("Operation:", event.params.operationName);
+    logger.log("Operation:", event.params.operationName);
   }
 );
 ```

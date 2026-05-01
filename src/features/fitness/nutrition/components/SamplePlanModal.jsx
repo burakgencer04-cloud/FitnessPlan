@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 export default function SamplePlanModal({ isOpen, onClose, activePlan, onApplySamplePlan, DAYS, nutDay, C }) {
   // Seçili günü tutan state (Varsayılan olarak bulunduğumuz gün)

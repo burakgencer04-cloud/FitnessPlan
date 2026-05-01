@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 const STYLES = {
   overlay: { position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', flexDirection: "column", alignItems: 'center', justifyContent: 'flex-end', padding: "20px 0 0 0" },

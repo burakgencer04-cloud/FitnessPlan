@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getGlassCardStyle, getGlassInnerStyle } from "../utils/progressUtils.jsx";
 import { InfoTooltip } from './ProgressModals.jsx';
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 export default function PRList(props) {
   const C = props?.C ?? {};
@@ -18,7 +18,7 @@ export default function PRList(props) {
   return (
     <>
       <AnimatePresence>
-        {personalRecords.length > 0 && (
+        {personalRecords?.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} style={glassCardStyle}>
             <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, fontFamily: fonts.header, color: C?.text }}>

@@ -1,3 +1,5 @@
+import { logger } from '@/shared/lib/logger.js';
+
 export const fetchFoodByBarcode = async (barcode) => {
   try {
     const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
@@ -23,7 +25,7 @@ export const fetchFoodByBarcode = async (barcode) => {
     }
     return null; 
   } catch (error) {
-    console.error("Barkod sorgulama hatası:", error);
+    logger.error("Barkod sorgulama hatası:", error);
     throw new Error("Ürün veritabanına ulaşılamadı.");
   }
 };

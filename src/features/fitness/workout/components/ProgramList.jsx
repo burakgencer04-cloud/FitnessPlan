@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { WORKOUT_PRESETS } from "../data/workoutData.js";
 import useModalStore from '@/shared/store/useModalStore'; // 🔥 MODAL EKLENDİ
 
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 const STYLES = {
   activeBox: { textAlign: "center", padding: "40px 24px", background: "rgba(20, 20, 25, 0.6)", backdropFilter: "blur(20px)", borderRadius: 32, border: `1px solid rgba(255,255,255,0.06)`, boxShadow: `0 15px 35px rgba(0,0,0,0.2)` },
@@ -15,7 +15,7 @@ const STYLES = {
 
 export const PresetsListView = ({ safeWorkouts, showPresetsList, handleResetProgram, setSelectedPreset, C = {}, t = (k)=>k }) => (
   <motion.div key="presets-grid" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-    {(safeWorkouts || []).length > 0 && !showPresetsList ? (
+    {(safeWorkouts || [])?.length > 0 && !showPresetsList ? (
       <div style={STYLES.activeBox}>
         <div style={{ fontSize: 52, marginBottom: 16 }}>✨</div>
         <h2 style={{ fontFamily: fonts.header, fontWeight: 900, color: "#fff", margin: "0 0 10px 0", letterSpacing: -0.5 }}>{t('prog_active_title')}</h2>
@@ -54,7 +54,7 @@ export const BuilderHomeView = ({ safeWorkouts, startNewWorkout, setEditingWorko
         </motion.button>
       </div>
 
-      {(safeWorkouts || []).length === 0 ? (
+      {(safeWorkouts || [])?.length === 0 ? (
         <div style={STYLES.emptyBox}>
           <div style={{ fontSize: 52, marginBottom: 20 }}>🛠️</div>
           <div style={{ fontSize: 20, color: "#fff", fontWeight: 900, fontFamily: fonts.header }}>{t('prog_no_routine_title')}</div>
@@ -69,7 +69,7 @@ export const BuilderHomeView = ({ safeWorkouts, startNewWorkout, setEditingWorko
                 <div>
                   <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 900, letterSpacing: 1.5, marginBottom: 6 }}>{t('prog_day_n')} {i+1}</div>
                   <div style={{ fontSize: 20, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", color: "#fff", marginBottom: 6 }}>{cleanLabel}</div>
-                  <div style={{ fontSize: 13, color: C?.green || '#22c55e', fontWeight: 700 }}>{(w?.exercises || []).length} {t('prog_exercises_count')}</div>
+                  <div style={{ fontSize: 13, color: C?.green || '#22c55e', fontWeight: 700 }}>{(w?.exercises || [])?.length} {t('prog_exercises_count')}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setEditingWorkout({...w, label: cleanLabel})} style={{ background: `rgba(52, 152, 219, 0.15)`, color: C?.blue || '#3b82f6', border: "none", padding: "12px 20px", borderRadius: 16, fontWeight: 800, cursor: "pointer", fontFamily: fonts.body }}>{t('prog_btn_edit')}</motion.button>
@@ -83,7 +83,7 @@ export const BuilderHomeView = ({ safeWorkouts, startNewWorkout, setEditingWorko
                       cancelText: 'İptal',
                       onConfirm: () => {
                         setCustomWorkouts(p => (p || []).filter(x => x?.id !== w?.id)); 
-                        if ((safeWorkouts||[]).length <= 1) setShowPresetsList(true);
+                        if ((safeWorkouts||[])?.length <= 1) setShowPresetsList(true);
                       }
                     });
                   }} style={{ background: `rgba(231, 76, 60, 0.15)`, color: C?.red || '#ef4444', border: "none", width: 44, height: 44, borderRadius: 16, cursor: "pointer" }}>🗑️</motion.button>

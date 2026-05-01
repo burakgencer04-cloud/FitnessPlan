@@ -42,7 +42,7 @@ const response = await ai.generate({
 // response.output is strongly typed
 const joke = response.output; 
 if (joke) {
-  console.log(`${joke.setup} ... ${joke.punchline}`);
+  logger.log(`${joke.setup} ... ${joke.punchline}`);
 }
 ```
 
@@ -55,12 +55,12 @@ const { stream, response } = ai.generateStream({
 });
 
 for await (const chunk of stream) {
-  console.log(chunk.text);
+  logger.log(chunk.text);
 }
 
 // Await the final response
 const finalResponse = await response;
-console.log('Complete:', finalResponse.text);
+logger.log('Complete:', finalResponse.text);
 ```
 
 ## Advanced Configuration
@@ -98,7 +98,7 @@ const response = await ai.generate({
 // Access grounding metadata (sources)
 const groundingMetadata = (response.custom as any)?.candidates?.[0]?.groundingMetadata;
 if (groundingMetadata) {
-  console.log('Sources:', groundingMetadata.groundingChunks);
+  logger.log('Sources:', groundingMetadata.groundingChunks);
 }
 ```
 

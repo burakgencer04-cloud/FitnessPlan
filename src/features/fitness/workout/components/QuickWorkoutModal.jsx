@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 import { guessTargetMuscle } from '../utils/workoutAnalyzer.js';
 
 export default function QuickWorkoutModal({ show, onClose, quickTemplates, onStartAdHoc, EXERCISE_DB, C }) {
@@ -24,7 +24,7 @@ export default function QuickWorkoutModal({ show, onClose, quickTemplates, onSta
   };
 
   const startCustomWorkout = () => {
-    if (selectedExercises.length === 0) return;
+    if (selectedExercises?.length === 0) return;
     onStartAdHoc({
       label: `Hızlı İdman: ${selectedMuscle}`,
       exercises: selectedExercises,
@@ -57,7 +57,7 @@ export default function QuickWorkoutModal({ show, onClose, quickTemplates, onSta
               <div style={{ marginTop: 12 }}>
                 <div style={{ fontSize: 12, fontWeight: 900, color: C.mute, letterSpacing: 1, marginBottom: 12 }}>KAYITLI ŞABLONLARIN</div>
                 {/* 🔥 ZIRH EKLENDİ: (quickTemplates || []) */}
-                {(quickTemplates || []).length === 0 ? (
+                {(quickTemplates || [])?.length === 0 ? (
                   <div style={{ padding: 20, textAlign: "center", background: "rgba(0,0,0,0.2)", borderRadius: 16, color: C.mute, fontSize: 13, border: `1px dashed ${C.border}40` }}>Henüz kaydedilmiş şablonun yok.</div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -65,7 +65,7 @@ export default function QuickWorkoutModal({ show, onClose, quickTemplates, onSta
                       <button key={t.id} onClick={() => onStartAdHoc({ ...t, isAdHoc: true })} style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}40`, padding: 16, borderRadius: 16, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
                         <div style={{ textAlign: "left" }}>
                           <div style={{ fontWeight: 900, fontSize: 15, fontFamily: fonts.header, color: C.text }}>{t.name}</div>
-                          <div style={{ fontSize: 11, color: C.mute }}>{t.exercises.length} Hareket</div>
+                          <div style={{ fontSize: 11, color: C.mute }}>{t.exercises?.length} Hareket</div>
                         </div>
                         <span style={{ color: C.green, fontSize: 20 }}>▶</span>
                       </button>
@@ -105,8 +105,8 @@ export default function QuickWorkoutModal({ show, onClose, quickTemplates, onSta
 
         {step === 2 && (
           <div style={{ paddingTop: 16, borderTop: `1px solid ${C.border}40`, marginTop: 16 }}>
-            <button onClick={startCustomWorkout} disabled={selectedExercises.length === 0} style={{ width: "100%", background: selectedExercises.length === 0 ? "rgba(255,255,255,0.1)" : C.text, color: C.bg, border: "none", padding: 16, borderRadius: 16, fontWeight: 900, fontSize: 15, cursor: selectedExercises.length === 0 ? "default" : "pointer" }}>
-              {selectedExercises.length} Hareket İle Başla
+            <button onClick={startCustomWorkout} disabled={selectedExercises?.length === 0} style={{ width: "100%", background: selectedExercises?.length === 0 ? "rgba(255,255,255,0.1)" : C.text, color: C.bg, border: "none", padding: 16, borderRadius: 16, fontWeight: 900, fontSize: 15, cursor: selectedExercises?.length === 0 ? "default" : "pointer" }}>
+              {selectedExercises?.length} Hareket İle Başla
             </button>
           </div>
         )}

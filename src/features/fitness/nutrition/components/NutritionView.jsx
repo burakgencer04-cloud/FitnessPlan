@@ -1,6 +1,8 @@
 import React from 'react';
 import { globalFonts as fonts } from '@/shared/ui/globalStyles.js';
-import { useNutrition } from './useNutrition.js';
+
+// 🔥 FIX: Import doğru, artık içeride de bunu kullanacağız.
+import { useNutritionUI } from '@/features/fitness/nutrition/hooks/useNutritionUI.js';
 
 import NutritionHeader from './NutritionHeader.jsx';
 import NutritionSummary from './NutritionSummary.jsx';
@@ -12,7 +14,9 @@ const STYLES = {
 };
 
 export default function NutritionView({ regeneratePlan, dayPlan, nutDay, setNutDay, themeColors: C = {}, shoppingList = [], onOpenStock }) {
-  const logic = useNutrition({ regeneratePlan, dayPlan, nutDay, setNutDay, shoppingList });
+  
+  // 🔥 FIX: useNutrition yerine useNutritionUI çağrıldı!
+  const logic = useNutritionUI({ regeneratePlan, dayPlan, nutDay, setNutDay, shoppingList });
   
   if (!logic) return null;
 

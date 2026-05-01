@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getGlassCardStyle } from "../utils/progressUtils.jsx";
 import SessionHistory from './SessionHistory.jsx';
 import BodyTrackerView from './BodyTrackerView.jsx';
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 // 🔥 SADELEŞTİRİLMİŞ (DUMB) BİLEŞENLER
 import ProgressHeader from './ProgressHeader.jsx';
@@ -14,14 +14,14 @@ import PRList from './PRList.jsx';
 
 // 🔥 İZOLE EDİLMİŞ MODALLAR VE LOGIC
 import { MeasureModal, PhotoSwipeModal, StoryModal, PRDetailModal } from './ProgressModals.jsx';
-import { useProgress } from './useProgress.js';
+import { useProgressUI } from '../hooks/useProgressUI.js'; // veya './hooks/useProgressUI.js'
 
 export default function TabProgress({ 
   totalDone, overallPct, badges = [], BADGES = [], BADGE_ICONS = {}, 
   weightLog = {}, themeColors: C, selectedProgram, hasActiveProgram, onSelectProgram
 }) {
   // Bütün beyin burada çalışıyor
-  const logic = useProgress({ weightLog, badges, BADGES, C });
+  const logic = useProgressUI({ weightLog, badges, BADGES, C });
   const fileInputRef = useRef(null);
 
   // Program yoksa gösterilecek uyarı ekranı

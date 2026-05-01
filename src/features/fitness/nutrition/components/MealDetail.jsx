@@ -33,7 +33,7 @@ export default function MealDetail({ mi, nutDay, isEmpty, mealItems = [], curren
         </div>
       ) : (
         (mealItems || []).map((item, idx) => (
-          <FoodItemRow key={item?.globalIndex || idx} item={item} idx={idx} isLast={idx === mealItems.length - 1} handleToggleEaten={handleToggleEaten} handleDeleteFood={handleDeleteFood} C={C} t={t} />
+          <FoodItemRow key={item?.globalIndex || idx} item={item} idx={idx} isLast={idx === mealItems?.length - 1} handleToggleEaten={handleToggleEaten} handleDeleteFood={handleDeleteFood} C={C} t={t} />
         ))
       )}
 

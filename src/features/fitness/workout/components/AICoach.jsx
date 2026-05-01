@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
-const fonts = {
-  header: "'Comucan', system-ui, sans-serif",
-  body: "'Comucan', system-ui, sans-serif",
-  mono: "monospace",
-};
 
 const TYPE_CONFIG = {
   warning:  { color: null, icon: "⚠️", gradient: "135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)" },

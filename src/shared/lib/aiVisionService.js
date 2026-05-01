@@ -1,5 +1,6 @@
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app } from './firebase'; // Projendeki doğru firebase.js yolunu belirt
+import { app } from '@/shared/api/firebase.js' // Projendeki doğru firebase.js yolunu belirt
+import { logger } from '@/shared/lib/logger.js';
 
 export const analyzeFoodImage = async (base64Image) => {
   try {
@@ -20,7 +21,7 @@ export const analyzeFoodImage = async (base64Image) => {
       throw new Error("Analiz sonucu boş döndü.");
     }
   } catch (error) {
-    console.error("AI Vision Proxy Hatası:", error);
+    logger.error("AI Vision Proxy Hatası:", error);
     // Hata mesajını UI'a yansıt
     throw new Error(error.message || "Görsel analiz edilemedi.");
   }

@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { getGlassCardStyle, getGlassInnerStyle } from "../utils/progressUtils.jsx";
 import { InfoTooltip } from './ProgressModals.jsx';
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 export default function ProgressPrograms(props) {
   const C = props?.C ?? {};
@@ -34,7 +34,7 @@ export default function ProgressPrograms(props) {
           <div style={{ fontSize: 11, color: C?.sub, fontWeight: 600, background: "rgba(0,0,0,0.2)", padding: "4px 8px", borderRadius: 8 }}>{props?.totalDone ?? 0} İdman</div>
         </div>
         
-        {recentWorkoutsGrid.length > 0 ? (
+        {recentWorkoutsGrid?.length > 0 ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 12 }}>
             {recentWorkoutsGrid.map((item, i) => (
               <div key={i} style={{ ...glassInnerStyle, overflow: "hidden", display: "flex", flexDirection: "column" }}>

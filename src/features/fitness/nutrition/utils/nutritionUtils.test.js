@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { generateMealPlan } from './nutritionUtils';
-import { calculateUSNavyBodyFat } from '../../progress/utils/progressUtils.jsx'; // 🔥 YOL DÜZELTİLDİ
+// 🔥 FIX: generateMealPlan fonksiyonu nutritionUtils'de değil, mealPlanner dosyasındadır!
+import { generateMealPlan } from './mealPlanner.js'; 
+import { calculateUSNavyBodyFat } from '../../progress/utils/progressUtils.jsx'; 
 
 describe('Nutrition Utility Functions', () => {
   
@@ -26,12 +27,12 @@ describe('Nutrition Utility Functions', () => {
   describe('generateMealPlan', () => {
     it('Verilen makrolara göre günlük plan oluşturmalı', () => {
       const mockMacros = { calories: 2500, protein: 180, carbs: 250, fat: 85 };
-      const mockUser = { goal: 'kas_yap', dietType: 'high_protein', weight: 80 }; // 🔥 weight eklendi
+      const mockUser = { goal: 'kas_yap', dietType: 'high_protein', weight: 80 }; 
       
       const plan = generateMealPlan(mockMacros, mockUser);
       
       expect(plan).toBeDefined();
-      expect(plan.length).toBeGreaterThan(0);
+      expect(plan?.length).toBeGreaterThan(0);
       expect(plan[0].meals).toBeDefined(); // Crash olmamalı
     });
   });

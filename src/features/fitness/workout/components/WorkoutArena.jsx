@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 // 🌟 SIKIK KUTULAR KALDIRILDI: Tamamen süzülen, asla taşmayan, ferah tasarım
 const PremiumArenaInput = ({ label, value, onIncrease, onDecrease, C }) => (

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getSharedStyles } from './WizardShared.jsx';
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 export const Step8Water = ({ form, setForm, C, t }) => {
   const { inputStyle } = getSharedStyles(C);

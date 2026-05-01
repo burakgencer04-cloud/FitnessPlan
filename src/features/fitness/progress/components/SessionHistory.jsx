@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { get as idbGet } from 'idb-keyval';
 import { globalFonts as fonts, getGlassInnerStyle } from '@/shared/ui/globalStyles.js';
+import { logger } from '@/shared/lib/logger.js';
 
 export default function SessionHistory({ C }) {
   const [sessions, setSessions] = useState([]);
@@ -14,7 +15,7 @@ export default function SessionHistory({ C }) {
         const data = await idbGet('workout_history');
         if (data) setSessions(data);
       } catch (error) {
-        console.error("Geçmiş okunamadı:", error);
+        logger.error("Geçmiş okunamadı:", error);
       } finally {
         setLoading(false);
       }
@@ -26,7 +27,7 @@ export default function SessionHistory({ C }) {
     return <div style={{ textAlign: "center", color: C.mute, padding: 20 }}>Geçmiş yükleniyor...</div>;
   }
 
-  if (sessions.length === 0) {
+  if (sessions?.length === 0) {
     return null; // Hiç idman yoksa bu bölümü hiç gösterme
   }
 
@@ -58,7 +59,7 @@ export default function SessionHistory({ C }) {
             </div>
 
             {/* Hareketler ve Set Detayları */}
-            {session.exercises && session.exercises.length > 0 && (
+            {session.exercises && session.exercises?.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12, borderTop: `1px dashed ${C.border}40`, paddingTop: 12 }}>
                 {session.exercises.map((ex, i) => {
                   // İlgili harekete ait tamamlanmış setleri buluyoruz

@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { getGlassCardStyle } from './progressUtils';
 import { get } from 'idb-keyval';
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
+import { logger } from '@/shared/lib/logger.js';
+
+
+
 // IndexedDB'den resmi asenkron çeken alt bileşen
 const PhotoItem = ({ photo, onClick, C }) => {
   const [imgSrc, setImgSrc] = useState(photo.src || null);
@@ -11,7 +15,7 @@ const PhotoItem = ({ photo, onClick, C }) => {
     if (!photo.src && photo.id) {
       get(`photo_${photo.id}`).then(data => {
         if (data) setImgSrc(data);
-      }).catch(console.error);
+      }).catch(logger.error);
     }
   }, [photo]);
 
@@ -41,7 +45,7 @@ export default function ProgressPhotos({ progressPhotos, setPhotoModalIndex, han
         <input type="file" ref={fileInputRef} accept="image/*" onChange={handlePhotoUpload} style={{ display: "none" }} />
       </div>
       
-      {progressPhotos.length > 0 ? (
+      {progressPhotos?.length > 0 ? (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none" }}>
           {progressPhotos.map((photo, idx) => (
             <PhotoItem key={photo.id} photo={photo} onClick={() => setPhotoModalIndex(idx)} C={C} />

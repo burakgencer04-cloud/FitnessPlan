@@ -1,23 +1,30 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useAppStore } from '@/app/store.js';
+import { useShallow } from 'zustand/react/shallow'; // 🔥 EKLENDİ
 import { EXERCISE_DB } from '../data/workoutData.js';
 import { guessTargetMuscle } from '../utils/workoutAnalyzer.js';
 
 export function useWorkoutSessionManager(currentWorkout) {
+  // 🔥 PERFORMANS FIX
   const {
     sessionSets, setSessionSets,
     dynamicSetCounts, setDynamicSetCounts,
     swappedExercises, setSwappedExercises
-  } = useAppStore();
+  } = useAppStore(useShallow(state => ({
+    sessionSets: state.sessionSets,
+    setSessionSets: state.setSessionSets,
+    dynamicSetCounts: state.dynamicSetCounts,
+    setDynamicSetCounts: state.setDynamicSetCounts,
+    swappedExercises: state.swappedExercises,
+    setSwappedExercises: state.setSwappedExercises
+  })));
 
   const [activeExIndex, setActiveExIndex] = useState(0);
 
-  // 🔥 ZIRH 1: Zustand'dan undefined gelme ihtimaline karşı %100 koruma
   const safeDynamicCounts = dynamicSetCounts || {};
   const safeSwapped = swappedExercises || {};
   const safeSessionSets = sessionSets || {};
 
-  // 🔥 ZIRH 2: Egzersiz listesi boş veya bozuk gelirse boş dizi kullan
   const sessionExercises = Array.isArray(currentWorkout?.exercises) ? currentWorkout.exercises : [];
   const baseExercise = sessionExercises[activeExIndex] || null;
   const activeExercise = safeSwapped[activeExIndex] || baseExercise;
@@ -28,11 +35,9 @@ export function useWorkoutSessionManager(currentWorkout) {
     return found || { name: activeExercise.name, target: guessTargetMuscle(activeExercise.name), video: "" };
   }, [activeExercise]);
 
-  // Artık safeDynamicCounts kullanıyoruz, asla çökmeyecek
   const currentSetCount = safeDynamicCounts[activeExIndex] || parseInt(activeExercise?.sets) || 3;
-  const isLastExercise = activeExIndex >= Math.max(0, sessionExercises.length - 1);
+  const isLastExercise = activeExIndex >= Math.max(0, sessionExercises?.length - 1);
 
-  // Set tamamlanma ve hacim hesaplamaları
   const completedSetsCount = useMemo(() => {
     let count = 0;
     for (let i = 0; i < currentSetCount; i++) {
@@ -49,7 +54,6 @@ export function useWorkoutSessionManager(currentWorkout) {
     return vol;
   }, [safeSessionSets]);
 
-  // Yardımcı fonksiyonlar (Ekle/Çıkar/Değiştir) (Güvenlik kontrolleri eklendi)
   const addSet = useCallback(() => {
     if (setDynamicSetCounts) {
       setDynamicSetCounts(prev => ({ ...prev, [activeExIndex]: currentSetCount + 1 }));
@@ -72,17 +76,8 @@ export function useWorkoutSessionManager(currentWorkout) {
   }, [activeExIndex, activeExercise, setSwappedExercises]);
 
   return {
-    activeExIndex,
-    setActiveExIndex,
-    activeExercise,
-    activeExerciseDetails,
-    currentSetCount,
-    isLastExercise,
-    completedSetsCount,
-    totalVolume,
-    sessionExercises,
-    addSet,
-    removeSet,
-    handleSwap
+    activeExIndex, setActiveExIndex, activeExercise, activeExerciseDetails,
+    currentSetCount, isLastExercise, completedSetsCount, totalVolume,
+    sessionExercises, addSet, removeSet, handleSwap
   };
 }

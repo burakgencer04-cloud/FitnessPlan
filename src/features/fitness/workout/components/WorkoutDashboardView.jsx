@@ -20,7 +20,7 @@ export default function WorkoutDashboardView({
 
   // Egzersiz Listesi Render Alanı
   const RenderExerciseList = useMemo(() => {
-    if (sessionExercises.length === 0) {
+    if (sessionExercises?.length === 0) {
       return (
         <div style={{ padding: 24, textAlign: "center" }}>
           <div style={{ fontSize: 40, marginBottom: 12, filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.3))' }}>🛋️</div>
@@ -96,14 +96,14 @@ export default function WorkoutDashboardView({
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: "#fff", fontFamily: fonts.header, fontStyle: "italic" }}>{currentWorkout?.label || t('today_rest_day')}</h2>
           </div>
           <div style={{ textAlign: "center", background: "rgba(0,0,0,0.3)", padding: "10px 16px", borderRadius: 16, border: `1px solid rgba(255,255,255,0.03)` }}>
-            <div style={{ fontSize: 24, fontWeight: 900, color: "#fff", fontFamily: fonts.mono, lineHeight: 1, fontStyle: "italic" }}>{sessionExercises.length}</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: "#fff", fontFamily: fonts.mono, lineHeight: 1, fontStyle: "italic" }}>{sessionExercises?.length}</div>
             <div style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", fontWeight: 900, letterSpacing: 1, marginTop: 4, fontStyle: "italic" }}>HAREKET</div>
           </div>
         </div>
         {RenderExerciseList}
       </div>
 
-      {sessionExercises.length > 0 && (
+      {sessionExercises?.length > 0 && (
         <div style={{ position: "fixed", bottom: 85, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 100, padding: "0 16px" }}>
           <motion.button 
             onClick={handleWorkoutStart} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}

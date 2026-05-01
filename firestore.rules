@@ -1,24 +1,67 @@
-rules_version = '2';
+rules_version = "2";
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Sadece giriş yapmış kullanıcılar okuyabilir
-    // Sadece kendi ID'si ile eşleşen dökümanları oluşturabilir/silebilir
+    // 1. FEED KOLEKSİYONU
     match /feed/{docId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      
+      // Sadece kendi ID'si ile post oluşturabilir
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.userId;
+        
+      // 🔥 MEVCUT FONKSİYONEL KORUMA: 
+      // Gönderi sahibi her şeyi güncelleyebilir, 
+      // Başkaları SADECE beğeni, yorum ve reaksiyon ekleyebilir (useSocial.js uyumluluğu)
+      allow update: if request.auth != null 
+        && (
+          request.auth.uid == resource.data.userId 
+          || 
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy', 'comments', 'reactions'])
+        );
+        
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.userId;
     }
 
+    // 2. LEADERBOARD (Sıralama) KOLEKSİYONU
+    match /leaderboard/{userId} {
+      allow read: if request.auth != null;
+      
+      // Hacim (Volume) manipülasyonunu engellemek için doğrudan yazma tamamen kapalı.
+      // Sadece arka planda (Cloud Functions ile atomic olarak) yazılabilir.
+      allow write: if false; 
+    }
+
+    // 3. MARKETPLACE (Pazar Yeri / Programlar) KOLEKSİYONU
     match /marketplace/{docId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.authorId;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+      
+      // Sadece giriş yapmış kullanıcılar kendi ID'leriyle program paylaşabilir
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.authorId;
+      
+      // 🔥 MEVCUT FONKSİYONEL KORUMA:
+      // Sahibi programı güncelleyebilir, 
+      // Başkaları SADECE indirme sayısını (downloads) artırabilir (incrementProgramDownload uyumluluğu)
+      allow update: if request.auth != null 
+        && (
+          request.auth.uid == resource.data.authorId
+          ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloads'])
+        );
+        
+      allow delete: if false;
     }
 
-    // Co-op (eşli) antrenman odalarına sadece giriş yapanlar erişebilir
-    match /coop_sessions/{docId} {
-      allow read, write: if request.auth != null;
+    // 4. KULLANICI PROFİLLERİ (Users)
+    match /users/{userId} {
+      // Sosyal (Topluluk) sekmesinde diğer kullanıcıların profillerinin görüntülenebilmesi için okuma açık kalmalı
+      allow read: if request.auth != null;
+      
+      // Profil verilerini (Takip, Boy, Kilo vb.) sadece kullanıcının kendisi değiştirebilir
+      allow write: if request.auth != null 
+        && request.auth.uid == userId;
     }
   }
 }

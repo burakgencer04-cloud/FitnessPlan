@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { doc, setDoc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { db } from '@/shared/lib/firebase.js';
+import { db } from '@/shared/api/firebase.js';
 import { useAppStore } from '@/app/store.js';
 
 export const useCoopSession = () => {

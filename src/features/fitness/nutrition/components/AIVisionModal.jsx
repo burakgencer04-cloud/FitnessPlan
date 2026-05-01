@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ErrorBoundary } from 'react-error-boundary'; // 🔥 Hata Yakalayıcı Eklendi
-import { AIErrorFallback } from '@/shared/components/ErrorFallbacks.jsx'; // 🔥 Yedek Hata Ekranı Eklendi
+import { AIErrorFallback } from '@/shared/ui/ErrorFallbacks.jsx'; // 🔥 Yedek Hata Ekranı Eklendi
 import { analyzeFoodImage } from '@/shared/lib/aiVisionService';
+import { logger } from '@/shared/lib/logger.js';
 
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 // 🔥 ASIL İŞ MANTIĞI BURAYA TAŞINDI (Böylece çökerse sınırları aşmaz)
 function AIVisionContent({ onClose, onFoodDetected, C }) {
   const [imageSrc, setImageSrc] = useState(null);
@@ -49,7 +50,7 @@ function AIVisionContent({ onClose, onFoodDetected, C }) {
       }, 100);
     } catch (err) {
       setIsCameraOpen(false); 
-      console.error("Kamera açılamadı:", err);
+      logger.error("Kamera açılamadı:", err);
       // 🔥 Error boundary'nin yakalaması için hata fırlatıyoruz
       throw new Error("Kamera izni reddedildi veya cihazda bulunamadı.");
     }

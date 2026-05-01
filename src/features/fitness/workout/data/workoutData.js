@@ -5,9 +5,9 @@ export { EXERCISE_DB };
 export const TOTAL_W = 48; 
 export const BADGE_ICONS = { fire: "🔥", star: "⭐", muscle: "💪", crown: "👑" };
 export const BADGES = [
-  { id: "b1", icon: "fire", label: "İlk Antrenman", check: (cw) => Object.keys(cw).length >= 1 },
+  { id: "b1", icon: "fire", label: "İlk Antrenman", check: (cw) => Object.keys(cw)?.length >= 1 },
   { id: "b2", icon: "muscle", label: "3 Günlük Seri", check: (cw, streak) => streak >= 3 },
-  { id: "b3", icon: "star", label: "1. Faz Bitti", check: (cw) => Object.keys(cw).filter(k => k.startsWith("0-")).length >= 16 }
+  { id: "b3", icon: "star", label: "1. Faz Bitti", check: (cw) => Object.keys(cw).filter(k => k.startsWith("0-"))?.length >= 16 }
 ];
 
 export const WORKOUT_PRESETS = [

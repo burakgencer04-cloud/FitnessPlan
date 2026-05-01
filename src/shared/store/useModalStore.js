@@ -2,20 +2,24 @@ import { create } from 'zustand';
 
 const useModalStore = create((set) => ({
   isOpen: false,
-  type: 'alert', // 'alert' veya 'confirm'
+  type: 'alert', // 'alert', 'confirm' veya 'input'
   title: '',
   message: '',
+  inputPlaceholder: '', // 🔥 YENİ: Input için yer tutucu metin
+  initialInputValue: '', // 🔥 YENİ: Input için varsayılan değer
   confirmText: 'Tamam',
   cancelText: 'İptal',
   onConfirm: null,
   onCancel: null,
 
-  // 🔥 YENİ VE STANDART API (Tüm uygulamanın kullanacağı ana fonksiyon)
+  // YENİ VE STANDART API
   openModal: (config) => set({
     isOpen: true,
     type: config.type || 'alert',
     title: config.title || 'Bilgi',
     message: config.message || '',
+    inputPlaceholder: config.inputPlaceholder || 'Buraya yazın...',
+    initialInputValue: config.initialInputValue || '',
     confirmText: config.confirmText || 'Tamam',
     cancelText: config.cancelText || 'İptal',
     onConfirm: config.onConfirm || null,
@@ -28,7 +32,7 @@ const useModalStore = create((set) => ({
     onCancel: null 
   }),
 
-  // 🛡️ GERİYE DÖNÜK UYUMLULUK ZIRHI (Eski kodlar patlamasın diye)
+  // GERİYE DÖNÜK UYUMLULUK ZIRHI
   showAlert: (title, message) => set({
     isOpen: true, type: 'alert', title, message, confirmText: 'Tamam', onConfirm: null
   }),

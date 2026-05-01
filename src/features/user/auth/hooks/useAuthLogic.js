@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { auth } from "@/shared/lib/firebase.js";
+import { auth } from "@/shared/api/firebase.js";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -7,7 +7,7 @@ import {
   updateProfile,
   sendPasswordResetEmail,
 } from "firebase/auth";
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/hooks/useTranslation.js';
 
 export function useAuthLogic() {
   const { t } = useTranslation(); 

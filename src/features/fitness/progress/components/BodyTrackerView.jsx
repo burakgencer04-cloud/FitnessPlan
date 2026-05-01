@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { set as idbSet, get as idbGet } from 'idb-keyval';
 import { getLocalIsoDate } from '@/shared/utils/dateUtils.js'; // Varsa kendi tarih util'ini kullan
+import { logger } from '@/shared/lib/logger.js';
 
 const METRICS = [
   { id: 'waist', label: 'Bel Çevresi', unit: 'cm', icon: '📏' },
@@ -26,7 +27,7 @@ export default function BodyTrackerView({ bodyMetrics, setBodyMetrics, C }) {
 
         // İlk fotoğrafı bulmak için geçmişe bakıyoruz
         const allKeys = Object.keys(bodyMetrics).sort();
-        if (allKeys.length > 0) {
+        if (allKeys?.length > 0) {
            const firstDate = allKeys[0];
            if (firstDate !== today) {
               const pFirst = await idbGet(`photo_${firstDate}`);
@@ -34,7 +35,7 @@ export default function BodyTrackerView({ bodyMetrics, setBodyMetrics, C }) {
            }
         }
       } catch (err) {
-        console.error("Fotoğraflar yüklenemedi:", err);
+        logger.error("Fotoğraflar yüklenemedi:", err);
       }
     };
     loadPhotos();

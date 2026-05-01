@@ -1,3 +1,5 @@
+import { logger } from '@/shared/lib/logger.js';
+
 define(['exports'], (function (exports) { 'use strict';
 
     // @ts-ignore
@@ -980,12 +982,12 @@ define(['exports'], (function (exports) { 'use strict';
             // See https://github.com/GoogleChrome/workbox/issues/2079
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             params = matchResult;
-            if (Array.isArray(params) && params.length === 0) {
+            if (Array.isArray(params) && params?.length === 0) {
               // Instead of passing an empty array in as params, use undefined.
               params = undefined;
             } else if (matchResult.constructor === Object &&
             // eslint-disable-line
-            Object.keys(matchResult).length === 0) {
+            Object.keys(matchResult)?.length === 0) {
               // Instead of passing an empty object in as params, use undefined.
               params = undefined;
             } else if (typeof matchResult === 'boolean') {
@@ -1214,7 +1216,7 @@ define(['exports'], (function (exports) { 'use strict';
       suffix: typeof registration !== 'undefined' ? registration.scope : ''
     };
     const _createCacheName = cacheName => {
-      return [_cacheNameDetails.prefix, cacheName, _cacheNameDetails.suffix].filter(value => value && value.length > 0).join('-');
+      return [_cacheNameDetails.prefix, cacheName, _cacheNameDetails.suffix].filter(value => value && value?.length > 0).join('-');
     };
     const eachCacheNameDetail = fn => {
       for (const key of Object.keys(_cacheNameDetails)) {
@@ -1441,7 +1443,7 @@ define(['exports'], (function (exports) { 'use strict';
      * @memberof workbox-precaching
      */
     function printCleanupDetails(deletedURLs) {
-      const deletionCount = deletedURLs.length;
+      const deletionCount = deletedURLs?.length;
       if (deletionCount > 0) {
         logger.groupCollapsed(`During precaching cleanup, ` + `${deletionCount} cached ` + `request${deletionCount === 1 ? ' was' : 's were'} deleted.`);
         logGroup('Deleted Cache Requests', deletedURLs);
@@ -1463,7 +1465,7 @@ define(['exports'], (function (exports) { 'use strict';
      * @private
      */
     function _nestedGroup(groupTitle, urls) {
-      if (urls.length === 0) {
+      if (urls?.length === 0) {
         return;
       }
       logger.groupCollapsed(groupTitle);
@@ -1480,8 +1482,8 @@ define(['exports'], (function (exports) { 'use strict';
      * @memberof workbox-precaching
      */
     function printInstallDetails(urlsToPrecache, urlsAlreadyPrecached) {
-      const precachedCount = urlsToPrecache.length;
-      const alreadyPrecachedCount = urlsAlreadyPrecached.length;
+      const precachedCount = urlsToPrecache?.length;
+      const alreadyPrecachedCount = urlsAlreadyPrecached?.length;
       if (precachedCount || alreadyPrecachedCount) {
         let message = `Precaching ${precachedCount} file${precachedCount === 1 ? '' : 's'}.`;
         if (alreadyPrecachedCount > 0) {
@@ -2157,7 +2159,7 @@ define(['exports'], (function (exports) { 'use strict';
        * prior to your work completing.
        */
       async doneWaiting() {
-        while (this._extendLifetimePromises.length) {
+        while (this._extendLifetimePromises?.length) {
           const promises = this._extendLifetimePromises.splice(0);
           const result = await Promise.allSettled(promises);
           const firstRejection = result.find(i => i.status === 'rejected');
@@ -2770,7 +2772,7 @@ define(['exports'], (function (exports) { 'use strict';
           }
           this._urlsToCacheKeys.set(url, cacheKey);
           this._urlsToCacheModes.set(url, cacheMode);
-          if (urlsToWarnAbout.length > 0) {
+          if (urlsToWarnAbout?.length > 0) {
             const warningMessage = `Workbox is precaching URLs without revision ` + `info: ${urlsToWarnAbout.join(', ')}\nThis is generally NOT safe. ` + `Learn more at https://bit.ly/wb-precache`;
             {
               logger.warn(warningMessage);
@@ -3240,7 +3242,7 @@ define(['exports'], (function (exports) { 'use strict';
         const cacheName = cacheNames.getPrecacheName();
         event.waitUntil(deleteOutdatedCaches(cacheName).then(cachesDeleted => {
           {
-            if (cachesDeleted.length > 0) {
+            if (cachesDeleted?.length > 0) {
               logger.log(`The following out-of-date precaches were cleaned up ` + `automatically:`, cachesDeleted);
             }
           }

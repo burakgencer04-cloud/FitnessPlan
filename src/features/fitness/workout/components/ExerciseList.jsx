@@ -1,3 +1,4 @@
+// src/features/fitness/workout/components/ExerciseList.jsx
 import React from 'react';
 import { motion } from "framer-motion";
 import { globalFonts as fonts, sleekRowStyle } from '@/shared/ui/globalStyles.js';
@@ -14,11 +15,12 @@ const STYLES = {
   addBtn: { background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.05)`, color: "rgba(255,255,255,0.8)", padding: "10px 20px", borderRadius: 14, fontWeight: 800, fontSize: 12, cursor: "pointer", fontStyle: "italic" }
 };
 
-export default function ExerciseList({ 
+// 🔥 React.memo eklendi! Saniye aktığında liste RENDER OLMAYACAK!
+const ExerciseList = React.memo(({ 
   t, C, activeExIndex, activeExerciseDetails, 
   setModalState, currentSetCount, localWeightLog, sessionSets, activeExercise,
   onSetToggle, onSetUpdate, onAddSet, onRemoveSet 
-}) {
+}) => {
   const exName = activeExercise?.name || "Yükleniyor...";
   const targetMuscle = activeExerciseDetails?.target || (t ? t('today_workout_lbl') : 'Antrenman');
 
@@ -45,17 +47,20 @@ export default function ExerciseList({
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {[...Array(currentSetCount || 1)].map((_, si) => {
           const exHistory = localWeightLog?.[exName] || [];
-          const lastLog = Array.isArray(exHistory) && exHistory.length > 0 ? exHistory[exHistory.length - 1] : exHistory;
           const currentSetData = (sessionSets && sessionSets[`${activeExIndex}-${si}`]) || { w: "", r: "" };
 
           return (
             <SetRow 
-              key={si} setIndex={si} 
-              setData={currentSetData} 
-              lastLog={lastLog} exName={exName} themeColors={C} 
-              targetRepsStr={activeExercise?.reps}
-              onToggle={() => onSetToggle(si, activeExercise?.rest, exName)}
-              onUpdate={(field, value) => onSetUpdate(si, field, value)}
+              key={`${activeExIndex}-${si}`} 
+              setIndex={si} 
+              weight={currentSetData.w || ""}
+              reps={currentSetData.r || ""}
+              isCompleted={currentSetData.done || false}
+              exerciseName={exName} 
+              C={C} 
+              onToggleComplete={() => onSetToggle(si, activeExercise?.rest, exName)}
+              onWeightChange={(value) => onSetUpdate(si, 'w', value)}
+              onRepsChange={(value) => onSetUpdate(si, 'r', value)}
             />
           );
         })}
@@ -75,4 +80,6 @@ export default function ExerciseList({
       </div>
     </motion.div>
   );
-}
+});
+
+export default ExerciseList;

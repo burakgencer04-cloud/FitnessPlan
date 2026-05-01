@@ -1,6 +1,8 @@
+import { parseLogDateStr } from '@/shared/utils/dateUtils.js';
 // Türkçe UI tarihlerini ("12 Nis") matematiksel Date objelerine çeviren parser
 const parseTurkishDate = (dateStr) => {
   if (!dateStr) return new Date();
+  
 
   const timestamp = Date.parse(dateStr);
   if (!isNaN(timestamp)) return new Date(timestamp); // Zaten geçerli bir ISO tarihiyse dön
@@ -11,7 +13,7 @@ const parseTurkishDate = (dateStr) => {
   };
 
   const parts = dateStr.trim().split(" ");
-  if (parts.length >= 2) {
+  if (parts?.length >= 2) {
     const day = parseInt(parts[0], 10);
     const monthKey = parts[1].toLowerCase().slice(0, 3);
     const monthIndex = months[monthKey];
@@ -32,7 +34,7 @@ export const calculateTrend = (dataArray = [], targetWeight = null) => {
   // 🔥 ZIRH: Eğer veri yoksa veya dizi değilse çökmesini engelle
   const safeData = Array.isArray(dataArray) ? dataArray : [];
 
-  if (safeData.length === 0) {
+  if (safeData?.length === 0) {
     return { 
       weightTrendData: [], 
       targetMessage: "Henüz yeterli ölçüm verisi yok. İlerlemeyi görmek için tartıl!" 
@@ -50,7 +52,7 @@ export const calculateTrend = (dataArray = [], targetWeight = null) => {
 
   // Lineer Regresyon (Eğilim Çizgisi) Hesaplaması
   let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-  const n = chartData.length;
+  const n = chartData?.length;
 
   chartData.forEach((point, i) => {
     sumX += i;

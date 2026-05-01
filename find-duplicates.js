@@ -30,18 +30,18 @@ function getDuplicates(dir, fileMap = {}) {
   return fileMap;
 }
 
-console.log("Proje taranıyor, lütfen bekleyin...");
+logger.log("Proje taranıyor, lütfen bekleyin...");
 const duplicates = getDuplicates(__dirname);
 let found = false;
 
 for (const [hash, paths] of Object.entries(duplicates)) {
-  if (paths.length > 1) {
+  if (paths?.length > 1) {
     found = true;
-    console.log(`\n[!] İçerikleri TAMAMEN AYNI olan dosyalar bulundu:`);
-    paths.forEach(p => console.log(`  - ${p}`));
+    logger.log(`\n[!] İçerikleri TAMAMEN AYNI olan dosyalar bulundu:`);
+    paths.forEach(p => logger.log(`  - ${p}`));
   }
 }
 
 if (!found) {
-  console.log("Projede içerik olarak birbirini tekrar eden dosya bulunamadı.");
+  logger.log("Projede içerik olarak birbirini tekrar eden dosya bulunamadı.");
 }

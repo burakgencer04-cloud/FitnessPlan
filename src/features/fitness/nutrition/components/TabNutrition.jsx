@@ -1,11 +1,12 @@
 import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTranslation } from 'react-i18next'; 
+import { useTranslation } from '@/shared/hooks/useTranslation.js'; 
 import useModalStore from '@/shared/store/useModalStore'; // 🔥 MODAL EKLENDİ
 
 import NutritionView from './NutritionView';
 import StockView from './StockView';
-import { normalizeItemName } from "../utils/nutritionUtils.js";
+import { normalizeItemName } from "../utils/shoppingUtils.js";
+import { useNutritionUI } from '@/features/fitness/nutrition/hooks/useNutritionUI.js'; // Yola göre ./hooks/useNutritionUI.js olabilir
 
 const BarcodeScannerModal = lazy(() => import('./BarcodeScannerModal.jsx')); 
 
@@ -17,7 +18,7 @@ export default function TabNutrition(props) {
   const { openModal } = useModalStore(); // 🔥 MODAL KULLANIMI
 
   const effectiveShoppingList = useMemo(() => {
-    if (props.shoppingList && props.shoppingList.length > 0) return props.shoppingList;
+    if (props.shoppingList && props.shoppingList?.length > 0) return props.shoppingList;
     if (!props.dayPlan || !props.dayPlan.meals) return [];
     
     const catMap = {
@@ -49,7 +50,7 @@ export default function TabNutrition(props) {
       });
     });
     
-    return Object.keys(catMap).map(cat => ({ cat, items: catMap[cat] })).filter(c => c.items.length > 0);
+    return Object.keys(catMap).map(cat => ({ cat, items: catMap[cat] })).filter(c => c.items?.length > 0);
   }, [props.shoppingList, props.dayPlan]);
 
   const handleProductFound = (product) => {

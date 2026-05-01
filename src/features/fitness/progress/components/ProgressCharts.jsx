@@ -4,7 +4,7 @@ import { AreaChart, Area, BarChart, Bar, LineChart, Line, ReferenceLine, Cell, X
 
 // 🔥 CustomTooltip utils dosyasından çekiliyor
 import { MEASUREMENT_TYPES, getGlassCardStyle, getGlassInnerStyle, CustomTooltip } from "../utils/progressUtils.jsx";
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 export default function ProgressCharts(props) {
   const C = props?.C ?? {};
@@ -50,7 +50,7 @@ export default function ProgressCharts(props) {
           </div>
         )}
         
-        {chartData.length > 0 ? (
+        {chartData?.length > 0 ? (
           props?.selectedChartType === 'weight' ? (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: -24 }}>
@@ -111,7 +111,7 @@ export default function ProgressCharts(props) {
           ))}
         </div>
         
-        {volumeTrendData.length > 0 ? (
+        {volumeTrendData?.length > 0 ? (
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={volumeTrendData} margin={{ top: 10, right: 0, bottom: 0, left: -24 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={`${C?.border}40`} vertical={false} />
@@ -123,7 +123,7 @@ export default function ProgressCharts(props) {
               
               <Bar dataKey="Hacim" fill={C?.sub} radius={[4, 4, 0, 0]}>
                 {volumeTrendData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={index === volumeTrendData.length - 1 ? C?.text : `${C?.sub}80`} />
+                  <Cell key={`cell-${index}`} fill={index === volumeTrendData?.length - 1 ? C?.text : `${C?.sub}80`} />
                 ))}
               </Bar>
             </BarChart>

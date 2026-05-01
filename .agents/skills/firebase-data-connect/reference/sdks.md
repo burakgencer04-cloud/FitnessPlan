@@ -1,3 +1,4 @@
+
 # SDK Reference
 
 ## Contents
@@ -71,7 +72,7 @@ const firstActor = movie.data.movie.actors[0].name;
 
 // Query
 const result = await listMovies();
-console.log(result.data.movies);
+logger.log(result.data.movies);
 
 // Query with variables
 const movie = await getMovie({ id: 'uuid-here' });
@@ -81,7 +82,7 @@ const newMovie = await createMovie({
   title: 'New Movie', 
   genre: 'Action' 
 });
-console.log(newMovie.data.movie_insert); // Returns key
+logger.log(newMovie.data.movie_insert); // Returns key
 ```
 
 ### Subscriptions
@@ -91,10 +92,10 @@ import { listMoviesRef, subscribe } from '@movie-app/dataconnect';
 
 const unsubscribe = subscribe(listMoviesRef(), {
   onNext: (result) => {
-    console.log('Movies updated:', result.data.movies);
+    logger.log('Movies updated:', result.data.movies);
   },
   onError: (error) => {
-    console.error('Subscription error:', error);
+    logger.error('Subscription error:', error);
   }
 });
 

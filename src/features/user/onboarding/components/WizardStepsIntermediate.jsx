@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { getSharedStyles, SelectionCard, ExpandableDietCard } from './WizardShared.jsx';
 import { POPULAR_DISLIKES, POPULAR_LIKES } from '../hooks/useOnboarding.js';
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 export const Step4Goals = ({ form, setForm, C, t }) => (
   <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} style={{ flex: 1 }}>

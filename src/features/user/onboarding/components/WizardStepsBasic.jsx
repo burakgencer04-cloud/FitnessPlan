@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { getSharedStyles } from './WizardShared.jsx';
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 export const Step1Personal = ({ form, setForm, C, t }) => {
   const { inputStyle, labelStyle } = getSharedStyles(C);

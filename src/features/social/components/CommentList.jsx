@@ -9,7 +9,7 @@ const STYLES = {
 };
 
 export default function CommentList({ comments = [], C = {} }) {
-  if (!comments || comments.length === 0) {
+  if (!comments || comments?.length === 0) {
     return <div style={STYLES.emptyState}>Henüz yorum yok. İlk ateşleyen sen ol!</div>;
   }
 

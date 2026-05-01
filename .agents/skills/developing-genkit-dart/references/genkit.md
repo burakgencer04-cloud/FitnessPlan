@@ -206,9 +206,9 @@ async function callHelloFlow() {
       url: 'http://127.0.0.1:3400/helloFlow', // Replace with your deployed flow's URL
       input: { name: 'Genkit User' },
     });
-    console.log('Non-streaming result:', result.greeting);
+    logger.log('Non-streaming result:', result.greeting);
   } catch (error) {
-    console.error('Error calling helloFlow:', error);
+    logger.error('Error calling helloFlow:', error);
   }
 }
 
@@ -229,14 +229,14 @@ async function streamHelloFlow() {
 
     // Process the stream chunks as they arrive
     for await (const chunk of result.stream) {
-      console.log('Stream chunk:', chunk);
+      logger.log('Stream chunk:', chunk);
     }
 
     // Get the final complete response
     const finalOutput = await result.output;
-    console.log('Final streaming output:', finalOutput.greeting);
+    logger.log('Final streaming output:', finalOutput.greeting);
   } catch (error) {
-    console.error('Error streaming helloFlow:', error);
+    logger.error('Error streaming helloFlow:', error);
   }
 }
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTranslation } from 'react-i18next'; 
-import { useProfile } from './useProfile.js'; // 🔥 İŞ MANTIĞIMIZ BURADAN GELİYOR
+import { useTranslation } from '@/shared/hooks/useTranslation.js'; 
+import { useProfile } from '../hooks/useProfile.js';
 
 const DEFAULT_THEME = {
   bg: '#05080c', text: '#f8fafc', sub: '#94a3b8', mute: '#475569',
@@ -9,7 +9,7 @@ const DEFAULT_THEME = {
   red: '#ef4444', yellow: '#f59e0b'
 };
 
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 // 🌟 ALT BİLEŞENLER (Aynı dosyada, sadece UI)
 const Accordion = ({ id, icon, title, isOpen, onToggle, children }) => (

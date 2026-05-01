@@ -16,7 +16,7 @@ const messaging = firebase.messaging();
 
 // Uygulama KAPALIYKEN veya ARKA PLANDAYKEN gelen mesajları dinler
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Arka plan mesajı alındı: ', payload);
+  logger.log('[firebase-messaging-sw.js] Arka plan mesajı alındı: ', payload);
   
   const notificationTitle = payload.notification.title || 'Protokol Çağırıyor!';
   const notificationOptions = {

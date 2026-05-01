@@ -1,8 +1,8 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTranslation } from "react-i18next";
-import { THEMES, formatGroceryAmount, normalizeItemName } from "../utils/nutritionUtils.js";
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { useTranslation } from '@/shared/hooks/useTranslation.js';
+import { THEMES, formatGroceryAmount, normalizeItemName } from "../utils/shoppingUtils.js";
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 // Beyin katmanı entegrasyonu (Tüm hesaplama buraya taşındı)
 import { useStockManager } from "../hooks/useStockManager.js";
@@ -84,7 +84,7 @@ export default function StockView({ shoppingList = [], themeColors: C = {}, onCl
             <motion.div key={catName} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div onClick={() => toggleCategory(catName)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, cursor: "pointer" }}>
                 <h3 style={{ margin: 0, fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.4)", letterSpacing: 1.5 }}>{catName.toUpperCase()}</h3>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 800 }}>{items.length} ÜRÜN {isExpanded ? "▲" : "▼"}</div>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 800 }}>{items?.length} ÜRÜN {isExpanded ? "▲" : "▼"}</div>
               </div>
 
               <AnimatePresence>

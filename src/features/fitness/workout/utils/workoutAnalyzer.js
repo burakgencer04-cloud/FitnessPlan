@@ -1,4 +1,6 @@
 import { EXERCISE_DB } from "@/features/fitness/workout/data/workoutData.js";
+import { parseLogDateStr } from '@/shared/utils/dateUtils.js';
+import { db } from '@/shared/db/db.js'; // 🚀 Dexie DB importu
 
 export const guessTargetMuscle = (exName) => {
   const name = (exName || "").toLowerCase().trim();
@@ -26,7 +28,6 @@ export const PART_TO_TARGET = {
   "Bacak (Quad)": "Bacak", "Arka Bacak": "Bacak", "Kalça": "Bacak", "Baldır": "Bacak"
 };
 
-// 🔥 ZIRHLI EPLEY FORMÜLÜ İLE E1RM HESAPLAYICI (Tek ve doğru versiyon)
 export const calculateE1RM = (weight, reps) => {
   const w = parseFloat(weight);
   const r = parseInt(reps);
@@ -37,13 +38,12 @@ export const calculateE1RM = (weight, reps) => {
 };
 
 export const predictNextGoal = (lastLog, targetRepsStr = "10") => {
-  if (!lastLog || !lastLog.sets || lastLog.sets.length === 0) return null;
+  if (!lastLog || !lastLog.sets || lastLog.sets?.length === 0) return null;
   
   let bestSet = lastLog.sets[0];
   let max1RM = 0;
 
   lastLog.sets.forEach(set => {
-    // 🔥 YANLIŞLIKLA YAPIŞTIRILAN EXPORT SİLİNDİ, DOĞRU ÇAĞRI EKLENDİ
     const e1rm = calculateE1RM(set.kg, set.reps);
     if (e1rm > max1RM) {
       max1RM = e1rm;
@@ -83,46 +83,41 @@ export const predictNextGoal = (lastLog, targetRepsStr = "10") => {
   return { nextWeight, nextReps, message, type, prev1RM: Math.round(max1RM) };
 };
 
-const parseLogDate = (dateStr) => {
-  if (!dateStr) return new Date();
-  const parts = dateStr.split(' ');
-  if (parts.length !== 2) return new Date();
-  
-  const trMonths = { "Oca": 0, "Şub": 1, "Mar": 2, "Nis": 3, "May": 4, "Haz": 5, "Tem": 6, "Ağu": 7, "Eyl": 8, "Eki": 9, "Kas": 10, "Ara": 11 };
-  const day = parseInt(parts[0]);
-  const month = trMonths[parts[1]];
-  const now = new Date();
-  
-  let logDate = new Date(now.getFullYear(), month, day);
-  if (logDate > now) logDate.setFullYear(now.getFullYear() - 1);
-  return logDate;
-};
-
-export const calculateRealFatigue = (weightLog) => {
+// 🔥 5. ADIM: weightLog parametresi kaldırıldı. Doğrudan Dexie'den asenkron okur.
+export const calculateRealFatigue = async () => {
   const fatigueRaw = { "Göğüs": 0, "Sırt": 0, "Bacak": 0, "Omuz": 0, "Kol": 0, "Karın": 0 };
   const now = new Date();
   const MAX_TOLERANCE = { "Bacak": 8000, "Sırt": 6000, "Göğüs": 5000, "Omuz": 4000, "Kol": 3000, "Karın": 2000 };
 
-  Object.entries(weightLog || {}).forEach(([exName, logs]) => {
-     const target = guessTargetMuscle(exName);
-     if (fatigueRaw[target] === undefined) return;
+  // Son 7 günün tarih string'i
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const dateStr = oneWeekAgo.toISOString().split('T')[0];
 
-     logs.forEach(log => {
-       const logDate = parseLogDate(log.date);
-       const diffMs = now - logDate;
-       const diffHours = diffMs / (1000 * 60 * 60);
+  try {
+      // IndexedDB'den (Dexie) son 1 haftanın verisini çekiyoruz
+      const recentLogs = await db.weightLogs
+          .where('date').aboveOrEqual(dateStr)
+          .toArray();
 
-       if (diffHours >= 0 && diffHours < 72) {
-         let logVolume = 0;
-         (log.sets || []).forEach(set => {
-            logVolume += (Number(set.kg) || 0) * (Number(set.reps) || 0);
-         });
-         
-         const decayFactor = 1 - (diffHours / 72);
-         fatigueRaw[target] += (logVolume * decayFactor);
-       }
-     });
-  });
+      recentLogs.forEach(log => {
+         const target = guessTargetMuscle(log.exerciseName);
+         if (fatigueRaw[target] === undefined) return;
+
+         const logDate = parseLogDateStr(log.date);
+         const diffMs = now - logDate;
+         const diffHours = diffMs / (1000 * 60 * 60);
+
+         if (diffHours >= 0 && diffHours < 72) {
+           // Yeni Dexie şeması (flat array) ile her nesne bir set barındırdığı için log.sets döngüsü kaldırıldı
+           const logVolume = (Number(log.weight) || 0) * (Number(log.reps) || 0);
+           const decayFactor = 1 - (diffHours / 72);
+           fatigueRaw[target] += (logVolume * decayFactor);
+         }
+      });
+  } catch (error) {
+      console.error("Yorgunluk analizi için Dexie logları çekilemedi:", error);
+  }
 
   const fatiguePct = {};
   Object.keys(fatigueRaw).forEach(m => {
@@ -135,27 +130,28 @@ export const calculateRealFatigue = (weightLog) => {
   return fatiguePct;
 };
 
-export const analyzeAndOptimizeWorkout = (plannedWorkout, weightLog, exerciseDB, forceDemo = false) => {
+// 🔥 5. ADIM: Asenkron hale getirildi ve weightLog dependency'si kaldırıldı
+export const analyzeAndOptimizeWorkout = async (plannedWorkout, exerciseDB, forceDemo = false) => {
   if (!plannedWorkout || !plannedWorkout.exercises) return { workout: plannedWorkout, modified: false, message: null };
 
-  const fatigue = calculateRealFatigue(weightLog);
+  const fatigue = await calculateRealFatigue();
   let tiredMuscles = Object.keys(fatigue).filter(m => fatigue[m] >= 75); 
 
-  if (forceDemo && tiredMuscles.length === 0 && plannedWorkout.exercises.length > 0) {
+  if (forceDemo && tiredMuscles?.length === 0 && plannedWorkout.exercises?.length > 0) {
      tiredMuscles = [guessTargetMuscle(plannedWorkout.exercises[0].name)];
   }
 
-  if (tiredMuscles.length === 0) return { workout: plannedWorkout, modified: false, message: "Sinir sistemin harika durumda. Orijinal programa tam güç saldırabilirsin!" };
+  if (tiredMuscles?.length === 0) return { workout: plannedWorkout, modified: false, message: "Sinir sistemin harika durumda. Orijinal programa tam güç saldırabilirsin!" };
 
   const optimizedExercises = [];
   const freshMuscles = Object.keys(fatigue).filter(m => fatigue[m] <= 30); 
-  const fallbackMuscle = freshMuscles.length > 0 ? freshMuscles[Math.floor(Math.random() * freshMuscles.length)] : "Karın";
+  const fallbackMuscle = freshMuscles?.length > 0 ? freshMuscles[Math.floor(Math.random() * freshMuscles?.length)] : "Karın";
 
   plannedWorkout.exercises.forEach(ex => {
       const target = guessTargetMuscle(ex.name);
       if (tiredMuscles.includes(target)) {
           const alternatives = exerciseDB.filter(d => d.target === fallbackMuscle);
-          const substitute = alternatives[Math.floor(Math.random() * alternatives.length)];
+          const substitute = alternatives[Math.floor(Math.random() * alternatives?.length)];
           if (substitute) optimizedExercises.push({ ...ex, name: substitute.name, target: substitute.target, isSwappedByAI: true });
           else optimizedExercises.push(ex); 
       } else {

@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTranslation } from 'react-i18next'; // 🌍 ÇEVİRİ KANCASI
+import { useTranslation } from '@/shared/hooks/useTranslation.js'; // 🌍 ÇEVİRİ KANCASI
 import { WORKOUT_PRESETS } from '@/features/fitness/workout/data/workoutData.js';
 
 
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 export const defaultForm = { 
   age: 25, gender: "erkek", height: 180, weight: 80, 
@@ -37,7 +37,7 @@ export default function Onboarding({ onDone, theme, existingUser }) {
 
     // 4. İKİNCİ DENEME (DİNAMİK BULUCU): Eğer o ID yoksa, programların içindeki GÜN SAYISINA göre bul!
     if (!matchedPlan) {
-      matchedPlan = WORKOUT_PRESETS.find(p => p.workouts && p.workouts.length === targetDays);
+      matchedPlan = WORKOUT_PRESETS.find(p => p.workouts && p.workouts?.length === targetDays);
     }
 
     // 5. ÜÇÜNCÜ DENEME: İsminde "5 Günlük" gibi bir ibare geçen programı bul
@@ -46,8 +46,8 @@ export default function Onboarding({ onDone, theme, existingUser }) {
     }
 
     // 6. SON ÇARE: Hiçbiri tutmazsa eldeki en kapsamlı (genelde en sondaki) programı ver
-    if (!matchedPlan && WORKOUT_PRESETS.length > 0) {
-      matchedPlan = WORKOUT_PRESETS[WORKOUT_PRESETS.length - 1]; 
+    if (!matchedPlan && WORKOUT_PRESETS?.length > 0) {
+      matchedPlan = WORKOUT_PRESETS[WORKOUT_PRESETS?.length - 1]; 
     }
 
     // Antrenman listesini güvenle çek (Bazı veritabanlarında "workouts", bazılarında "phases[0].workouts" içindedir)

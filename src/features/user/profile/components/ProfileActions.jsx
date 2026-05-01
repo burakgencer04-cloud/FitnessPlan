@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 const STYLES = {
   wrapper: { position: "fixed", bottom: 100, left: 0, right: 0, display: "flex", justifyContent: "center", padding: "0 20px", zIndex: 100, transform: "translateZ(0)", pointerEvents: "none" },

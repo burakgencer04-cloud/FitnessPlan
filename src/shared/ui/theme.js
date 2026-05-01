@@ -1,6 +1,8 @@
 // 🔧 DÜZELTİLDİ: fonts objesi artık tek bir yerden export ediliyor.
 // App.jsx, TabProfile.jsx, nutritionUtils.js ve diğer dosyalardaki
 // yerel font tanımlamaları kaldırıldı; buradan import edilmeli.
+import { useAppStore } from '@/app/store.js';
+
 export const fonts = {
   header: "'Comucan', system-ui, sans-serif",
   body: "'Comucan', system-ui, sans-serif",
@@ -91,4 +93,10 @@ export const THEMES = {
     red: "#ef4444",
     yellow: "#f59e0b",
   },
+};
+
+// 🔥 YENİ: Prop Drilling Katili Hook
+export const useTheme = () => {
+  const activeThemeId = useAppStore(state => state.activeThemeId);
+  return THEMES[activeThemeId] || THEMES.midnight;
 };

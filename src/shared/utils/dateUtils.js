@@ -6,7 +6,7 @@ export const getLocalIsoDate = (dateParam) => {
   return localISOTime; // "YYYY-MM-DD" formatında döner
 };
 
-// Node.js saçmalamalarına karşı zırhlanmış parse fonksiyonumuz
+
 export const parseLogDateStr = (dateStr) => {
   if (!dateStr || typeof dateStr !== 'string') return null;
   

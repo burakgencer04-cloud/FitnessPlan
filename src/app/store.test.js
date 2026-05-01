@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAppStore } from './store';
 
+vi.stubGlobal('indexedDB', {
+  open: vi.fn(() => ({})), 
+});
+
 // 🔥 CRASH KORUMASI: Tarayıcı API'leri test ortamında olmadığı için sahtesini (Mock) üretiyoruz
 vi.mock('@/shared/lib/healthService', () => ({
   healthService: { requestPermissions: vi.fn(), getDailyMetrics: vi.fn() }

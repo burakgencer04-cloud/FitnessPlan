@@ -1,16 +1,28 @@
 // WorkoutModals.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
-import { fonts } from '@/shared/utils/uiStyles.js'; // 🔥 EKSİK OLAN IMPORT EKLENDİ
+import { fonts } from '@/shared/ui/uiStyles.js'; 
+
+// 🔥 ZIRH: Modal içerisindeki sabit UI elementleri (Object Allocation önlendi)
+const S = {
+  overlay: { position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  backdrop: { position: "absolute", inset: 0, background: 'rgba(5, 8, 12, 0.8)', backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" },
+  modalWrap: { width: '100%', display: 'flex', justifyContent: 'center', position: "relative", zIndex: 1 },
+  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  colGap12: { display: "flex", flexDirection: "column", gap: 12 },
+  plateRow: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(0,0,0,0.2)", padding: "16px 24px", borderRadius: 16 },
+  flexCenterGap12: { display: "flex", alignItems: "center", gap: 12 },
+  swapRow: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(0,0,0,0.2)", padding: "16px", borderRadius: 16, cursor: "pointer", transition: "0.2s" },
+  videoWrap: { width: "100%", aspectRatio: "16/9", background: "#000", borderRadius: 20, overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" },
+  summaryStatsGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 },
+  summaryStatBox: { background: `linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.2))`, padding: 20, borderRadius: 24, textAlign: "center" },
+  checkboxLabel: { display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }
+};
 
 export const ModalOverlay = ({ children, onClose }) => (
-  <motion.div 
-    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-    style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-    onClick={onClose}
-  >
-    <div style={{ position: "absolute", inset: 0, background: 'rgba(5, 8, 12, 0.8)', backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }} />
-    <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} style={{ width: '100%', display: 'flex', justifyContent: 'center', position: "relative", zIndex: 1 }}>
+  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={S.overlay} onClick={onClose}>
+    <div style={S.backdrop} />
+    <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} style={S.modalWrap}>
       {children}
     </motion.div>
   </motion.div>
@@ -34,7 +46,7 @@ export const calculatePlates = (totalWeight, barWeight = 20) => {
 export const PlatesModal = ({ C, currentMaxWeight, onClose }) => (
   <ModalOverlay onClose={onClose}>
     <div style={{ background: `linear-gradient(145deg, ${C.card}E6, ${C.bg}CC)`, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderRadius: 32, padding: 28, width: '100%', maxWidth: 400, border: `1px solid ${C.border}80`, textAlign: "center", boxShadow: "0 30px 60px rgba(0,0,0,0.5)" }} onClick={e => e.stopPropagation()}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div style={S.headerRow}>
         <h3 style={{ margin: 0, fontWeight: 900, fontSize: 20, fontFamily: fonts.header, color: C.text }}>Plaka Hesaplayıcı</h3>
         <button onClick={onClose} style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}60`, color: C.text, width: 36, height: 36, borderRadius: 12, cursor: "pointer", fontWeight: 900 }}>✕</button>
       </div>
@@ -45,11 +57,11 @@ export const PlatesModal = ({ C, currentMaxWeight, onClose }) => (
       {currentMaxWeight <= 20 ? (
         <div style={{ padding: 20, background: "rgba(0,0,0,0.3)", borderRadius: 16, color: C.mute, fontSize: 13, border: `1px solid ${C.border}40` }}>Sadece boş bar ile çalışmalısın.</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={S.colGap12}>
           <div style={{ fontSize: 10, fontWeight: 900, color: C.mute, letterSpacing: 1, textAlign: "left", marginBottom: 4 }}>BARIN TEK TARAFINA TAKILACAKLAR:</div>
           {calculatePlates(currentMaxWeight).map((plate, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(0,0,0,0.2)", padding: "16px 24px", borderRadius: 16, border: `1px solid ${C.border}40` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div key={i} style={{ ...S.plateRow, border: `1px solid ${C.border}40` }}>
+              <div style={S.flexCenterGap12}>
                 <div style={{ width: 40, height: 40, borderRadius: "50%", background: C.text, color: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, boxShadow: "0 4px 10px rgba(0,0,0,0.2)" }}>{plate.weight}</div>
                 <span style={{ fontSize: 14, color: C.text, fontWeight: 800 }}>kg Plaka</span>
               </div>
@@ -65,7 +77,7 @@ export const PlatesModal = ({ C, currentMaxWeight, onClose }) => (
 export const SwapModal = ({ C, activeExerciseDetails, swapAlternatives, handleSwap, onClose }) => (
   <ModalOverlay onClose={onClose}>
     <div style={{ background: `linear-gradient(145deg, ${C.card}E6, ${C.bg}CC)`, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderRadius: 32, padding: 28, width: '100%', maxWidth: 480, border: `1px solid ${C.border}80`, maxHeight: "80vh", overflowY: "auto", boxShadow: "0 30px 60px rgba(0,0,0,0.5)" }} onClick={e => e.stopPropagation()}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, position: "sticky", top: 0, zIndex: 10, paddingBottom: 10, borderBottom: `1px solid ${C.border}60` }}>
+      <div style={{ ...S.headerRow, position: "sticky", top: 0, zIndex: 10, paddingBottom: 10, borderBottom: `1px solid ${C.border}60` }}>
         <div>
           <h3 style={{ margin: 0, fontWeight: 900, fontSize: 20, fontFamily: fonts.header, color: C.text }}>Egzersizi Değiştir</h3>
           <span style={{ fontSize: 11, color: C.sub, fontWeight: 600 }}>Hedef: {activeExerciseDetails.target}</span>
@@ -73,10 +85,10 @@ export const SwapModal = ({ C, activeExerciseDetails, swapAlternatives, handleSw
         <button onClick={onClose} style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}60`, color: C.text, width: 36, height: 36, borderRadius: 12, cursor: "pointer", fontWeight: 900 }}>✕</button>
       </div>
       
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {swapAlternatives.length > 0 ? swapAlternatives.map(alt => (
-          <div key={alt.id} onClick={() => handleSwap(alt.name)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(0,0,0,0.2)", border: `1px solid ${C.border}40`, padding: "16px", borderRadius: 16, cursor: "pointer", transition: "0.2s" }} onMouseOver={e => e.currentTarget.style.borderColor = C.green} onMouseOut={e => e.currentTarget.style.borderColor = `${C.border}40`}>
-             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={S.colGap12}>
+        {swapAlternatives?.length > 0 ? swapAlternatives.map(alt => (
+          <div key={alt.id} onClick={() => handleSwap(alt.name)} style={{ ...S.swapRow, border: `1px solid ${C.border}40` }} onMouseOver={e => e.currentTarget.style.borderColor = C.green} onMouseOut={e => e.currentTarget.style.borderColor = `${C.border}40`}>
+             <div style={S.flexCenterGap12}>
                 <span style={{ fontSize: 24 }}>{alt.icon}</span>
                 <span style={{ fontSize: 14, fontWeight: 800, color: C.text, fontFamily: fonts.header }}>{alt.name}</span>
              </div>
@@ -93,12 +105,12 @@ export const SwapModal = ({ C, activeExerciseDetails, swapAlternatives, handleSw
 export const VideoModal = ({ C, activeExerciseDetails, onClose }) => (
   <ModalOverlay onClose={onClose}>
     <div style={{ background: `linear-gradient(145deg, ${C.card}E6, ${C.bg}CC)`, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderRadius: 32, padding: 24, width: '100%', maxWidth: 480, border: `1px solid ${C.border}80`, boxShadow: "0 30px 60px rgba(0,0,0,0.5)" }} onClick={e => e.stopPropagation()}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div style={S.headerRow}>
         <h3 style={{ margin: 0, fontWeight: 900, fontSize: 20, fontFamily: fonts.header, color: C.text }}>{activeExerciseDetails.name}</h3>
         <button onClick={onClose} style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}60`, color: C.text, width: 36, height: 36, borderRadius: 12, cursor: "pointer", fontWeight: 900 }}>✕</button>
       </div>
       {activeExerciseDetails.video ? (
-        <div style={{ width: "100%", aspectRatio: "16/9", background: "#000", borderRadius: 20, overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.5)", border: `1px solid ${C.border}40` }}>
+        <div style={{ ...S.videoWrap, border: `1px solid ${C.border}40` }}>
           <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${activeExerciseDetails.video}`} frameBorder="0" allowFullScreen />
         </div>
       ) : (
@@ -135,19 +147,19 @@ export const SummaryModal = ({ C, stats, summaryData, onClose, onComplete }) => 
           <p style={{ color: C.sub, fontSize: 15, marginTop: 8, fontWeight: 600 }}>Harika bir iş çıkardın, antrenman tamamlandı.</p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-           <div style={{ background: `linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.2))`, border: `1px solid rgba(255,255,255,0.05)`, padding: 20, borderRadius: 24, textAlign: "center" }}>
+        <div style={S.summaryStatsGrid}>
+           <div style={{ ...S.summaryStatBox, border: `1px solid rgba(255,255,255,0.05)` }}>
               <div style={{ fontSize: 11, color: C.sub, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>TOPLAM HACİM</div>
               <div style={{ fontSize: 24, fontWeight: 900, color: C.yellow, fontFamily: "monospace" }}>{stats.volume.toLocaleString()} <span style={{fontSize: 14, color: C.mute}}>kg</span></div>
            </div>
-           <div style={{ background: `linear-gradient(145deg, rgba(255,255,255,0.03), rgba(0,0,0,0.2))`, border: `1px solid rgba(255,255,255,0.05)`, padding: 20, borderRadius: 24, textAlign: "center" }}>
+           <div style={{ ...S.summaryStatBox, border: `1px solid rgba(255,255,255,0.05)` }}>
               <div style={{ fontSize: 11, color: C.sub, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>HAREKET</div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: C.green, fontFamily: "monospace" }}>{summaryData.length}</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: C.green, fontFamily: "monospace" }}>{summaryData?.length}</div>
            </div>
         </div>
 
         <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 20, padding: 20, marginBottom: 32, border: `1px solid ${C.border}40` }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: saveAsTemplate ? 16 : 0 }}>
+          <label style={{ ...S.checkboxLabel, marginBottom: saveAsTemplate ? 16 : 0 }}>
              <input type="checkbox" checked={saveAsTemplate} onChange={e => setSaveAsTemplate(e.target.checked)} style={{ width: 20, height: 20, accentColor: C.green }} />
              <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>Bu kombinasyonu "Şablon" olarak kaydet</span>
           </label>

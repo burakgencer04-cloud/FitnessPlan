@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import useModalStore from '@/shared/store/useModalStore';
 // import { Health } from '@awesome-cordova-plugins/health';
+import { logger } from '@/shared/lib/logger.js';
 
 const getGlassCardStyle = (C) => ({
   background: `linear-gradient(145deg, rgba(30, 30, 35, 0.6), rgba(15, 15, 20, 0.8))`,
@@ -42,7 +43,7 @@ export default function HealthSyncWidget({ C }) {
       }, 2000);
 
     } catch (error) {
-      console.error("Health API Bağlantı Hatası:", error);
+      logger.error("Health API Bağlantı Hatası:", error);
       // 🔥 ALERT DEĞİŞTİRİLDİ
       openModal({ 
         type: 'alert', 

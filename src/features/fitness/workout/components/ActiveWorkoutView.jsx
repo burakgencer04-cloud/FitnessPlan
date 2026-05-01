@@ -1,42 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
-import { globalFonts as fonts, sleekRowStyle } from '@/shared/ui/globalStyles.js';
+
+// 🔥 YENİ TASARIM SİSTEMİ EKLENDİ
+import { globalFonts as fonts, sleekRowStyle, LAYOUT, GLASS_STYLES } from '@/shared/ui/globalStyles.js';
 import { HapticEngine, SoundEngine } from '@/shared/lib/hapticSoundEngine.js';
 import SetRow from './SetRow.jsx';
 import AICoach from './AICoach.jsx';
 import CoopBanner from '@/features/social/components/CoopBanner.jsx';
 import WorkoutArena from './WorkoutArena.jsx';
+import { useAppStore } from '@/app/store.js'; 
+import { useTheme } from '@/shared/ui/theme.js'; 
 
 export const WorkoutTimer = React.memo(({ sessActive }) => {
   const [elapsed, setElapsed] = useState(0);
+  const startTimeRef = useRef(null);
+  const activeWorkoutSession = useAppStore(state => state.activeWorkoutSession); 
 
   useEffect(() => {
-    let interval;
     if (sessActive) {
+      startTimeRef.current = activeWorkoutSession?.startTime || Date.now();
       const calculateElapsed = () => {
-        const savedStr = localStorage.getItem('activeWorkoutSession');
-        if (savedStr) {
-          try {
-            const parsed = JSON.parse(savedStr);
-            if (parsed.startTime) setElapsed(Math.floor((Date.now() - parsed.startTime) / 1000));
-          } catch (e) {}
-        }
+         setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
       };
       calculateElapsed(); 
-      interval = setInterval(calculateElapsed, 1000);
+      const interval = setInterval(calculateElapsed, 1000);
+      return () => clearInterval(interval);
     } else {
       setElapsed(0);
     }
-    return () => clearInterval(interval);
-  }, [sessActive]);
+  }, [sessActive, activeWorkoutSession?.startTime]);
 
   const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
   const s = (elapsed % 60).toString().padStart(2, '0');
   return <>{m}:{s}</>;
 });
 
+// 🔥 PROP DRILLING FIX: 'C' parametresi dışarıdan gelmiyor
 export default function ActiveWorkoutView({
-  t, C, sessActive, sessDay, totalVolume,
+  t, sessActive, sessDay, totalVolume,
   coopId, partner, dailyQuests,
   activeExIndex, setActiveExIndex,
   activeExercise, activeExerciseDetails,
@@ -46,12 +47,12 @@ export default function ActiveWorkoutView({
   isArenaOpen, setIsArenaOpen, completedSetsCount, restT
 }) {
 
-  // 🔥 ZIRH 1: activeExercise verisi gelmeden okunmaya çalışılırsa patlamaması için güvenli değişken
+  const C = useTheme(); // Temayı artık kendisi çekiyor
   const safeActiveExName = activeExercise?.name || "";
 
   return (
     <div style={{ width: "100%", padding: "0 4px" }}>
-      <div style={{ ...sleekRowStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, padding: "20px" }}>
+      <div style={{ ...sleekRowStyle, ...LAYOUT.flexBetween, marginBottom: 20, padding: "20px" }}>
          <div>
            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 900, fontFamily: fonts.header, letterSpacing: 1, marginBottom: 4, fontStyle: "italic" }}>{t ? t('today_elapsed_time') : 'GEÇEN SÜRE'}</div>
            <div style={{ fontSize: 26, fontWeight: 900, fontFamily: fonts.mono, color: "#fff", fontStyle: "italic" }}>
@@ -61,7 +62,7 @@ export default function ActiveWorkoutView({
          
          <motion.button 
            whileTap={{ scale: 0.9 }} onClick={() => { handleWorkoutFinish(); if(HapticEngine?.medium) HapticEngine.medium(); if(SoundEngine?.tick) SoundEngine.tick(); }}
-           style={{ background: `linear-gradient(145deg, rgba(231, 76, 60, 0.15), rgba(0,0,0,0.4))`, border: `1px solid rgba(231, 76, 60, 0.2)`, color: C?.red || '#ef4444', width: 48, height: 48, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "inset 0 2px 10px rgba(231, 76, 60, 0.1)" }}
+           style={{ background: `linear-gradient(145deg, rgba(231, 76, 60, 0.15), rgba(0,0,0,0.4))`, border: `1px solid rgba(231, 76, 60, 0.2)`, color: C?.red || '#ef4444', width: 48, height: 48, borderRadius: 16, cursor: "pointer", boxShadow: "inset 0 2px 10px rgba(231, 76, 60, 0.1)", ...LAYOUT.flexCenter }}
          >
            <div style={{ width: 16, height: 16, background: C?.red || '#ef4444', borderRadius: 4 }} />
          </motion.button>
@@ -79,7 +80,7 @@ export default function ActiveWorkoutView({
       <div style={{ position: 'relative', width: '100%', marginBottom: 20 }}>
         <motion.button 
           onClick={() => setIsArenaOpen(true)} whileTap={{ scale: 0.96 }}
-          style={{ position: 'relative', zIndex: 1, width: "100%", background: `linear-gradient(145deg, rgba(15, 15, 20, 0.8), rgba(40, 40, 45, 0.2))`, color: "#fff", border: "1px solid rgba(255,255,255,0.02)", padding: "16px", borderRadius: 20, fontWeight: 700, fontFamily: fonts.header, fontSize: 15, cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 10, fontStyle: "italic", backdropFilter: "blur(16px)", boxShadow: "inset 0 4px 15px rgba(0,0,0,0.4)" }}
+          style={{ position: 'relative', zIndex: 1, width: "100%", background: `linear-gradient(145deg, rgba(15, 15, 20, 0.8), rgba(40, 40, 45, 0.2))`, color: "#fff", border: "1px solid rgba(255,255,255,0.02)", padding: "16px", borderRadius: 20, fontWeight: 700, fontFamily: fonts.header, fontSize: 15, cursor: "pointer", gap: 10, fontStyle: "italic", boxShadow: "inset 0 4px 15px rgba(0,0,0,0.4)", ...GLASS_STYLES.light, ...LAYOUT.flexCenter }}
         >
           <span style={{ fontSize: 18 }}>🎯</span> {t ? t('today_open_focus') : 'ODAK MODU (TAM EKRAN)'}
         </motion.button>
@@ -88,7 +89,7 @@ export default function ActiveWorkoutView({
       <AICoach C={C} activeExercise={activeExercise} nutDay={sessDay} />
       
       <div style={{ ...sleekRowStyle, padding: "24px", marginBottom: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div style={{ ...LAYOUT.flexBetween, marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 10, color: C?.yellow || '#eab308', fontWeight: 900, letterSpacing: 1.5, fontFamily: fonts.header, marginBottom: 6, fontStyle: "italic" }}>{t ? t('today_daily_goals') : 'GÜNLÜK HEDEFLER'}</div>
             <div style={{ fontSize: 18, color: "#fff", fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic" }}>{t ? t('today_captain_quests') : 'KAPTANIN GÖREVLERİ'}</div>
@@ -96,11 +97,10 @@ export default function ActiveWorkoutView({
           <div style={{ fontSize: 24 }}>📜</div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* 🔥 ZIRH 2: dailyQuests tanımlı değilse boş array döndürerek çökmeyi engeller */}
+        <div style={{ ...LAYOUT.colGap10 }}>
           {(dailyQuests || []).map(quest => (
             <div key={quest.id} style={{ background: "rgba(0,0,0,0.3)", borderRadius: 16, padding: "14px", border: `1px solid rgba(255,255,255,0.02)`, display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.03)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, border: "1px solid rgba(255,255,255,0.02)" }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.03)", fontSize: 18, flexShrink: 0, border: "1px solid rgba(255,255,255,0.02)", ...LAYOUT.flexCenter }}>
                 {quest.icon}
               </div>
               <div style={{ flex: 1 }}>
@@ -115,9 +115,9 @@ export default function ActiveWorkoutView({
       <AnimatePresence mode="wait">
         <motion.div key={activeExIndex} initial={{ x: 10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -10, opacity: 0 }} transition={{ duration: 0.2 }} style={{...sleekRowStyle, padding: "24px 16px", width: "100%", overflowX: "hidden" }}>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+          <div style={{ ...LAYOUT.flexBetween, alignItems: 'flex-start', marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "rgba(255,255,255,0.5)", border: `1px solid rgba(255,255,255,0.02)`, fontStyle: "italic" }}>{activeExIndex + 1}</div>
+              <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(0,0,0,0.4)", fontSize: 18, fontWeight: 900, color: "rgba(255,255,255,0.5)", border: `1px solid rgba(255,255,255,0.02)`, fontStyle: "italic", ...LAYOUT.flexCenter }}>{activeExIndex + 1}</div>
               <div>
                 <h2 style={{ fontSize: 20, fontWeight: 900, margin: "0 0 6px 0", fontFamily: fonts.header, color: "#fff", fontStyle: "italic", letterSpacing: -0.5 }}>{safeActiveExName || 'Yükleniyor...'}</h2>
                 <span style={{ fontSize: 10, color: C?.green || '#22c55e', fontWeight: 800, background: `rgba(46, 204, 113, 0.1)`, padding: "4px 10px", borderRadius: 8, fontStyle: "italic", border: `1px solid rgba(46, 204, 113, 0.2)` }}>{t ? t('today_target_muscle') : 'Hedef:'} {activeExerciseDetails?.target || (t ? t('today_workout_lbl') : 'Antrenman')}</span>
@@ -125,20 +125,17 @@ export default function ActiveWorkoutView({
             </div>
             
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { setModalState(p => ({ ...p, platesOpen: true })); }} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.02)`, color: "#fff", width: 40, height: 40, borderRadius: 12, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>🏋️</button>
-              <button onClick={() => { setModalState(p => ({ ...p, historyEx: safeActiveExName })); }} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.02)`, color: "#fff", width: 40, height: 40, borderRadius: 12, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>📊</button>
-              <button onClick={() => { setModalState(p => ({ ...p, swapOpen: true })); }} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.02)`, color: "#fff", width: 40, height: 40, borderRadius: 12, fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>🔄</button>
+              <button onClick={() => { setModalState(p => ({ ...p, platesOpen: true })); }} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.02)`, color: "#fff", width: 40, height: 40, borderRadius: 12, fontSize: 18, cursor: "pointer", ...LAYOUT.flexCenter }}>🏋️</button>
+              <button onClick={() => { setModalState(p => ({ ...p, historyEx: safeActiveExName })); }} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.02)`, color: "#fff", width: 40, height: 40, borderRadius: 12, fontSize: 18, cursor: "pointer", ...LAYOUT.flexCenter }}>📊</button>
+              <button onClick={() => { setModalState(p => ({ ...p, swapOpen: true })); }} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.02)`, color: "#fff", width: 40, height: 40, borderRadius: 12, fontSize: 18, cursor: "pointer", ...LAYOUT.flexCenter }}>🔄</button>
             </div>
           </div>
           
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {/* 🔥 ZIRH 3: currentSetCount undefined gelme ihtimaline karşı fallback || 1 eklendi */}
             {[...Array(currentSetCount || 1)].map((_, si) => {
-              
-              // 🔥 ANA ÇÖKME SEBEBİNİN ÇÖZÜMÜ BURASI
-              const safeWeightLog = weightLog || {}; // weightLog prop'u henüz yüklenmemişse boş obje atar.
-              const exHistory = safeWeightLog[safeActiveExName] || []; // Egzersiz geçmişi yoksa veya yüklenmemişse boş dizi atar.
-              const lastLog = Array.isArray(exHistory) && exHistory.length > 0 ? exHistory[exHistory.length - 1] : exHistory;
+              const safeWeightLog = weightLog || {}; 
+              const exHistory = safeWeightLog[safeActiveExName] || []; 
+              const lastLog = Array.isArray(exHistory) && exHistory?.length > 0 ? exHistory[exHistory?.length - 1] : exHistory;
 
               return (
                 <SetRow 
@@ -146,7 +143,7 @@ export default function ActiveWorkoutView({
                   setData={(sessionSets && sessionSets[`${activeExIndex}-${si}`]) || { w: "", r: "" }} 
                   lastLog={lastLog} 
                   exName={safeActiveExName}
-                  themeColors={C} targetRepsStr={activeExercise?.reps}
+                  targetRepsStr={activeExercise?.reps}
                   onToggle={() => handleSetToggle(activeExIndex, si, activeExercise?.rest, safeActiveExName)}
                   onUpdate={(field, value) => handleSetUpdate(activeExIndex, si, field, value)}
                 />
@@ -154,7 +151,7 @@ export default function ActiveWorkoutView({
             })}
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 16 }}>
+          <div style={{ ...LAYOUT.flexCenter, gap: 16, marginTop: 16 }}>
              <button onClick={removeSet} disabled={currentSetCount <= 1} style={{ background: "transparent", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 12, fontWeight: 800, cursor: currentSetCount <= 1 ? "default" : "pointer", opacity: currentSetCount <= 1 ? 0.5 : 1, fontStyle: "italic" }}>{t ? t('today_btn_delete') : 'Sil'}</button>
              <button onClick={addSet} style={{ background: "rgba(0,0,0,0.3)", border: `1px solid rgba(255,255,255,0.05)`, color: "rgba(255,255,255,0.8)", padding: "10px 20px", borderRadius: 14, fontWeight: 800, fontSize: 12, cursor: "pointer", fontStyle: "italic" }}>{t ? t('today_btn_add_set') : 'Set Ekle'}</button>
           </div>
@@ -185,7 +182,6 @@ export default function ActiveWorkoutView({
         onFinishWorkout={() => { handleWorkoutFinish(); setIsArenaOpen(false); }}
         isLastExercise={isLastExercise}
         skipRest={() => restT && restT.stop ? restT.stop() : null}
-        C={C}
       />
     </div>
   );

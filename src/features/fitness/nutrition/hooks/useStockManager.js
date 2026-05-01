@@ -1,35 +1,37 @@
+// src/features/fitness/nutrition/hooks/useStockManager.js
 import { useState, useMemo, useCallback } from 'react';
 import { useAppStore } from '@/app/store.js';
-import { guessAisle, parseAmountToNum, normalizeItemName } from '../utils/nutritionUtils.js';
+import { useShallow } from 'zustand/react/shallow';
+import { guessAisle, parseAmountToNum, normalizeItemName } from "../utils/shoppingUtils.js";
+import { aggregateConsumedFoods } from '@/shared/utils/consumedFoodsUtils.js';
 
 export function useStockManager(shoppingList = []) {
   const {
-    consumedFoods = [],
-    stockCheckedItems = {},
-    stockCustomItems = [],
-    stockEditedAmounts = {},
+    eatenAggregated, // 🔥 EKLENDİ (Selector Seviyesinde Hesaplandı)
+    stockCheckedItems,
+    stockCustomItems,
+    stockEditedAmounts,
     setStockCheckedItems,
     setStockCustomItems,
     setStockEditedAmounts,
-  } = useAppStore();
+  } = useAppStore(useShallow(state => ({
+    // Tüketilenleri isim bazında gruplayıp objeye çevirme işlemi store okumasında yapılıyor!
+    eatenAggregated: aggregateConsumedFoods(state.consumedFoods), 
+    stockCheckedItems: state.stockCheckedItems ?? {},
+    stockCustomItems: state.stockCustomItems ?? [],
+    stockEditedAmounts: state.stockEditedAmounts ?? {},
+    setStockCheckedItems: state.setStockCheckedItems,
+    setStockCustomItems: state.setStockCustomItems,
+    setStockEditedAmounts: state.setStockEditedAmounts,
+  })));
 
   const [groupingMode, setGroupingMode] = useState("macro");
   const [expandedCats, setExpandedCats] = useState({});
   const [newItemName, setNewItemName] = useState("");
   const [newItemAmount, setNewItemAmount] = useState("");
 
-  // 1. Tüketilenleri Topla (İsme Göre Grupla)
-  const eatenAggregated = useMemo(() => {
-    const agg = {};
-    consumedFoods.forEach((f) => {
-      const nm = normalizeItemName(f.name);
-      if (!agg[nm]) agg[nm] = { qty: 0, unit: f.unit || "g" };
-      agg[nm].qty += f.qty || 0;
-    });
-    return agg;
-  }, [consumedFoods]);
+  // 🔥 NOT: eatenAggregated artık useMemo ile değil, Zustand üzerinden geliyor!
 
-  // 2. Özel (Custom) ve Planlı Öğeleri Birleştir
   const mergedItemsMap = useMemo(() => {
     const map = new Map();
 
@@ -60,14 +62,12 @@ export function useStockManager(shoppingList = []) {
     return map;
   }, [shoppingList, stockCustomItems]);
 
-  // 3. Stok Öğelerini Hesapla (Gruplanmış Liste İçin)
   const stockItems = useMemo(() => {
     const items = [];
     mergedItemsMap.forEach((val, key) => {
       const nm = normalizeItemName(val.name);
       let plannedQty = val.qty;
 
-      // Kullanıcı miktarı düzenlediyse onu kullan
       if (stockEditedAmounts[nm] !== undefined) {
         plannedQty = stockEditedAmounts[nm];
       }
@@ -93,7 +93,6 @@ export function useStockManager(shoppingList = []) {
     return items;
   }, [mergedItemsMap, eatenAggregated, stockEditedAmounts]);
 
-  // 4. Öğeleri Gruplandır
   const groupedList = useMemo(() => {
     const groups = {};
     stockItems.forEach((item) => {
@@ -112,11 +111,10 @@ export function useStockManager(shoppingList = []) {
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
   }, [stockItems, groupingMode]);
 
-  const boughtItems = Object.values(stockCheckedItems).filter(Boolean).length;
-  const totalItems = stockItems.length;
+  const boughtItems = Object.values(stockCheckedItems).filter(Boolean)?.length;
+  const totalItems = stockItems?.length;
   const fillRate = totalItems > 0 ? Math.round((boughtItems / totalItems) * 100) : 0;
 
-  // 5. Aksiyon Fonksiyonları
   const handleToggleCheck = useCallback((itemName) => {
     const nm = normalizeItemName(itemName);
     setStockCheckedItems((prev) => ({ ...prev, [nm]: !prev[nm] }));
@@ -134,13 +132,12 @@ export function useStockManager(shoppingList = []) {
     setStockCustomItems((prev) => [...prev, item]);
     setNewItemName("");
     setNewItemAmount("");
-    return true; // Başarılı eklendi
+    return true; 
   }, [newItemName, newItemAmount, setStockCustomItems]);
 
   const clearChecked = useCallback(() => {
-    if (Object.keys(stockCheckedItems).length === 0) return;
+    if (Object.keys(stockCheckedItems)?.length === 0) return;
     
-    // Düzenlenen miktarları sıfırla
     setStockEditedAmounts((prev) => {
       const next = { ...prev };
       Object.keys(stockCheckedItems).forEach(k => {
@@ -149,7 +146,6 @@ export function useStockManager(shoppingList = []) {
       return next;
     });
 
-    // Custom eklenenleri sil
     setStockCustomItems((prev) => 
       prev.filter(item => !stockCheckedItems[normalizeItemName(item.name)])
     );

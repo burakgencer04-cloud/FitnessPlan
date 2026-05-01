@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, Reorder } from 'framer-motion';
 
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 const STYLES = {
   mainBox: { background: "rgba(20, 20, 25, 0.7)", backdropFilter: "blur(24px)", border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 36, padding: 28, boxShadow: `0 25px 60px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)` },
   titleInput: { width: "100%", background: "rgba(0,0,0,0.4)", border: `1px solid rgba(255,255,255,0.05)`, color: "#fff", fontSize: 22, fontWeight: 900, fontFamily: fonts.header, fontStyle: "italic", padding: "18px 20px", borderRadius: 20, outline: "none", transition: "0.3s", boxSizing: "border-box" },
@@ -22,10 +22,10 @@ export default function ExerciseDetail({ editingWorkout, setEditingWorkout, gues
       
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ fontSize: 14, color: "#fff", fontWeight: 900, fontFamily: fonts.header }}>{t('prog_added_exs', { count: (editingWorkout?.exercises || []).length })}</div>
+          <div style={{ fontSize: 14, color: "#fff", fontWeight: 900, fontFamily: fonts.header }}>{t('prog_added_exs', { count: (editingWorkout?.exercises || [])?.length })}</div>
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontWeight: 700 }}>{t('prog_drag_sort')}</div>
         </div>
-        {(editingWorkout?.exercises || []).length === 0 ? (
+        {(editingWorkout?.exercises || [])?.length === 0 ? (
           <div style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", padding: "30px", textAlign: "center", background: "rgba(0,0,0,0.2)", borderRadius: 24, border: `1px dashed rgba(255,255,255,0.1)`, fontWeight: 600 }}>{t('prog_select_below')}</div>
         ) : (
           <Reorder.Group axis="y" values={editingWorkout?.exercises || []} onReorder={(newOrder) => setEditingWorkout({...editingWorkout, exercises: newOrder})} style={{ listStyleType: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 16 }}>

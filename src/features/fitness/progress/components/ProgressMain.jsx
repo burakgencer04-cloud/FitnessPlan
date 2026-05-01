@@ -1,9 +1,12 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+// src/features/fitness/progress/components/ProgressMain.jsx
+
+import React, { useState, useMemo, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { useShallow } from 'zustand/react/shallow';
 
 import { useAppStore } from '@/app/store';
-import { MEASUREMENT_TYPES, CORE_LIFTS, guessTargetMuscle, fonts, getGlassCardStyle, getGlassInnerStyle, CustomTooltip } from './progressUtils';
+import { MEASUREMENT_TYPES, CORE_LIFTS, guessTargetMuscle, fonts, getGlassCardStyle, CustomTooltip } from './progressUtils';
 
 import ProgressPhotos from './ProgressPhotos';
 import WorkoutConsistency from './WorkoutConsistency';
@@ -11,22 +14,24 @@ import VolumeChart from './VolumeChart';
 import PRSection from './PRSection';
 import { CNSFatigue, StatBoxes, BadgesSection } from './ProgressStats';
 import { MeasureModal, PhotoSwipeModal, StoryModal, Confetti } from './ProgressModals';
-import MuscleMap from './MuscleMap'; 
-import { LocalDB } from '@/shared/lib/localDB.js'; // 🔥 HAYAT KURTARAN IMPORT
+
+const MuscleMap = lazy(() => import('./MuscleMap.jsx'));
 
 export default function ProgressMain({ 
   totalDone, overallPct, badges = [], BADGES = [], BADGE_ICONS = {}, 
   themeColors: C, selectedProgram, hasActiveProgram, onSelectProgram
-  // 🔴 DİKKAT: weightLog prop'u buradan SİLİNDİ!
 }) {
-  const user = useAppStore(state => state.user);
-  const bodyMeasurements = useAppStore(state => state.bodyMeasurements) || [];
-  const streak = useAppStore(state => state.streak);
-  const addMeasurement = useAppStore(state => state.addMeasurement);
   
-  // 🔥 YENİ: Artık weightLog bir state. (Uygulamanın hafızasını tıkamaz)
-  const [weightLog, setWeightLog] = useState({});
-
+  const { user, bodyMeasurements, streak, addMeasurement, weightLog } = useAppStore(
+    useShallow(state => ({
+      user: state.user,
+      bodyMeasurements: state.bodyMeasurements ?? [], 
+      streak: state.streak,
+      addMeasurement: state.addMeasurement,
+      weightLog: state.weightLog || {} 
+    }))
+  );
+  
   const [showMeasureModal, setShowMeasureModal] = useState(false);
   const [measureForm, setMeasureForm] = useState({ date: new Date().toISOString().split('T')[0], type: "weight", value: "" });
   
@@ -38,15 +43,13 @@ export default function ProgressMain({
   
   const [volumeFilter, setVolumeFilter] = useState('all');
 
-  // 🔥 YENİ: Sayfa açılınca arka planda devasa geçmiş verisini çeker
-  useEffect(() => {
-    LocalDB.getWeightLog().then(data => {
-      if (data) setWeightLog(data);
-    });
-  }, []);
+  const [selectedChartType, setSelectedChartType] = useState("weight");
+  const [progressPhotos, setProgressPhotos] = useState([]);
+  const [storyModal, setStoryModal] = useState(false);
+  const fileInputRef = useRef(null);
 
-
-
+  const isOlder = user?.age && user.age > 40;
+  const currentWeight = bodyMeasurements.filter(m => m.type === 'weight').sort((a,b) => b.id - a.id)[0]?.value || 0;
 
   const handleDownloadCSV = () => {
     let csvContent = "Veri Tipi,Tarih,Detay,Deger\n";
@@ -66,15 +69,30 @@ export default function ProgressMain({
     link.click(); document.body.removeChild(link);
   };
 
+  const handleAddMeasure = () => {
+    if (measureForm.value && !isNaN(parseFloat(measureForm.value))) {
+      addMeasurement({
+        type: measureForm.type,
+        value: parseFloat(measureForm.value),
+        date: measureForm.date
+      });
+    }
+    setShowMeasureModal(false);
+    setMeasureForm(prev => ({ ...prev, value: "" }));
+  };
+
+  const handlePhotoUpload = () => {};
+  const handleDeletePhoto = () => {};
+
   const chartData = useMemo(() => {
-    return bodyMeasurements.filter(m => m.type === selectedChartType).sort((a, b) => new Date(a.id) - new Date(b.id)); 
+    return bodyMeasurements.filter(m => m.type === selectedChartType).sort((a, b) => new Date(a.date) - new Date(b.date)); 
   }, [bodyMeasurements, selectedChartType]);
 
   const volumeTrendData = useMemo(() => {
     const dailyVolumes = {};
     Object.entries(weightLog).forEach(([exName, logs]) => {
       const target = guessTargetMuscle(exName);
-      if (volumeFilter !== "Tümü" && target !== volumeFilter) return;
+      if (volumeFilter !== "all" && volumeFilter !== "Tümü" && target !== volumeFilter) return;
       logs.forEach(log => {
         const vol = (parseFloat(log.weight) || 0) * (parseInt(log.reps) || 0);
         if (vol > 0) dailyVolumes[log.date] = (dailyVolumes[log.date] || 0) + vol;
@@ -128,9 +146,9 @@ export default function ProgressMain({
   }, [weightLog]);
 
   const cnsFatiguePct = useMemo(() => {
-    if (volumeTrendData.length < 3) return 15;
+    if (volumeTrendData?.length < 3) return 15;
     const recentVol = volumeTrendData.slice(-3).reduce((a, b) => a + b.Hacim, 0) / 3;
-    const oldVol = volumeTrendData.slice(0, -3).reduce((a, b) => a + b.Hacim, 0) / (volumeTrendData.length - 3 || 1);
+    const oldVol = volumeTrendData.slice(0, -3).reduce((a, b) => a + b.Hacim, 0) / (volumeTrendData?.length - 3 || 1);
     let ratio = (recentVol / oldVol) * 100;
     if (isOlder) ratio *= 1.15; 
     return Math.min(100, Math.max(0, Math.round(ratio - 20))) || 20;
@@ -143,9 +161,9 @@ export default function ProgressMain({
     if (globalTotalVolume >= 100000) dynamicBadges.push({ label: "100 Ton Herkül", color: "#fff", icon: "🏛️" }); 
     if (streak >= 7) dynamicBadges.push({ label: "Haftalık Disiplin", color: C.green, icon: "🔥" });
     if (streak >= 30) dynamicBadges.push({ label: "Aylık Çelik İrade", color: C.blue, icon: "🛡️" }); 
-    if (personalRecords.length >= 3) dynamicBadges.push({ label: "Kuvvet Ustası", color: C.blue, icon: "💎" });
+    if (personalRecords?.length >= 3) dynamicBadges.push({ label: "Kuvvet Ustası", color: C.blue, icon: "💎" });
     if (totalDone >= 50) dynamicBadges.push({ label: "50. Antrenmanım", color: C.yellow, icon: "💯" }); 
-    if (progressPhotos.length >= 3) dynamicBadges.push({ label: "Değişim Mimarı", color: C.green, icon: "📸" }); 
+    if (progressPhotos?.length >= 3) dynamicBadges.push({ label: "Değişim Mimarı", color: C.green, icon: "📸" }); 
     return dynamicBadges;
   }, [globalTotalVolume, streak, personalRecords, totalDone, progressPhotos, C]);
 
@@ -155,8 +173,8 @@ export default function ProgressMain({
 
     Object.entries(weightLog).forEach(([exName, logs]) => {
       const logsArr = Array.isArray(logs) ? logs : [logs];
-      if (logsArr.length > maxLogs) {
-        maxLogs = logsArr.length;
+      if (logsArr?.length > maxLogs) {
+        maxLogs = logsArr?.length;
         mostLoggedEx = exName;
       }
     });
@@ -169,7 +187,7 @@ export default function ProgressMain({
   if (!hasActiveProgram || !selectedProgram) {
     return (
       <div style={{ paddingBottom: 40, fontFamily: fonts.body, color: C.text, position: "relative" }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ ...glassCardStyle, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: "80px 20px", textAlign: 'center', margin: "20px auto", maxWidth: 400 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ ...getGlassCardStyle(C), display: 'flex', flexDirection: 'column', alignItems: 'center', padding: "80px 20px", textAlign: 'center', margin: "20px auto", maxWidth: 400 }}>
           <div style={{ width: 80, height: 80, borderRadius: 24, background: `rgba(255,255,255,0.05)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, marginBottom: 24, border: `1px solid rgba(255,255,255,0.1)`, boxShadow: "inset 0 4px 10px rgba(0,0,0,0.4)" }}>📈</div>
           <h2 style={{ fontSize: 24, color: "#fff", fontWeight: 900, fontFamily: fonts.header, marginBottom: 12, letterSpacing: -0.5 }}>Analiz Bekleniyor</h2>
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", lineHeight: 1.6, maxWidth: 280, marginBottom: 32 }}>İlerlemeni takip etmek için bir antrenman programı seçmelisin.</p>
@@ -196,7 +214,6 @@ export default function ProgressMain({
           </button>
         </div>
 
-        {/* YAPAY ZEKA ANALİZ KARTI */}
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} style={{ ...getGlassCardStyle(C), marginBottom: 24, padding: "28px" }}>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: aiAnalysis.mood === "success" ? C.green : aiAnalysis.mood === "warning" ? C.yellow : C.blue, boxShadow: `0 0 20px ${aiAnalysis.mood === "success" ? C.green : C.blue}` }} />
           <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
@@ -209,22 +226,27 @@ export default function ProgressMain({
           </div>
         </motion.div>
 
-        {/* 🔥 YENİ: HASAR RAPORU (KAS HARİTASI) */}
-        <MuscleMap weightLog={weightLog} C={C} />
+        <Suspense fallback={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: C?.sub || '#8e8e93' }}>
+            Vücut Haritası Yükleniyor...
+          </div>
+        }>
+          <MuscleMap user={user} C={C} />
+        </Suspense>
 
         <StatBoxes streak={streak} globalTotalVolume={globalTotalVolume} C={C} />
         <WorkoutConsistency recentWorkoutsGrid={recentWorkoutsGrid} totalDone={totalDone} progressPhotos={progressPhotos} setPhotoModalIndex={setPhotoModalIndex} C={C} />
         <CNSFatigue cnsFatiguePct={cnsFatiguePct} C={C} />
         <ProgressPhotos progressPhotos={progressPhotos} setPhotoModalIndex={setPhotoModalIndex} handlePhotoUpload={handlePhotoUpload} fileInputRef={fileInputRef} C={C} />
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={glassCardStyle}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={getGlassCardStyle(C)}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
             <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, fontFamily: fonts.header, color: "#fff", letterSpacing: -0.5 }}>Vücut Ölçülerim</h2>
             <button onClick={() => { setMeasureForm(prev => ({...prev, type: selectedChartType})); setShowMeasureModal(true); }} style={{ background: "#fff", color: "#000", border: "none", padding: "10px 20px", borderRadius: 12, fontWeight: 900, cursor: "pointer", fontSize: 13, boxShadow: "0 4px 15px rgba(255,255,255,0.2)" }}>Kayıt Gir</button>
           </div>
 
           <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 16, scrollbarWidth: "none", marginBottom: 16 }}>
-            {MEASUREMENT_TYPES.map(type => (
+            {(MEASUREMENT_TYPES || []).map(type => (
               <button 
                 key={type.id} onClick={() => setSelectedChartType(type.id)} 
                 style={{ flexShrink: 0, background: selectedChartType === type.id ? "#fff" : "rgba(255,255,255,0.05)", border: `1px solid ${selectedChartType === type.id ? "#fff" : `rgba(255,255,255,0.1)`}`, color: selectedChartType === type.id ? "#000" : "rgba(255,255,255,0.6)", padding: "10px 20px", borderRadius: 100, fontSize: 13, fontWeight: 800, cursor: "pointer", transition: "all 0.3s ease" }}
@@ -234,7 +256,7 @@ export default function ProgressMain({
             ))}
           </div>
           
-          {chartData.length > 0 ? (
+          {chartData?.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={chartData} margin={{ top: 10, right: 0, bottom: 0, left: -24 }}>
                 <defs><linearGradient id="colorMeasure" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ffffff" stopOpacity={0.4}/><stop offset="95%" stopColor="#ffffff" stopOpacity={0}/></linearGradient></defs>

@@ -24,7 +24,7 @@ export const getDailyQuests = (dateString) => {
 
   for (let i = 0; i < 3; i++) {
     // Rastgele bir indeks seç
-    const index = Math.floor(random(currentSeed) * RAW_QUESTS.length);
+    const index = Math.floor(random(currentSeed) * RAW_QUESTS?.length);
     currentSeed += 1;
     
     const xp = Math.floor(random(currentSeed) * 5) * 10 + 50; // 50, 60, 70, 80, 90 XP

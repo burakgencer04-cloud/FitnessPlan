@@ -1,13 +1,42 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { VitePWA } from 'vite-plugin-pwa';
+import basicSsl from '@vitejs/plugin-basic-ssl'; // 🔥 BEYAZ EKRAN ÇÖZÜMÜ İÇİN EKLENDİ
 
 export default defineConfig({
   base: './',
   plugins: [
     react(),
-    // Eğer projene ileride Vite PWA eklentisi kurarsan burada etkinleştirebilirsin
-    // VitePWA({ registerType: 'autoUpdate' })
+    basicSsl(), // 🔥 HTTPS AKTİF EDİLDİ (iOS/Safari'de JS'in çalışması için zorunlu)
+    
+    // 🔥 PWA YAPILANDIRMASI (Offline Destek ve Hızlı Yükleme İçin Zırh)
+    VitePWA({
+      registerType: "autoUpdate",
+      manifest: false, // public/manifest.webmanifest projenizde zaten var olduğu için false
+      workbox: {
+        runtimeCaching: [
+          {
+            // Firestore istekleri için "Önce Ağı Dene, Yoksa Cache'ten Al" stratejisi
+            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
+            handler: "NetworkFirst",
+            options: { 
+              cacheName: "firestore-cache", 
+              networkTimeoutSeconds: 4 
+            }
+          },
+          {
+            // Statik dosyalar (Görseller, Fontlar, JS, CSS) için "Direkt Cache'ten Al" stratejisi
+            urlPattern: /\.(js|css|html|otf|png|svg)$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "static-cache",
+              expiration: { maxAgeSeconds: 604800 } // 1 hafta boyunca telefonda tut
+            }
+          }
+        ]
+      }
+    })
   ],
   resolve: {
     alias: {
@@ -49,9 +78,6 @@ export default defineConfig({
             }
             if (id.includes('recharts')) {
               return 'charts';
-            }
-            if (id.includes('three') || id.includes('@react-three')) {
-              return '3d-engine';
             }
             if (id.includes('firebase')) {
               return 'firebase';

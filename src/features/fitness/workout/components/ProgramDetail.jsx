@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-import { fonts } from '@/shared/utils/uiStyles.js';
+import { fonts } from '@/shared/ui/uiStyles.js';
 
 const STYLES = {
   backBtn: { background: "transparent", border: "none", color: "rgba(255,255,255,0.7)", fontWeight: 800, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, marginBottom: 24, padding: 0, fontFamily: fonts.body },
@@ -38,7 +38,7 @@ export default function ProgramDetail({ selectedPreset, setSelectedPreset, setPr
               <div style={{ fontSize: 17, fontWeight: 900, fontFamily: fonts.header, color: "#fff", letterSpacing: -0.2 }}>{w?.label || t('prog_workout_label')}</div>
             </div>
             <div style={{ padding: "16px 24px" }}>
-              {(w?.exercises || []).length > 0 ? (
+              {(w?.exercises || [])?.length > 0 ? (
                 (w.exercises || []).map((ex, idx) => {
                   const realTarget = ex?.target || guessTargetMuscle(ex?.name);
                   const isLast = idx === (w?.exercises?.length || 1) - 1;

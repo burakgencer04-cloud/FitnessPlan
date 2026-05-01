@@ -1,5 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+// src/features/fitness/workout/hooks/useWorkoutTimer.js
+import { useEffect } from 'react';
+import { create } from 'zustand';
 
+// Ses Fonksiyonları (Aynı kalıyor)
 export function playDing(f = 880, d = 0.18) { 
   try { 
     const ctx = new (window.AudioContext || window.webkitAudioContext)(); 
@@ -22,57 +25,60 @@ export function playRestEnd() {
   [520,660,880].forEach((f,i)=>setTimeout(()=>playDing(f,.12),i*110)); 
 }
 
-export function useTimer() {
-  const [sec, setSec] = useState(0);
-  const [on, setOn] = useState(false);
-  const r = useRef(null);
-
+// 🔥 YENİ ZIRH: Zustand tabanlı Atomic Timer Store'u
+export const useWorkoutTimerStore = create((set, get) => ({
+  sec: 0,
+  on: false,
+  intervalId: null,
   
-  useEffect(() => { 
-    if (on) r.current = setInterval(() => setSec(s => s + 1), 1000); 
-    else clearInterval(r.current); 
-    return () => clearInterval(r.current); 
-  }, [on]);
-  
-  const fmt = (s) => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
-  
-  return { sec, on, toggle: () => setOn(v => !v), reset: () => { setOn(false); setSec(0); }, fmt };
-}
+  toggle: () => {
+      const { on, intervalId } = get();
+      if (on) {
+          clearInterval(intervalId);
+          set({ on: false, intervalId: null });
+      } else {
+          // Her saniye state'i güncelleyen ama bileşenleri sadece `sec` okuyanları uyandıracak interval
+          const id = setInterval(() => set(s => ({ sec: s.sec + 1 })), 1000);
+          set({ on: true, intervalId: id });
+      }
+  },
+  reset: () => {
+      const { intervalId } = get();
+      if (intervalId) clearInterval(intervalId);
+      set({ sec: 0, on: false, intervalId: null });
+  },
+  fmt: (s) => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`
+}));
 
-export function useWorkoutTimer() {
-  return useTimer();
-}
-
-
-export function useRestTimer() {
-  const [secs, setSecs] = useState(0);
-  const [isActive, setIsActive] = useState(false);
-
-  useEffect(() => {
-    let interval;
-    if (isActive && secs > 0) {
-      interval = setInterval(() => setSecs((prev) => prev - 1), 1000);
-    } else if (secs === 0) {
-      setIsActive(false);
+// Rest Timer için Atomic Store
+export const useRestTimerStore = create((set, get) => ({
+    secs: 0,
+    isActive: false,
+    intervalId: null,
+    
+    start: (duration) => {
+        const { intervalId } = get();
+        if (intervalId) clearInterval(intervalId);
+        
+        set({ secs: duration, isActive: true });
+        
+        const id = setInterval(() => {
+            const currentSecs = get().secs;
+            if (currentSecs <= 1) {
+                clearInterval(get().intervalId);
+                set({ secs: 0, isActive: false, intervalId: null });
+                playRestEnd(); // Süre bitince ses çal
+            } else {
+                set({ secs: currentSecs - 1 });
+            }
+        }, 1000);
+        
+        set({ intervalId: id });
+    },
+    adjust: (amount) => set(s => ({ secs: Math.max(0, s.secs + amount) })),
+    stop: () => {
+        const { intervalId } = get();
+        if (intervalId) clearInterval(intervalId);
+        set({ secs: 0, isActive: false, intervalId: null });
     }
-    return () => clearInterval(interval);
-  }, [isActive, secs]);
-
-  const start = (duration) => {
-    setSecs(duration);
-    setIsActive(true);
-  };
-
-  // 🔥 YENİ: Süreyi ileri/geri sarmayı sağlar
-  const adjust = (amount) => {
-    setSecs((prev) => Math.max(0, prev + amount));
-  };
-
-  // 🔥 YENİ: Sayacı durdurur (Dinlenmeyi Geç için)
-  const stop = () => {
-    setSecs(0);
-    setIsActive(false);
-  };
-
-  return { secs, isActive, start, adjust, stop };
-}
+}));

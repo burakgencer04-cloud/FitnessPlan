@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/hooks/useTranslation.js';
 import { useAppStore } from "@/app/store.js";
 import useModalStore from '@/shared/store/useModalStore'; // 🔥 MODAL EKLENDİ
 
@@ -15,7 +15,7 @@ export function useProgram({ customWorkouts = [], setCustomWorkouts, EXERCISE_DB
       ? rawWorkouts[0].workouts 
       : rawWorkouts;
 
-  const [showPresetsList, setShowPresetsList] = useState(!safeWorkouts || safeWorkouts.length === 0);
+  const [showPresetsList, setShowPresetsList] = useState(!safeWorkouts || safeWorkouts?.length === 0);
   const [activeTab, setActiveTab] = useState("presets"); 
   const [selectedPreset, setSelectedPreset] = useState(null); 
   const [presetSetup, setPresetSetup] = useState(null);
@@ -94,7 +94,7 @@ export function useProgram({ customWorkouts = [], setCustomWorkouts, EXERCISE_DB
     setEditingWorkout(prev => {
       if (!prev) return prev;
       const currentExs = prev?.exercises || [];
-      if (swapIndex !== null && swapIndex >= 0 && swapIndex < currentExs.length) {
+      if (swapIndex !== null && swapIndex >= 0 && swapIndex < currentExs?.length) {
         const updatedExs = [...currentExs];
         updatedExs[swapIndex] = newExercise; 
         setSwapIndex(null);
@@ -127,7 +127,7 @@ export function useProgram({ customWorkouts = [], setCustomWorkouts, EXERCISE_DB
   }, [swapIndex]);
 
   const saveWorkout = useCallback(() => {
-    if (!editingWorkout || !(editingWorkout?.exercises) || editingWorkout.exercises.length === 0) {
+    if (!editingWorkout || !(editingWorkout?.exercises) || editingWorkout.exercises?.length === 0) {
       // 🔥 ALERT DEĞİŞTİRİLDİ
       return openModal({ type: 'alert', title: 'Uyarı', message: t('prog_err_no_ex') });
     }

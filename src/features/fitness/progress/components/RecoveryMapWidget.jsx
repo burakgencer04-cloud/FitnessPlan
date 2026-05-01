@@ -3,7 +3,8 @@ import { calculateRealFatigue } from '@/features/fitness/workout/utils/workoutAn
 import { useAppStore } from '@/app/store.js';
 
 export default function RecoveryMapWidget({ C }) {
-  const { weightLog } = useAppStore();
+  // 🔥 PERFORMANS FIX: Tüm store yerine sadece weightLog dinleniyor!
+  const weightLog = useAppStore(state => state.weightLog);
 
   // Veritabanındaki geçmiş antrenmanları analiz et
   const fatigueData = useMemo(() => {

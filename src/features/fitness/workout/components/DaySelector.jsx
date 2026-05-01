@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { globalFonts as fonts } from '@/shared/ui/globalStyles.js';
 
 export default function DaySelector({ workouts = [], activeDay, setActiveDay, C, t }) {
-  if (!workouts || workouts.length === 0) return null;
+  if (!workouts || workouts?.length === 0) return null;
 
   return (
     <div className="hide-scrollbar" style={{ 
